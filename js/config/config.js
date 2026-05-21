@@ -4,12 +4,12 @@ module.exports = {
   paths: {
     // paths for local mode manera local
     local: {
-      templatesBase: "/Users/rmlsub1/Documents/pruebas/Nike Lacrosse/Mens",
+      templatesBase: "/Users/rmlsub1/Documents/pruebas/PATRONES PARA ROLLO/NIKE LACROSSE",
       ordersBase: "/Users/rmlsub1/Documents/pruebas/TO PRINT/NIKE ORDERS"
     },
     // paths for server mode
     server: {
-      templatesBase: "/Volumes/Fullsize/Nike Lacrosse/Mens",
+      templatesBase: "/Volumes/Fullsize/PATRONES ACOMODADOS PARA ROLLO/NIKE LACROSSE",
       ordersBase: "/Volumes/Fullsize/TO PRINT/NIKE ORDERS"
     }
   }

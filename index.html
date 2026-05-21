@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>RMC Nike Panel</title>
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+
+<body>
+    <header class="app-header">
+        <div>
+            <div class="nike-title">RMC NIKE</div>
+            <div class="nike-subtitle">On Demand Panel</div>
+        </div>
+        <button id="btnResetPanel" class="icon-button" title="Reiniciar panel">↻</button>
+    </header>
+
+    <nav class="step-nav" aria-label="Flujo del pedido">
+        <button class="step-button active" data-page="pageTeams">1 Equipo</button>
+        <button class="step-button" data-page="pageOrder">2 Pedido</button>
+        <button class="step-button" data-page="pageProcess">3 Proceso</button>
+        <button class="step-button" data-page="pageSettings">Rutas</button>
+    </nav>
+
+    <main>
+        <section id="pageTeams" class="page active">
+            <div class="section-heading section-heading-row">
+                <h1>Selecciona equipo</h1>
+                <label class="line-field">
+                    Linea
+                    <select id="productLineSelect">
+                        <option value="masculino" selected>Masculino</option>
+                        <option value="femenino">Femenino</option>
+                    </select>
+                </label>
+            </div>
+
+            <div id="teamGrid" class="team-grid"></div>
+        </section>
+
+        <section id="pageOrder" class="page">
+            <div class="selected-summary">
+                <div id="selectedPreview" class="selected-preview"></div>
+                <div>
+                    <span class="eyebrow">Equipo seleccionado</span>
+                    <h1 id="selectedTeamName">Sin equipo</h1>
+                    <label class="variant-field">
+                        Variante
+                        <select id="variantSelect"></select>
+                    </label>
+                    <div class="version-toggle" role="group" aria-label="Version">
+                        <label>
+                            <input type="radio" name="version" value="Home" checked>
+                            Home
+                        </label>
+                        <label>
+                            <input type="radio" name="version" value="Away">
+                            Away
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <label>
+                    Work Order
+                    <input type="text" id="wo" placeholder="Ej. 172539">
+                </label>
+
+                <label>
+                    Style
+                    <select id="styleCode"></select>
+                </label>
+
+                <label>
+                    Talla
+                    <select id="size">
+                        <option value="XS">XS</option>
+                        <option value="SM">SM</option>
+                        <option value="MD">MD</option>
+                        <option value="LG" selected>LG</option>
+                        <option value="XL">XL</option>
+                        <option value="2X">2X</option>
+                        <option value="3X">3X</option>
+                    </select>
+                </label>
+
+                <label>
+                    Numero
+                    <input type="text" id="playerNumber" placeholder="Ej. 7">
+                </label>
+
+                <label class="wide-field">
+                    Nombre
+                    <input type="text" id="playerName" placeholder="Opcional">
+                </label>
+
+                <label class="wide-field">
+                    Carpeta On Demand
+                    <select id="demandFolder">
+                        <option value="NIKE ON DEMAND 8 MAYO">NIKE ON DEMAND 8 MAYO</option>
+                        <option value="NIKE ON DEMAND 15 MAYO">NIKE ON DEMAND 15 MAYO</option>
+                        <option value="NIKE ON DEMAND 22 MAYO" selected>NIKE ON DEMAND 22 MAYO</option>
+                    </select>
+                </label>
+            </div>
+
+            <button id="btnReviewOrder" class="primary-button">Revisar pedido</button>
+        </section>
+
+        <section id="pageProcess" class="page">
+            <div class="section-heading">
+                <h1>Revisar y procesar</h1>
+            </div>
+
+            <div class="review-panel">
+                <div>
+                    <span class="eyebrow">Plantilla</span>
+                    <p id="templatePathPreview" class="path-preview">Pendiente</p>
+                </div>
+                <div>
+                    <span class="eyebrow">Archivo final</span>
+                    <p id="outputNamePreview" class="path-preview">Pendiente</p>
+                </div>
+                <div>
+                    <span class="eyebrow">Destino</span>
+                    <p id="destinationPreview" class="path-preview">Pendiente</p>
+                </div>
+            </div>
+
+            <button id="btnCrearCopia" class="primary-button">Crear copia de plantilla</button>
+            <button id="btnAbrirIllustrator">Abrir en Illustrator</button>
+            <button id="btnAplicarDatos">Aplicar nombre / numero</button>
+        </section>
+
+        <section id="pageSettings" class="page">
+            <div class="section-heading">
+                <h1>Rutas</h1>
+            </div>
+
+            <div class="settings-list">
+                <div>
+                    <span class="eyebrow">Modo</span>
+                    <p id="modePreview">Pendiente</p>
+                </div>
+                <div>
+                    <span class="eyebrow">Templates</span>
+                    <p id="templatesBasePreview" class="path-preview">Pendiente</p>
+                </div>
+                <div>
+                    <span class="eyebrow">Ordenes</span>
+                    <p id="ordersBasePreview" class="path-preview">Pendiente</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <section id="log-container">
+        <div class="log-header">
+            Log de Consola
+            <button id="btnClearLog">Limpiar</button>
+        </div>
+        <div id="terminal"></div>
+    </section>
+
+    <footer class="footer-credits">
+        Creado por Jose Alberto Villarreal Garcia
+    </footer>
+
+    <script src="./js/CSInterface.js"></script>
+    <script src="./js/logger.js"></script>
+    <script src="./js/main.js"></script>
+</body>
+</html>

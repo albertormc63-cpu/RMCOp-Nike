@@ -1,44 +1,146 @@
+const fs = require("fs");
 const path = require("path");
-// Este módulo se encarga de construir las rutas de los templates y los nombres de los archivos de salida basándose en los parámetros proporcionados, como el equipo, la versión, el estilo, el tamaño y el número. Utiliza un archivo de equipos para obtener las siglas correspondientes a cada equipo.
 const teams = require("../data/teams");
 
-// Determina el código de versión (A para Away, H para Home) basado en la versión proporcionada.
-function getVersionCode(version) {
-  return version === "Away" ? "A" : "H";
+function normalizeStyle(style) {
+  return String(style || "").trim().toUpperCase();
 }
-// Determina el código de Nike (PLL o WLL) basado en el estilo proporcionado.
+
 function getNikeCode(style) {
-  if (style.includes("1000")) return "PLL";
-  if (style.includes("2000")) return "WLL";
+  const normalizedStyle = normalizeStyle(style);
+
+  if (normalizedStyle.includes("1000")) return "PLL";
+  if (normalizedStyle.includes("2000")) return "WLL";
   throw new Error(`No se pudo detectar PLL/WLL desde el style: ${style}`);
 }
-//Construye la ruta del template a partir de los parámetros proporcionados, utilizando las siglas de los equipos y los códigos de versión y estilo.
+
+function getProductConfig(style) {
+  const normalizedStyle = normalizeStyle(style);
+  const audienceCode = normalizedStyle.charAt(0);
+  const nikeCode = getNikeCode(normalizedStyle);
+
+  if (nikeCode === "PLL" && audienceCode === "A") {
+    return { nikeCode, groupFolder: "NIKE Mens and Youth", productFolder: "MENS" };
+  }
+
+  if (nikeCode === "PLL" && audienceCode === "Y") {
+    return { nikeCode, groupFolder: "NIKE Mens and Youth", productFolder: "YOUTH" };
+  }
+
+  if (nikeCode === "WLL" && audienceCode === "A") {
+    return { nikeCode, groupFolder: "NIKE Girls and Ladies", productFolder: "Ladies" };
+  }
+
+  if (nikeCode === "WLL" && audienceCode === "Y") {
+    return { nikeCode, groupFolder: "NIKE Girls and Ladies", productFolder: "Girls" };
+  }
+
+  throw new Error(`No se pudo detectar categoria desde el style: ${style}`);
+}
+
+function findExistingPath(candidates) {
+  return candidates.find(function (candidatePath) {
+    return fs.existsSync(candidatePath);
+  });
+}
+
+function findCaseInsensitiveChild(parentPath, childName) {
+  if (!fs.existsSync(parentPath)) return null;
+
+  const normalizedChildName = childName.toLowerCase();
+  const entries = fs.readdirSync(parentPath);
+  const match = entries.find(function (entry) {
+    return entry.toLowerCase() === normalizedChildName;
+  });
+
+  return match ? path.join(parentPath, match) : null;
+}
+
+function resolvePathSegments(basePath, segments) {
+  return segments.reduce(function (currentPath, segment) {
+    return findCaseInsensitiveChild(currentPath, segment) || path.join(currentPath, segment);
+  }, basePath);
+}
+
+function getTeamFolderCandidates(team, version) {
+  const versionUpper = version.toUpperCase();
+
+  return [
+    `${team} ${version}`,
+    `${team.toUpperCase()} ${versionUpper}`
+  ];
+}
+
+function getTemplateFolderCandidates(basePath, productConfig, team, version) {
+  const versionFolder = version.toUpperCase();
+  const teamFolders = getTeamFolderCandidates(team, version);
+  const candidates = [];
+
+  teamFolders.forEach(function (teamFolder) {
+    candidates.push(resolvePathSegments(basePath, [
+      productConfig.groupFolder,
+      productConfig.productFolder,
+      versionFolder,
+      teamFolder
+    ]));
+  });
+
+  return candidates;
+}
+
+function getCanonicalTemplateName({ teamCode, productConfig, style, size }) {
+  return `${productConfig.nikeCode}-${teamCode}-${normalizeStyle(style)} ${size}.pdf`;
+}
+
+function findTemplateByStyleAndSize(folderPath, style, size) {
+  if (!fs.existsSync(folderPath)) return null;
+
+  const normalizedStyle = normalizeStyle(style);
+  const normalizedSize = String(size || "").trim().toUpperCase();
+  const files = fs.readdirSync(folderPath);
+  const match = files.find(function (fileName) {
+    const normalizedFileName = fileName.toUpperCase();
+    return normalizedFileName.endsWith(".PDF") &&
+      normalizedFileName.indexOf(normalizedStyle) !== -1 &&
+      normalizedFileName.indexOf(` ${normalizedSize}.PDF`) !== -1;
+  });
+
+  return match ? path.join(folderPath, match) : null;
+}
+
 function buildTemplatePath({ basePath, team, version, style, size }) {
-  
-  //Sacamos codigo de equipo, version y estilo
   const teamCode = teams[team];
-  const versionCode = getVersionCode(version);
-  const nikeCode = getNikeCode(style);
+  const productConfig = getProductConfig(style);
 
   if (!teamCode) {
     throw new Error(`Equipo no registrado: ${team}`);
   }
-  // Construimos el nombre del archivo del template utilizando los códigos obtenidos y el tamaño.
-  const fileName = `5LM-${nikeCode}-${teamCode}-${versionCode}-ALD ${size}.pdf`;
 
-  return path.join(
-    basePath,
-    version,
-    `${team} ${version}`,
-    fileName
-  );
+  const folderCandidates = getTemplateFolderCandidates(basePath, productConfig, team, version);
+  const versionPath = resolvePathSegments(basePath, [
+    productConfig.groupFolder,
+    productConfig.productFolder,
+    version.toUpperCase()
+  ]);
+  const existingFolder = findExistingPath(folderCandidates) ||
+    findCaseInsensitiveChild(versionPath, `${team} ${version}`);
+  const targetFolder = existingFolder || folderCandidates[0];
+  const canonicalName = getCanonicalTemplateName({ teamCode, productConfig, style, size });
+  const canonicalPath = path.join(targetFolder, canonicalName);
+
+  if (fs.existsSync(canonicalPath)) {
+    return canonicalPath;
+  }
+
+  return findTemplateByStyleAndSize(targetFolder, style, size) || canonicalPath;
 }
-// Construye el nombre del archivo de salida utilizando los parámetros proporcionados, incluyendo el código de Nike y las siglas del equipo.
-function buildOutputName({ wo, team, style, size, number }) {
-  const nikeCode = getNikeCode(style);
-  return `${wo} ${nikeCode}-${team} ${style} ${size} ${number}.pdf`;
+
+function buildOutputName({ wo, team, variant, style, size, number }) {
+  const productConfig = getProductConfig(style);
+  const variantPart = variant && variant !== "Standard" ? ` ${variant}` : "";
+  return `${wo} ${productConfig.nikeCode}-${team}${variantPart} ${normalizeStyle(style)} ${size} ${number}.pdf`;
 }
-// Exportamos las funciones para que puedan ser utilizadas en otros módulos.
+
 module.exports = {
   buildTemplatePath,
   buildOutputName
