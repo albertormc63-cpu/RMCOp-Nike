@@ -47,6 +47,14 @@
                             <Width>450</Width>
                             <Height>800</Height>
                         </Size>
+                        <MinSize>
+                            <Width>320</Width>
+                            <Height>500</Height>
+                        </MinSize>
+                        <MaxSize>
+                            <Width>900</Width>
+                            <Height>1200</Height>
+                        </MaxSize>
                     </Geometry>
                 </UI>
             </DispatchInfo>

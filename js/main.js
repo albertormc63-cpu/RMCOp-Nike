@@ -1,306 +1,24 @@
 (function () {
-    // Lista de equipos disponibles para selección
-    const teams = [
-        { name: "Boston", code: "BOS" },
-        { name: "California", code: "CAL" },
-        { name: "Carolina", code: "CAR" },
-        { name: "Denver", code: "DEN" },
-        { name: "Maryland", code: "MDW" },
-        { name: "New York", code: "NY" },
-        { name: "Philadelphia", code: "PHL" },
-        { name: "Utah", code: "UTA" }
-    ];
+    const catalog = window.RMC.productCatalog;
+    const nodeRuntime = window.RMC.nodeServices.create(logFlow);
+    const orderView = window.RMC.ui.orderView;
+    const teamsView = window.RMC.ui.teamsView;
+    const textRules = window.RMC.illustrator.textRules;
+    const illustratorBridge = window.RMC.illustrator.bridge;
 
-    const productLines = {
-        masculino: {
-            label: "Masculino",
-            teams: ["Boston", "California", "Carolina", "Denver", "Maryland", "New York", "Philadelphia", "Utah"],
-            styles: [
-                { base: "A1000", label: "Hombre" },
-                { base: "Y1000", label: "Nino" }
-            ]
-        },
-        femenino: {
-            label: "Femenino",
-            teams: ["Boston", "California", "Maryland", "New York"],
-            styles: [
-                { base: "A2000", label: "Mujer" },
-                { base: "Y2000", label: "Nina" }
-            ]
-        }
-    };
-
-    // Variantes disponibles. Standard conserva el flujo que ya esta operando.
-    const variants = [
-        { name: "Standard", slug: "standard" },
-        { name: "Indigena Asc", slug: "indigena-asc" }
-    ];
-
-    // Estado global de la aplicación
     const state = {
         selectedLine: "masculino",
-        selectedTeam: teams[0].name,
-        selectedVariant: variants[0].name,
+        selectedTeam: catalog.teams[0].name,
+        selectedVariant: catalog.variants[0].name,
         lastOutputPath: ""
     };
-    // Variables para servicios Node, se asignan al cargar los servicios
-    let config = null;
-    let buildTemplatePath = null;
-    let buildOutputName = null;
-    let copyTemplate = null;
-    let path = null;
-    let fs = null;
-    // Función para loguear mensajes de flujo de la aplicación
+
     function logFlow(message) {
         console.log(`[Flujo] ${message}`);
     }
-    // Función para obtener la raíz de la extensión, necesaria para cargar archivos con require
-    function getExtensionRoot() {
-        const currentPath = window.location.pathname;
-        const decodedPath = decodeURIComponent(currentPath);
-        const normalizedPath = decodedPath.replace(/^\/([A-Za-z]:\/)/, "$1");
-
-        return path.dirname(normalizedPath);
-    }
-
-    // Función para cargar archivos usando require desde la raíz de la extensión
-    function requireFromExtension(relativePath) {
-        return require(path.join(getExtensionRoot(), relativePath));
-    }
-    //
-    function loadNodeServices() {
-        logFlow("Cargando servicios Node del panel.");
-        // Verificamos si require esta disponible, lo cual indica que estamos en un entorno con Node (CEP)
-        if (typeof require !== "function") {
-            console.warn("Node no esta disponible. Abre el panel desde CEP para copiar archivos.");
-            return;
-        }
-
-        try {
-            path = require("path");
-            fs = require("fs");
-            // Cargamos los servicios específicos de la extensión usando nuestra función personalizada
-            config = requireFromExtension("js/config/config.js");
-            //
-            const pathBuilder = requireFromExtension("js/utils/pathBuilder.js");
-            buildTemplatePath = pathBuilder.buildTemplatePath;
-            buildOutputName = pathBuilder.buildOutputName;
-            copyTemplate = requireFromExtension("js/services/copyTemplate.js");
-
-            logFlow("Servicios Node cargados correctamente.");
-        } catch (error) {
-            console.error("No se pudieron cargar los servicios Node:");
-            console.error(error.message);
-        }
-    }
 
     function getCurrentPaths() {
-        if (!config) return null;
-        return config.paths[config.mode];
-    }
-
-    function getVersion() {
-        const checked = document.querySelector("input[name='version']:checked");
-        return checked ? checked.value : "Home";
-    }
-
-    function getVersionStyleSuffix() {
-        return getVersion() === "Away" ? "A" : "H";
-    }
-
-    function getProductLine() {
-        const select = document.getElementById("productLineSelect");
-        return select && select.value ? select.value : state.selectedLine;
-    }
-
-    function getVariant() {
-        const select = document.getElementById("variantSelect");
-        return select && select.value ? select.value : variants[0].name;
-    }
-
-    function getVariantSlug(variantName) {
-        const variant = variants.find(function (item) {
-            return item.name === variantName;
-        });
-
-        return variant ? variant.slug : slugify(variantName);
-    }
-
-    function slugify(value) {
-        return value.toLowerCase().replace(/\s+/g, "-");
-    }
-
-    function getCurrentLineConfig() {
-        return productLines[state.selectedLine] || productLines.masculino;
-    }
-
-    function getVisibleTeams() {
-        const lineConfig = getCurrentLineConfig();
-        return teams.filter(function (team) {
-            return lineConfig.teams.indexOf(team.name) !== -1;
-        });
-    }
-
-    // Previews nuevos: linea-equipo-variante-version.webp. Hay fallbacks para archivos ya existentes.
-    function getPreviewPaths(teamName, variantName, version) {
-        const lineSlug = slugify(state.selectedLine);
-        const teamSlug = slugify(teamName);
-        const variantSlug = getVariantSlug(variantName);
-        const versionSlug = version.toLowerCase();
-        const paths = [`./previews/teams/${lineSlug}-${teamSlug}-${variantSlug}-${versionSlug}.webp`];
-
-        if (state.selectedLine === "masculino") {
-            paths.push(`./previews/teams/${teamSlug}-${variantSlug}-${versionSlug}.webp`);
-        }
-
-        if (state.selectedLine === "masculino" && variantSlug === "standard") {
-            paths.push(`./previews/teams/${teamSlug}-${versionSlug}.webp`);
-        }
-
-        return paths;
-    }
-
-    // Función para obtener las iniciales del nombre del equipo.
-    // Se utiliza para mostrar las iniciales en caso de que la imagen de vista previa no se pueda cargar.
-    function getInitials(teamName) {
-        return teamName
-            .split(" ")
-            .map(function (word) { return word.charAt(0); })
-            .join("");
-    }
-    // Función para llenar las opciones del select de carpetas On Demand, basada en los nombres de las carpetas encontradas.
-    // Si no se encuentran carpetas, se muestra una opción de placeholder indicando que no se encontraron carpetas.
-    function fillDemandFolderOptions(folderNames, placeholder) {
-        const select = document.getElementById("demandFolder");
-
-        select.innerHTML = "";
-
-        if (placeholder) {
-            const option = document.createElement("option");
-            option.value = "";
-            option.textContent = placeholder;
-            select.appendChild(option);
-            return;
-        }
-
-        folderNames.forEach(function (folderName) {
-            const option = document.createElement("option");
-            option.value = folderName;
-            option.textContent = folderName;
-            select.appendChild(option);
-        });
-    }
-    // Función para cargar las carpetas On Demand disponibles, leyendo el directorio de órdenes y filtrando por carpetas que contengan "NIKE ON DEMAND".
-    async function loadDemandFolders() {
-        const paths = getCurrentPaths();
-
-        if (!fs || !paths) {
-            logFlow("Usando carpetas On Demand de ejemplo porque Node no esta listo.");
-            return;
-        }
-
-        try {
-            logFlow("Buscando carpetas reales que contengan NIKE ON DEMAND.");
-
-            const entries = fs.readdirSync(paths.ordersBase);
-            const folderNames = entries
-                .filter(function (entryName) {
-                    const entryPath = path.join(paths.ordersBase, entryName);
-                    return fs.statSync(entryPath).isDirectory() && entryName.toUpperCase().indexOf("NIKE ON DEMAND") !== -1;
-                })
-                .sort(function (a, b) { return a.localeCompare(b, undefined, { numeric: true }); });
-
-            if (!folderNames.length) {
-                fillDemandFolderOptions([], "No se encontraron carpetas NIKE ON DEMAND");
-                console.warn(`No encontre carpetas NIKE ON DEMAND en: ${paths.ordersBase}`);
-                return;
-            }
-
-            fillDemandFolderOptions(folderNames);
-            logFlow(`Carpetas On Demand cargadas: ${folderNames.length}.`);
-        } catch (error) {
-            console.error("No se pudieron leer las carpetas On Demand:");
-            console.error(error.message);
-        }
-    }
-
-    function renderVariants() {
-        const select = document.getElementById("variantSelect");
-
-        if (!select) return;
-
-        select.innerHTML = "";
-
-        variants.forEach(function (variant) {
-            const option = document.createElement("option");
-            option.value = variant.name;
-            option.textContent = variant.name;
-            select.appendChild(option);
-        });
-
-        select.value = state.selectedVariant;
-    }
-
-    function renderStyleOptions() {
-        const select = document.getElementById("styleCode");
-        const lineConfig = getCurrentLineConfig();
-        const currentAudience = select && select.value ? select.value.charAt(0) : "A";
-        const suffix = getVersionStyleSuffix();
-
-        if (!select) return;
-
-        select.innerHTML = "";
-
-        lineConfig.styles.forEach(function (style) {
-            const styleCode = `${style.base}${suffix}`;
-            const option = document.createElement("option");
-            option.value = styleCode;
-            option.textContent = `${styleCode} · ${style.label}`;
-            select.appendChild(option);
-        });
-
-        const matchingOption = Array.prototype.find.call(select.options, function (option) {
-            return option.value.charAt(0) === currentAudience;
-        });
-
-        if (matchingOption) {
-            select.value = matchingOption.value;
-        }
-    }
-
-    function paintPreview(element, teamName, variantName, version) {
-        const image = new Image();
-        const previewPaths = getPreviewPaths(teamName, variantName, version);
-        let previewIndex = 0;
-
-        function tryPreview() {
-            const previewPath = previewPaths[previewIndex];
-
-            element.style.backgroundImage = `url("${previewPath}")`;
-            image.src = previewPath;
-        }
-
-        element.classList.remove("missing");
-        element.textContent = "";
-
-        image.onload = function () {
-            element.classList.remove("missing");
-        };
-
-        image.onerror = function () {
-            previewIndex += 1;
-
-            if (previewIndex < previewPaths.length) {
-                tryPreview();
-                return;
-            }
-
-            element.classList.add("missing");
-            element.style.backgroundImage = "";
-            element.textContent = getInitials(teamName);
-        };
-
-        tryPreview();
+        return nodeRuntime.getCurrentPaths();
     }
 
     function showPage(pageId) {
@@ -313,60 +31,40 @@
         });
     }
 
+    function renderSettings() {
+        const paths = getCurrentPaths();
+        const config = nodeRuntime.services.config;
+
+        document.getElementById("modePreview").textContent = config ? config.mode : "Sin Node";
+        document.getElementById("templatesBasePreview").textContent = paths ? paths.templatesBase : "No disponible";
+        document.getElementById("ordersBasePreview").textContent = paths ? paths.ordersBase : "No disponible";
+    }
+
     function renderTeams() {
         logFlow("Pintando equipos disponibles.");
-
-        const teamGrid = document.getElementById("teamGrid");
-        teamGrid.innerHTML = "";
-
-        getVisibleTeams().forEach(function (team) {
-            const button = document.createElement("button");
-            const preview = document.createElement("div");
-            const name = document.createElement("div");
-            const meta = document.createElement("div");
-
-            button.type = "button";
-            button.className = "team-card";
-            button.setAttribute("data-team", team.name);
-
-            preview.className = "team-preview";
-            name.className = "team-name";
-            meta.className = "team-meta";
-
-            name.textContent = team.name;
-            meta.textContent = `${team.code} · ${getCurrentLineConfig().label}`;
-            paintPreview(preview, team.name, state.selectedVariant, "Overview");
-
-            button.appendChild(preview);
-            button.appendChild(name);
-            button.appendChild(meta);
-
-            button.addEventListener("click", function () {
-                selectTeam(team.name);
-                showPage("pageOrder");
-            });
-
-            teamGrid.appendChild(button);
-        });
+        teamsView.render(state, { onTeamSelected: selectTeamAndOpenOrder });
+        teamsView.markSelected(state.selectedTeam);
     }
 
     function selectTeam(teamName) {
         state.selectedTeam = teamName;
         logFlow(`Equipo seleccionado: ${teamName}.`);
-
-        document.querySelectorAll(".team-card").forEach(function (card) {
-            card.classList.toggle("active", card.getAttribute("data-team") === teamName);
-        });
-
-        updateSelectedSummary();
+        teamsView.markSelected(teamName);
+        orderView.updateSelectedSummary(state);
     }
 
-    function updateSelectedSummary() {
-        const selectedTeamName = document.getElementById("selectedTeamName");
-        const selectedPreview = document.getElementById("selectedPreview");
+    function selectTeamAndOpenOrder(teamName) {
+        const changedTeam = state.selectedTeam !== teamName;
 
-        selectedTeamName.textContent = state.selectedTeam;
-        paintPreview(selectedPreview, state.selectedTeam, getVariant(), getVersion());
+        selectTeam(teamName);
+
+        if (changedTeam) {
+            state.lastOutputPath = "";
+            orderView.resetOrderFields(state);
+            logFlow("Datos del pedido reiniciados por cambio de equipo.");
+        }
+
+        showPage("pageOrder");
     }
 
     function changeVariant(variantName) {
@@ -377,60 +75,36 @@
     }
 
     function changeProductLine(lineName) {
-        const visibleTeams = productLines[lineName] ? productLines[lineName].teams : productLines.masculino.teams;
+        const visibleTeams = catalog.productLines[lineName] ? catalog.productLines[lineName].teams : catalog.productLines.masculino.teams;
 
-        state.selectedLine = productLines[lineName] ? lineName : "masculino";
+        state.selectedLine = catalog.productLines[lineName] ? lineName : "masculino";
 
         if (visibleTeams.indexOf(state.selectedTeam) === -1) {
             state.selectedTeam = visibleTeams[0];
         }
 
-        logFlow(`Linea seleccionada: ${getCurrentLineConfig().label}.`);
-        renderStyleOptions();
+        logFlow(`Linea seleccionada: ${catalog.getLineConfig(state.selectedLine).label}.`);
+        state.lastOutputPath = "";
+        orderView.renderStyleOptions(state);
         renderTeams();
         selectTeam(state.selectedTeam);
-    }
-
-    function collectOrder() {
-        return {
-            wo: document.getElementById("wo").value.trim(),
-            line: getProductLine(),
-            team: state.selectedTeam,
-            variant: getVariant(),
-            version: getVersion(),
-            style: document.getElementById("styleCode").value.trim().toUpperCase(),
-            size: document.getElementById("size").value,
-            number: document.getElementById("playerNumber").value.trim(),
-            name: document.getElementById("playerName").value.trim().toUpperCase(),
-            demandFolder: document.getElementById("demandFolder").value
-        };
-    }
-
-    function validateOrder(order) {
-        const missing = [];
-
-        if (!order.wo) missing.push("Work Order");
-        if (!order.style) missing.push("Style");
-        if (!order.number) missing.push("Numero");
-        if (!order.demandFolder) missing.push("Carpeta On Demand");
-
-        if (missing.length) {
-            throw new Error(`Faltan datos: ${missing.join(", ")}`);
-        }
+        orderView.resetOrderFields(state);
     }
 
     function buildOrderPreview() {
-        if (!buildTemplatePath || !buildOutputName) {
+        const services = nodeRuntime.services;
+
+        if (!services.buildTemplatePath || !services.buildOutputName || !services.path) {
             throw new Error("Los servicios Node no estan cargados.");
         }
 
         logFlow("Construyendo vista previa del pedido.");
 
         const paths = getCurrentPaths();
-        const order = collectOrder();
-        validateOrder(order);
+        const order = orderView.collectOrder(state);
+        orderView.validateOrder(order);
 
-        const templatePath = buildTemplatePath({
+        const templatePath = services.buildTemplatePath({
             basePath: paths.templatesBase,
             line: order.line,
             team: order.team,
@@ -439,8 +113,8 @@
             style: order.style,
             size: order.size
         });
-        const outputName = buildOutputName(order);
-        const destinationFolder = path.join(paths.ordersBase, order.demandFolder);
+        const outputName = services.buildOutputName(order);
+        const destinationFolder = services.path.join(paths.ordersBase, order.demandFolder);
 
         document.getElementById("templatePathPreview").textContent = templatePath;
         document.getElementById("outputNamePreview").textContent = outputName;
@@ -455,34 +129,83 @@
         };
     }
 
-    function renderSettings() {
-        const paths = getCurrentPaths();
-
-        document.getElementById("modePreview").textContent = config ? config.mode : "Sin Node";
-        document.getElementById("templatesBasePreview").textContent = paths ? paths.templatesBase : "No disponible";
-        document.getElementById("ordersBasePreview").textContent = paths ? paths.ordersBase : "No disponible";
-    }
-
     async function createCopy() {
-        if (!copyTemplate) {
+        const services = nodeRuntime.services;
+
+        if (!services.copyTemplate) {
             throw new Error("El servicio de copia no esta cargado.");
         }
 
         logFlow("Preparando copia de plantilla.");
 
         const preview = buildOrderPreview();
+        const copyCheck = await services.copyTemplate({
+            templatePath: preview.templatePath,
+            ordersBase: preview.paths.ordersBase,
+            demandFolder: preview.order.demandFolder,
+            outputName: preview.outputName,
+            dryRun: true
+        });
 
-        const outputPath = await copyTemplate({
+        if (copyCheck.replaced) {
+            const shouldReplace = confirm(`Ya existe este archivo:\n\n${copyCheck.outputPath}\n\nSi continuas, se reemplazara con una copia limpia de la plantilla.`);
+
+            if (!shouldReplace) {
+                console.warn("Copia cancelada para evitar reemplazar el archivo existente.");
+                return;
+            }
+        }
+
+        const copyResult = await services.copyTemplate({
             templatePath: preview.templatePath,
             ordersBase: preview.paths.ordersBase,
             demandFolder: preview.order.demandFolder,
             outputName: preview.outputName
         });
+        const outputPath = typeof copyResult === "string" ? copyResult : copyResult.outputPath;
+        const replaced = typeof copyResult === "object" && copyResult.replaced;
 
         state.lastOutputPath = outputPath;
-        logFlow("Copia creada y lista para abrir en Illustrator.");
-        console.log("Plantilla copiada correctamente:");
+        logFlow(replaced ? "Copia existente reemplazada con la plantilla limpia." : "Copia creada y lista para abrir en Illustrator.");
+        console.log(replaced ? "Plantilla reemplazada correctamente:" : "Plantilla copiada correctamente:");
         console.log(outputPath);
+    }
+
+    async function openCurrentFileInIllustrator() {
+        if (!state.lastOutputPath) {
+            throw new Error("Primero crea la copia de plantilla para abrirla en Illustrator.");
+        }
+
+        const message = await illustratorBridge.openFile(state.lastOutputPath);
+        console.log(message);
+    }
+
+    async function applyOrderDataToIllustrator() {
+        const order = orderView.collectOrder(state);
+        const rule = textRules.getTextRule(order);
+
+        if (!rule.placeholders) {
+            throw new Error(`No hay reglas de texto registradas para ${order.team}.`);
+        }
+
+        if (rule.mode === "text-only") {
+            console.warn(rule.message);
+        }
+
+        const message = await illustratorBridge.applyNameNumber({
+            namePlaceholder: rule.placeholders.namePlaceholder,
+            numberPlaceholder: rule.placeholders.numberPlaceholder,
+            name: order.name || " ",
+            number: order.number || " ",
+            replaceNumber: rule.mode === "text"
+        });
+
+        console.log(message);
+    }
+
+    async function openAndApplyOrderData() {
+        await openCurrentFileInIllustrator();
+        await applyOrderDataToIllustrator();
     }
 
     function bindEvents() {
@@ -494,22 +217,43 @@
 
         document.querySelectorAll("input[name='version']").forEach(function (input) {
             input.addEventListener("change", function () {
-                renderStyleOptions();
-                updateSelectedSummary();
+                state.lastOutputPath = "";
+                orderView.renderStyleOptions(state);
+                orderView.updateSelectedSummary(state);
+                orderView.resetProcessPreview();
             });
         });
 
         document.getElementById("variantSelect").addEventListener("change", function (event) {
+            state.lastOutputPath = "";
             changeVariant(event.target.value);
+            orderView.resetProcessPreview();
         });
 
         document.getElementById("productLineSelect").addEventListener("change", function (event) {
             changeProductLine(event.target.value);
         });
 
+        ["wo", "styleCode", "size", "playerNumber", "playerName", "demandFolder"].forEach(function (id) {
+            const element = document.getElementById(id);
+
+            if (!element) return;
+
+            element.addEventListener("change", function () {
+                state.lastOutputPath = "";
+                orderView.resetProcessPreview();
+            });
+        });
+
         document.getElementById("btnReviewOrder").addEventListener("click", function () {
             try {
-                buildOrderPreview();
+                const preview = buildOrderPreview();
+                const rule = textRules.getTextRule(preview.order);
+
+                if (rule.mode === "text-only") {
+                    console.warn(rule.message);
+                }
+
                 showPage("pageProcess");
                 console.log("Pedido listo para procesar.");
             } catch (error) {
@@ -524,12 +268,11 @@
             });
         });
 
-        document.getElementById("btnAbrirIllustrator").addEventListener("click", function () {
-            console.warn("Abrir en Illustrator queda pendiente de conectar con CSInterface/ExtendScript.");
-        });
-
-        document.getElementById("btnAplicarDatos").addEventListener("click", function () {
-            console.warn("Aplicar nombre / numero queda pendiente de conectar con JSX.");
+        document.getElementById("btnAbrirAplicar").addEventListener("click", function () {
+            openAndApplyOrderData().catch(function (error) {
+                console.error("No se pudo abrir y aplicar datos:");
+                console.error(error.message);
+            });
         });
 
         document.getElementById("btnResetPanel").addEventListener("click", function () {
@@ -538,14 +281,14 @@
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-        loadNodeServices();
-        renderVariants();
-        renderStyleOptions();
+        nodeRuntime.load();
+        orderView.renderVariants(state);
+        orderView.renderStyleOptions(state);
         renderTeams();
         selectTeam(state.selectedTeam);
         renderSettings();
         bindEvents();
-        loadDemandFolders();
+        orderView.loadDemandFolders(nodeRuntime, logFlow);
 
         console.log("RMC Nike Panel cargado correctamente.");
     });

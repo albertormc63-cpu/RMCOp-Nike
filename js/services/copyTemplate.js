@@ -3,7 +3,7 @@ const path = require("path");
 const fs = require("fs-extra");
 
 // Función principal que realiza la copia de la plantilla al destino especificado, verificando la existencia de la plantilla y asegurando que el directorio de destino esté creado.
-async function copyTemplate({ templatePath, ordersBase, demandFolder, outputName }) {
+async function copyTemplate({ templatePath, ordersBase, demandFolder, outputName, dryRun }) {
 
     // Construimos la ruta completa del archivo de salida combinando la base de órdenes, la carpeta de demanda y el nombre del archivo de salida.
   const destinationFolder = path.join(ordersBase, demandFolder);
@@ -15,11 +15,23 @@ async function copyTemplate({ templatePath, ordersBase, demandFolder, outputName
   if (!exists) {
     throw new Error(`No existe la plantilla:\n${templatePath}`);
   }
-  // Aseguramos que el directorio de destino exista, y luego copiamos la plantilla al destino especificado sin sobrescribir archivos existentes.
-  await fs.ensureDir(destinationFolder);
-  await fs.copy(templatePath, outputPath, { overwrite: false });
+  const willReplace = await fs.pathExists(outputPath);
 
-  return outputPath;
+  if (dryRun) {
+    return {
+      outputPath,
+      replaced: willReplace
+    };
+  }
+
+  // Aseguramos que el directorio de destino exista, y copiamos la plantilla permitiendo regenerar una copia ya existente.
+  await fs.ensureDir(destinationFolder);
+  await fs.copy(templatePath, outputPath, { overwrite: true });
+
+  return {
+    outputPath,
+    replaced: willReplace
+  };
 }
 
 // Exportamos la función `copyTemplate` para que pueda ser utilizada en otros módulos.

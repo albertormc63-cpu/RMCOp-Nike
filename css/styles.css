@@ -15,7 +15,7 @@
 }
 
 body {
-    min-width: 300px;
+    min-width: 280px;
     margin: 0;
     padding: 10px;
     background: var(--bg);
@@ -283,8 +283,7 @@ select {
 
 #btnReviewOrder,
 #btnCrearCopia,
-#btnAbrirIllustrator,
-#btnAplicarDatos {
+#btnAbrirAplicar {
     width: 100%;
     margin-top: 10px;
 }

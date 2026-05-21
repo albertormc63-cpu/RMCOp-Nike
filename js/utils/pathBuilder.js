@@ -2,6 +2,10 @@ const fs = require("fs");
 const path = require("path");
 const teams = require("../data/teams");
 
+const variantCodes = {
+  "Indigenous Heritage": "IH"
+};
+
 function normalizeStyle(style) {
   return String(style || "").trim().toUpperCase();
 }
@@ -137,7 +141,7 @@ function buildTemplatePath({ basePath, team, version, style, size }) {
 
 function buildOutputName({ wo, team, variant, style, size, number }) {
   const productConfig = getProductConfig(style);
-  const variantPart = variant && variant !== "Standard" ? ` ${variant}` : "";
+  const variantPart = variant && variant !== "Standard" ? ` ${variantCodes[variant] || variant}` : "";
   return `${wo} ${productConfig.nikeCode}-${team}${variantPart} ${normalizeStyle(style)} ${size} ${number}.pdf`;
 }
 
