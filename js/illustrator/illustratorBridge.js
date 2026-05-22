@@ -1,10 +1,12 @@
 (function () {
+    // Este modulo es el puente CEP -> ExtendScript. main.js llama aqui, y aqui llamamos a Illustrator.
     window.RMC = window.RMC || {};
     window.RMC.illustrator = window.RMC.illustrator || {};
 
     let csInterface = null;
     let jsxLoaded = false;
 
+    // CSInterface solo existe cuando el panel corre dentro de Illustrator/CEP.
     function getCSInterface() {
         if (!csInterface && typeof CSInterface === "function") {
             csInterface = new CSInterface();
@@ -14,15 +16,18 @@
     }
 
     function getExtensionRoot() {
+        // Ruta real de la extension; se usa para cargar jsx/rmcNike.jsx desde Illustrator.
         const currentPath = window.location.pathname;
         const decodedPath = decodeURIComponent(currentPath);
         return decodedPath.replace(/^\/([A-Za-z]:\/)/, "$1").replace(/\/index\.html$/i, "");
     }
 
+    // JSON.stringify escapa comillas/apostrofes para mandar texto seguro a evalScript.
     function toJsxString(value) {
         return JSON.stringify(String(value == null ? "" : value));
     }
 
+    // Envuelve cs.evalScript en Promise para poder usar async/await en el panel.
     function evalScript(script) {
         return new Promise(function (resolve, reject) {
             const cs = getCSInterface();
@@ -43,6 +48,7 @@
         });
     }
 
+    // Carga una sola vez las funciones JSX globales usadas por el panel.
     async function ensureJsxLoaded() {
         if (jsxLoaded) return;
 
@@ -54,6 +60,12 @@
     async function openFile(filePath) {
         await ensureJsxLoaded();
         return evalScript(`RMCNike_openFile(${toJsxString(filePath)})`);
+    }
+
+    async function confirmReplace(filePath) {
+        await ensureJsxLoaded();
+        const result = await evalScript(`RMCNike_confirmReplace(${toJsxString(filePath)})`);
+        return result === "YES";
     }
 
     async function applyNameNumber(payload) {
@@ -76,6 +88,7 @@
 
     window.RMC.illustrator.bridge = {
         openFile: openFile,
+        confirmReplace: confirmReplace,
         applyNameNumber: applyNameNumber
     };
 })();

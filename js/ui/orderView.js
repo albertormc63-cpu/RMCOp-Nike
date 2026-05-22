@@ -1,4 +1,5 @@
 (function () {
+    // Modulo de UI para la seccion Pedido: lee/limpia campos y pinta resumen/previews.
     window.RMC = window.RMC || {};
     window.RMC.ui = window.RMC.ui || {};
 
@@ -6,6 +7,7 @@
     const previewView = window.RMC.ui.previewView;
 
     function getVersion() {
+        // Home es el default operativo si por alguna razon no hay radio seleccionado.
         const checked = document.querySelector("input[name='version']:checked");
         return checked ? checked.value : "Home";
     }
@@ -38,6 +40,7 @@
     }
 
     function renderStyleOptions(state) {
+        // El style depende de linea y version: A1000H vs A1000A, etc.
         const select = document.getElementById("styleCode");
         const lineConfig = catalog.getLineConfig(state.selectedLine);
         const currentAudience = select && select.value ? select.value.charAt(0) : "A";
@@ -78,18 +81,46 @@
     }
 
     function collectOrder(state) {
+        // Punto unico donde convertimos el formulario HTML en un objeto de pedido.
         return {
-            wo: document.getElementById("wo").value.trim(),
+            wo: sanitizeWorkOrder(document.getElementById("wo").value),
             line: getProductLine(state.selectedLine),
             team: state.selectedTeam,
             variant: getVariant(state.selectedVariant),
             version: getVersion(),
             style: document.getElementById("styleCode").value.trim().toUpperCase(),
             size: document.getElementById("size").value,
-            number: document.getElementById("playerNumber").value.trim(),
+            number: sanitizeNumber(document.getElementById("playerNumber").value),
             name: document.getElementById("playerName").value.trim().toUpperCase(),
             demandFolder: document.getElementById("demandFolder").value
         };
+    }
+
+    function sanitizeWorkOrder(value) {
+        // WO acepta numeros y guiones porque a veces viene compuesto.
+        return String(value || "").replace(/[^0-9-]/g, "").trim();
+    }
+
+    function sanitizeNumber(value) {
+        // Numero de jugador: solo digitos.
+        return String(value || "").replace(/[^0-9]/g, "").trim();
+    }
+
+    function bindInputFilters() {
+        const woInput = document.getElementById("wo");
+        const numberInput = document.getElementById("playerNumber");
+
+        if (woInput) {
+            woInput.addEventListener("input", function () {
+                woInput.value = sanitizeWorkOrder(woInput.value);
+            });
+        }
+
+        if (numberInput) {
+            numberInput.addEventListener("input", function () {
+                numberInput.value = sanitizeNumber(numberInput.value);
+            });
+        }
     }
 
     function validateOrder(order) {
@@ -97,7 +128,6 @@
 
         if (!order.wo) missing.push("Work Order");
         if (!order.style) missing.push("Style");
-        if (!order.number) missing.push("Numero");
         if (!order.demandFolder) missing.push("Carpeta On Demand");
 
         if (missing.length) {
@@ -106,6 +136,7 @@
     }
 
     function resetOrderFields(state) {
+        // Se usa cuando cambia equipo/linea para evitar arrastrar datos de otra orden.
         const homeInput = document.querySelector("input[name='version'][value='Home']");
         const sizeSelect = document.getElementById("size");
 
@@ -114,7 +145,7 @@
         document.getElementById("playerName").value = "";
 
         if (sizeSelect) {
-            sizeSelect.value = "LG";
+            sizeSelect.value = "SM";
         }
 
         if (homeInput) {
@@ -127,6 +158,7 @@
     }
 
     function resetProcessPreview() {
+        // Limpia la seccion 3 cuando el pedido deja de coincidir con lo revisado.
         document.getElementById("templatePathPreview").textContent = "Pendiente";
         document.getElementById("outputNamePreview").textContent = "Pendiente";
         document.getElementById("destinationPreview").textContent = "Pendiente";
@@ -154,6 +186,7 @@
     }
 
     function loadDemandFolders(nodeRuntime, logFlow) {
+        // Lee carpetas reales que contengan NIKE ON DEMAND desde ordersBase.
         const services = nodeRuntime.services;
         const paths = nodeRuntime.getCurrentPaths();
 
@@ -191,6 +224,7 @@
         getVersion: getVersion,
         renderVariants: renderVariants,
         renderStyleOptions: renderStyleOptions,
+        bindInputFilters: bindInputFilters,
         updateSelectedSummary: updateSelectedSummary,
         collectOrder: collectOrder,
         validateOrder: validateOrder,

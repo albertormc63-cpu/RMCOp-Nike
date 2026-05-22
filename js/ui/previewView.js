@@ -1,4 +1,5 @@
 (function () {
+    // Modulo encargado de resolver y pintar las imagenes preview del equipo.
     window.RMC = window.RMC || {};
     window.RMC.ui = window.RMC.ui || {};
 
@@ -12,6 +13,7 @@
     }
 
     function getPreviewPaths(lineName, teamName, variantName, version) {
+        // Orden de busqueda: nueva arquitectura por carpetas y luego fallbacks antiguos.
         const lineSlug = catalog.slugify(lineName);
         const teamSlug = catalog.slugify(teamName);
         const variant = catalog.getVariant(variantName);
@@ -37,6 +39,7 @@
     }
 
     function paintPreview(element, options) {
+        // Prueba cada ruta hasta que una imagen cargue; si ninguna existe, muestra iniciales.
         const image = new Image();
         const previewPaths = getPreviewPaths(options.line, options.team, options.variant, options.version);
         let previewIndex = 0;

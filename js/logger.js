@@ -1,8 +1,10 @@
 (function () {
+    // Captura console.log/warn/error y los pinta dentro del panel para ver el flujo sin abrir DevTools.
     const terminal = document.getElementById("terminal");
     const btnClearLog = document.getElementById("btnClearLog");
 
     function writeLog(message, className) {
+        // Si el HTML no tiene terminal, dejamos que console siga funcionando normal.
         if (!terminal) return;
 
         const line = document.createElement("div");
@@ -16,6 +18,7 @@
         terminal.scrollTop = terminal.scrollHeight;
     }
 
+    // Guardamos las funciones originales para no perder salida real de consola.
     const originalLog = console.log;
     const originalError = console.error;
     const originalWarn = console.warn;

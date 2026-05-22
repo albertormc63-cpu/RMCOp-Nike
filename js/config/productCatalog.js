@@ -1,6 +1,8 @@
 (function () {
+    // RMC es el espacio global del panel. Cada archivo cuelga su modulo aqui para compartirlo sin usar bundlers.
     window.RMC = window.RMC || {};
 
+    // Catalogo base: equipos visibles y codigo corto usado para nombres/rutas.
     const teams = [
         { name: "Boston", code: "BOS" },
         { name: "California", code: "CAL" },
@@ -12,6 +14,7 @@
         { name: "Utah", code: "UTA" }
     ];
 
+    // Cada linea decide que equipos aparecen y que styles se muestran en el pedido.
     const productLines = {
         masculino: {
             label: "Masculino",
@@ -31,11 +34,33 @@
         }
     };
 
+    // Nombre deportivo que aparece en rosters/pedidos. Depende de la linea.
+    const teamNicknames = {
+        masculino: {
+            Boston: "Cannons",
+            California: "Redwoods",
+            Carolina: "Chaos",
+            Denver: "Outlaws",
+            Maryland: "Whipsnakes",
+            "New York": "Atlas",
+            Philadelphia: "Waterdogs",
+            Utah: "Archers"
+        },
+        femenino: {
+            Boston: "Guard",
+            California: "Palms",
+            Maryland: "Charm",
+            "New York": "Charging"
+        }
+    };
+
+    // replacementMode anticipa como se aplicaran datos en Illustrator para cada variante.
     const variants = [
         { name: "Standard", slug: "standard", code: "STD", replacementMode: "text" },
         { name: "Indigenous Heritage", slug: "indigenous-heritage", code: "IH", replacementMode: "raster" }
     ];
 
+    // Convierte texto de UI a nombre seguro para archivos/carpetas.
     function slugify(value) {
         return String(value || "").toLowerCase().replace(/\s+/g, "-");
     }
@@ -52,6 +77,11 @@
         });
     }
 
+    function getTeamNickname(lineName, teamName) {
+        const lineNicknames = teamNicknames[lineName] || {};
+        return lineNicknames[teamName] || "";
+    }
+
     function getVariant(variantName) {
         return variants.find(function (variant) {
             return variant.name === variantName;
@@ -62,13 +92,16 @@
         return version === "Away" ? "A" : "H";
     }
 
+    // Exportamos solo lo que otros modulos necesitan.
     window.RMC.productCatalog = {
         teams: teams,
         productLines: productLines,
+        teamNicknames: teamNicknames,
         variants: variants,
         slugify: slugify,
         getLineConfig: getLineConfig,
         getVisibleTeams: getVisibleTeams,
+        getTeamNickname: getTeamNickname,
         getVariant: getVariant,
         getVersionStyleSuffix: getVersionStyleSuffix
     };

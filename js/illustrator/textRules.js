@@ -1,7 +1,9 @@
 (function () {
+    // RMC.illustrator agrupa todo lo que habla con Illustrator o define reglas para Illustrator.
     window.RMC = window.RMC || {};
     window.RMC.illustrator = window.RMC.illustrator || {};
 
+    // Placeholders reales que vienen en las plantillas base por linea/equipo.
     const textRulesByLine = {
         masculino: {
             Boston: { numberPlaceholder: "1", namePlaceholder: "HOLMAN" },
@@ -21,6 +23,7 @@
         }
     };
 
+    // Standard reemplaza nombre y numero. IH por ahora solo reemplaza nombre porque el numero es raster.
     function getTextRule(order) {
         const lineRules = textRulesByLine[order.line] || {};
         const placeholders = lineRules[order.team] || null;
@@ -39,6 +42,7 @@
         };
     }
 
+    // API publica para que main.js pida la regla correcta del pedido actual.
     window.RMC.illustrator.textRules = {
         getTextRule: getTextRule
     };

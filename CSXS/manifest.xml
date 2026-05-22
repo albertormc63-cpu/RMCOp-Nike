@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Manifest CEP: registra el panel en Illustrator y define permisos/tamano de ventana. -->
 <ExtensionManifest Version="7.0"
     ExtensionBundleId="com.rmc.nike.panel"
     ExtensionBundleVersion="1.0.0"
@@ -9,6 +10,7 @@
     </ExtensionList>
 
     <ExecutionEnvironment>
+        <!-- ILST = Adobe Illustrator. El rango amplio evita amarrarlo a una version exacta. -->
         <HostList>
             <Host Name="ILST" Version="[0.0,99.9]"/>
         </HostList>
@@ -24,6 +26,7 @@
         <Extension Id="com.rmc.nike.panel.main">
             <DispatchInfo>
                 <Resources>
+                    <!-- index.html es la entrada visual; Node se habilita para copiar/leer archivos. -->
                     <MainPath>./index.html</MainPath>
                     <scriptPath>./js/main.js</scriptPath>
                     <CEFCommandLine>
@@ -42,6 +45,7 @@
                 <UI>
                     <Type>Panel</Type>
                     <Menu>RMC Nike Panel</Menu>
+                    <!-- Size es inicial; MinSize/MaxSize permiten redimensionar el panel. -->
                     <Geometry>
                         <Size>
                             <Width>450</Width>

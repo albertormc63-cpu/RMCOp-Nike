@@ -1,4 +1,4 @@
-// Aqui muetra los equipos disponibles para el usuario, y se exporta un objeto con los nombres de los equipos y sus respectivas siglas.
+// Mapa de nombre visible del equipo -> codigo corto usado en nombres de plantillas.
 module.exports = {
   Boston: "BOS",
   California: "CAL",

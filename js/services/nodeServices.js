@@ -1,7 +1,9 @@
 (function () {
+    // Servicio central para cargar modulos Node/CommonJS desde CEP.
     window.RMC = window.RMC || {};
 
     function create(logFlow) {
+        // Objeto compartido: main.js lo usa para acceder a config, fs, path y servicios.
         const services = {
             config: null,
             path: null,
@@ -12,6 +14,7 @@
         };
 
         function getExtensionRoot() {
+            // CEP entrega la ruta como URL; decodeURIComponent arregla espacios tipo Application%20Support.
             const currentPath = window.location.pathname;
             const decodedPath = decodeURIComponent(currentPath);
             const normalizedPath = decodedPath.replace(/^\/([A-Za-z]:\/)/, "$1");
@@ -20,10 +23,12 @@
         }
 
         function requireFromExtension(relativePath) {
+            // Evita require("./...") relativo al contexto raro de index.html en CEP.
             return require(services.path.join(getExtensionRoot(), relativePath));
         }
 
         function load() {
+            // Carga diferida: si el panel se abre fuera de Illustrator, no truena toda la UI.
             logFlow("Cargando servicios Node del panel.");
 
             if (typeof require !== "function") {

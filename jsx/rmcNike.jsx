@@ -1,4 +1,8 @@
+// Funciones ExtendScript ejecutadas dentro de Illustrator.
+// El panel las llama desde js/illustrator/illustratorBridge.js via CSInterface.evalScript.
+
 function RMCNike_openFile(filePath) {
+    // Abre el PDF copiado por el panel.
     try {
         var file = new File(filePath);
 
@@ -13,7 +17,20 @@ function RMCNike_openFile(filePath) {
     }
 }
 
+function RMCNike_confirmReplace(filePath) {
+    try {
+        var message = "Ya existe este archivo:\n\n" +
+            filePath +
+            "\n\nSi continuas, se reemplazara con una copia limpia de la plantilla.";
+
+        return confirm(message) ? "OK:YES" : "OK:NO";
+    } catch (error) {
+        return "ERROR:" + error.message;
+    }
+}
+
 function RMCNike_applyNameNumber(namePlaceholder, numberPlaceholder, newName, newNumber, shouldReplaceNumber) {
+    // Reemplaza placeholders de texto en el documento activo. En IH no se reemplaza numero.
     try {
         if (app.documents.length === 0) {
             return "ERROR:No hay documento abierto en Illustrator.";
@@ -37,6 +54,7 @@ function RMCNike_applyNameNumber(namePlaceholder, numberPlaceholder, newName, ne
 }
 
 function replaceExactText(doc, placeholder, replacement) {
+    // Busca textFrames cuyo contenido sea igual al placeholder, tolerando apostrofes/espacios raros.
     var count = 0;
 
     if (placeholder === null || placeholder === "") {
@@ -60,6 +78,7 @@ function textMatches(actual, expected) {
 }
 
 function normalizeText(value) {
+    // Normaliza diferencias comunes al importar texto desde PDFs.
     return String(value)
         .replace(/[\u2018\u2019\u02BC]/g, "'")
         .replace(/[\r\n\t]+/g, " ")
@@ -68,6 +87,7 @@ function normalizeText(value) {
 }
 
 function textOrBlank(value) {
+    // Si un dato viene vacio, usamos un espacio para que no quede el placeholder original.
     if (value === null || value === undefined || String(value) === "") {
         return " ";
     }

@@ -1,4 +1,5 @@
 :root {
+    /* Variables base del tema oscuro del panel. */
     --bg: #202124;
     --panel: #2b2d31;
     --panel-soft: #34373d;
@@ -11,10 +12,12 @@
 }
 
 * {
+    /* Evita calculos raros de ancho cuando hay padding/bordes. */
     box-sizing: border-box;
 }
 
 body {
+    /* El panel vive dentro de CEP, por eso usamos medidas compactas. */
     min-width: 280px;
     margin: 0;
     padding: 10px;
@@ -25,21 +28,57 @@ body {
 }
 
 .app-header {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(72px, 1fr) minmax(58px, 0.75fr) minmax(104px, 1fr);
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 8px 0 10px;
+    gap: 8px;
+    padding: 6px 0 9px;
     border-bottom: 1px solid var(--line);
 }
 
-.nike-title {
-    font-size: 21px;
-    font-weight: 700;
-    letter-spacing: 0;
+.header-logo-slot {
+    display: flex;
+    align-items: center;
+    min-width: 0;
 }
 
-.nike-subtitle,
+.header-logo-left {
+    justify-content: flex-start;
+}
+
+.header-logo-center {
+    justify-content: center;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 0;
+}
+
+.header-logo {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.header-logo-rmc {
+    max-height: 50px;
+}
+
+.header-logo-nike {
+    max-height: 50px;
+}
+
+.header-logo-rmc-nike {
+    max-height: 50px;
+    /* max-width: 60px; */
+}
+
 .eyebrow {
     color: var(--muted);
     font-size: 9px;
@@ -95,6 +134,7 @@ select:focus {
 }
 
 .page {
+    /* Solo una pagina del flujo se muestra a la vez. */
     display: none;
 }
 
@@ -131,6 +171,7 @@ p {
 }
 
 .team-grid {
+    /* Grid responsive simple para cards de equipos. */
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
@@ -154,6 +195,7 @@ p {
 
 .team-preview,
 .selected-preview {
+    /* Las previews se cargan como background-image desde js/ui/previewView.js. */
     width: 100%;
     min-height: 82px;
     border-radius: 5px;
@@ -181,6 +223,13 @@ p {
 .team-name {
     margin-top: 7px;
     font-weight: 700;
+    line-height: 1.2;
+}
+
+.team-nickname {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 11px;
     line-height: 1.2;
 }
 
@@ -248,6 +297,7 @@ p {
 }
 
 .form-grid {
+    /* Formulario de pedido en dos columnas; .wide-field ocupa ambas. */
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
@@ -332,6 +382,7 @@ select {
 }
 
 #terminal {
+    /* Consola interna del panel, alimentada por js/logger.js. */
     height: 130px;
     padding: 8px;
     overflow-y: auto;

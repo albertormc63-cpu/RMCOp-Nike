@@ -1,4 +1,5 @@
 (function () {
+    // main.js coordina los modulos: UI, servicios Node e Illustrator.
     const catalog = window.RMC.productCatalog;
     const nodeRuntime = window.RMC.nodeServices.create(logFlow);
     const orderView = window.RMC.ui.orderView;
@@ -6,6 +7,7 @@
     const textRules = window.RMC.illustrator.textRules;
     const illustratorBridge = window.RMC.illustrator.bridge;
 
+    // Estado vivo del panel. Se actualiza cuando el usuario cambia linea/equipo/variante.
     const state = {
         selectedLine: "masculino",
         selectedTeam: catalog.teams[0].name,
@@ -91,6 +93,7 @@
         orderView.resetOrderFields(state);
     }
 
+    // Arma rutas/nombres del pedido y pinta la seccion 3 antes de copiar.
     function buildOrderPreview() {
         const services = nodeRuntime.services;
 
@@ -129,6 +132,7 @@
         };
     }
 
+    // Copia la plantilla al folder On Demand. Si ya existe, pide confirmacion antes de reemplazar.
     async function createCopy() {
         const services = nodeRuntime.services;
 
@@ -148,7 +152,7 @@
         });
 
         if (copyCheck.replaced) {
-            const shouldReplace = confirm(`Ya existe este archivo:\n\n${copyCheck.outputPath}\n\nSi continuas, se reemplazara con una copia limpia de la plantilla.`);
+            const shouldReplace = await confirmTemplateReplace(copyCheck.outputPath);
 
             if (!shouldReplace) {
                 console.warn("Copia cancelada para evitar reemplazar el archivo existente.");
@@ -171,6 +175,15 @@
         console.log(outputPath);
     }
 
+    async function confirmTemplateReplace(outputPath) {
+        try {
+            return await illustratorBridge.confirmReplace(outputPath);
+        } catch (error) {
+            console.warn("No se pudo mostrar confirmacion nativa de Illustrator; usando confirmacion del panel.");
+            return confirm(`Ya existe este archivo:\n\n${outputPath}\n\nSi continuas, se reemplazara con una copia limpia de la plantilla.`);
+        }
+    }
+
     async function openCurrentFileInIllustrator() {
         if (!state.lastOutputPath) {
             throw new Error("Primero crea la copia de plantilla para abrirla en Illustrator.");
@@ -183,6 +196,13 @@
     async function applyOrderDataToIllustrator() {
         const order = orderView.collectOrder(state);
         const rule = textRules.getTextRule(order);
+        const hasName = order.name !== "";
+        const hasNumber = order.number !== "";
+
+        if (!hasName && !hasNumber) {
+            console.warn("Sin nombre ni numero: se deja la plantilla tal como viene.");
+            return;
+        }
 
         if (!rule.placeholders) {
             throw new Error(`No hay reglas de texto registradas para ${order.team}.`);
@@ -203,6 +223,7 @@
         console.log(message);
     }
 
+    // Flujo del boton final: abre el PDF copiado y aplica datos si existen.
     async function openAndApplyOrderData() {
         await openCurrentFileInIllustrator();
         await applyOrderDataToIllustrator();
@@ -284,6 +305,7 @@
         nodeRuntime.load();
         orderView.renderVariants(state);
         orderView.renderStyleOptions(state);
+        orderView.bindInputFilters();
         renderTeams();
         selectTeam(state.selectedTeam);
         renderSettings();

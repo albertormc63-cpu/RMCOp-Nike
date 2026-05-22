@@ -7,14 +7,23 @@
 </head>
 
 <body>
+    <!-- Header fijo del panel: marca, subtitulo y reinicio rapido de UI. -->
     <header class="app-header">
-        <div>
-            <div class="nike-title">RMC NIKE</div>
-            <div class="nike-subtitle">On Demand Panel</div>
+        <div class="header-logo-slot header-logo-left">
+            <img src="./assets/logo rmc m.svg" alt="RMC" class="header-logo header-logo-rmc">
         </div>
-        <button id="btnResetPanel" class="icon-button" title="Reiniciar panel">↻</button>
+
+        <div class="header-logo-slot header-logo-center">
+            <img src="./assets/logo nike.svg" alt="Nike" class="header-logo header-logo-nike">
+        </div>
+
+        <div class="header-actions">
+            <img src="./assets/logo rmc x nike.svg" alt="RMC x Nike" class="header-logo header-logo-rmc-nike">
+            <button id="btnResetPanel" class="icon-button" title="Reiniciar panel">↻</button>
+        </div>
     </header>
 
+    <!-- Navegacion principal del flujo: equipo -> pedido -> proceso -> rutas. -->
     <nav class="step-nav" aria-label="Flujo del pedido">
         <button class="step-button active" data-page="pageTeams">1 Equipo</button>
         <button class="step-button" data-page="pageOrder">2 Pedido</button>
@@ -23,6 +32,7 @@
     </nav>
 
     <main>
+        <!-- Paso 1: seleccion de linea y equipo. El grid se pinta desde js/ui/teamsView.js. -->
         <section id="pageTeams" class="page active">
             <div class="section-heading section-heading-row">
                 <h1>Selecciona equipo</h1>
@@ -38,6 +48,7 @@
             <div id="teamGrid" class="team-grid"></div>
         </section>
 
+        <!-- Paso 2: datos variables del pedido. Se leen desde js/ui/orderView.js. -->
         <section id="pageOrder" class="page">
             <div class="selected-summary">
                 <div id="selectedPreview" class="selected-preview"></div>
@@ -64,7 +75,7 @@
             <div class="form-grid">
                 <label>
                     Work Order
-                    <input type="text" id="wo" placeholder="Ej. 172539">
+                    <input type="text" id="wo" inputmode="numeric" pattern="[0-9-]*" placeholder="Ej. 172539">
                 </label>
 
                 <label>
@@ -76,9 +87,9 @@
                     Talla
                     <select id="size">
                         <option value="XS">XS</option>
-                        <option value="SM">SM</option>
+                        <option value="SM" selected>SM</option>
                         <option value="MD">MD</option>
-                        <option value="LG" selected>LG</option>
+                        <option value="LG" >LG</option>
                         <option value="XL">XL</option>
                         <option value="2X">2X</option>
                         <option value="3X">3X</option>
@@ -87,7 +98,7 @@
 
                 <label>
                     Numero
-                    <input type="text" id="playerNumber" placeholder="Ej. 7">
+                    <input type="text" id="playerNumber" inputmode="numeric" pattern="[0-9]*" placeholder="Ej. 7">
                 </label>
 
                 <label class="wide-field">
@@ -108,6 +119,7 @@
             <button id="btnReviewOrder" class="primary-button">Revisar pedido</button>
         </section>
 
+        <!-- Paso 3: revision, copia de plantilla y envio a Illustrator. -->
         <section id="pageProcess" class="page">
             <div class="section-heading">
                 <h1>Revisar y procesar</h1>
@@ -132,6 +144,7 @@
             <button id="btnAbrirAplicar">Abrir y aplicar datos</button>
         </section>
 
+        <!-- Vista de apoyo para confirmar rutas activas local/server. -->
         <section id="pageSettings" class="page">
             <div class="section-heading">
                 <h1>Rutas</h1>
@@ -154,6 +167,7 @@
         </section>
     </main>
 
+    <!-- Consola visible del panel: js/logger.js redirige console.log/warn/error aqui. -->
     <section id="log-container">
         <div class="log-header">
             Log de Consola
@@ -166,6 +180,7 @@
         Creado por Jose Alberto Villarreal Garcia
     </footer>
 
+    <!-- Orden importante: primero vendor/logger/catalogos, luego UI/Illustrator, al final main.js. -->
     <script src="./js/CSInterface.js"></script>
     <script src="./js/logger.js"></script>
     <script src="./js/config/productCatalog.js"></script>
