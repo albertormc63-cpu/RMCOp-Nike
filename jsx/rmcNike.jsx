@@ -83,7 +83,8 @@ function normalizeText(value) {
         .replace(/[\u2018\u2019\u02BC]/g, "'")
         .replace(/[\r\n\t]+/g, " ")
         .replace(/\s+/g, " ")
-        .replace(/^\s+|\s+$/g, "");
+        .replace(/^\s+|\s+$/g, "")
+        .toUpperCase();
 }
 
 function textOrBlank(value) {

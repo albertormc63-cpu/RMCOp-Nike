@@ -26,6 +26,25 @@ const teamNicknames = {
   }
 };
 
+const defaultTemplateNumbers = {
+  masculino: {
+    Boston: "1",
+    California: "96",
+    Carolina: "0",
+    Denver: "42",
+    Maryland: "7",
+    "New York": "9",
+    Philadelphia: "22",
+    Utah: "26"
+  },
+  femenino: {
+    Boston: "8",
+    California: "12",
+    Maryland: "11",
+    "New York": "27"
+  }
+};
+
 function normalizeStyle(style) {
   return String(style || "").trim().toUpperCase();
 }
@@ -165,14 +184,16 @@ function buildTemplatePath({ basePath, team, version, style, size }) {
   return findTemplateByStyleAndSize(targetFolder, style, size) || canonicalPath;
 }
 
-function buildOutputName({ wo, team, variant, style, size, number }) {
+function buildOutputName({ wo, team, variant, style, size, number, name }) {
   // Nombre de la copia de trabajo dentro de la carpeta On Demand.
   const productConfig = getProductConfig(style);
   const lineNicknames = teamNicknames[productConfig.lineName] || {};
+  const lineDefaultNumbers = defaultTemplateNumbers[productConfig.lineName] || {};
   const nickname = lineNicknames[team] ? ` ${lineNicknames[team]}` : "";
   const variantPart = variant && variant !== "Standard" ? ` ${variantCodes[variant] || variant}` : "";
-  const numberPart = number ? ` ${number}` : "";
-  return `${wo} ${productConfig.nikeCode}-${team}${nickname}${variantPart} ${normalizeStyle(style)} ${size}${numberPart}.pdf`;
+  const orderIdentifier = number || name || lineDefaultNumbers[team] || "";
+  const identifierPart = orderIdentifier ? ` ${orderIdentifier}` : "";
+  return `${wo} ${productConfig.nikeCode}-${team}${nickname}${variantPart} ${normalizeStyle(style)} ${size}${identifierPart}.pdf`;
 }
 
 module.exports = {
