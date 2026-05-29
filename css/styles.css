@@ -278,6 +278,15 @@ p {
     font-size: 11px;
 }
 
+.version-toggle label.disabled {
+    opacity: 0.42;
+}
+
+.version-toggle label.disabled,
+.version-toggle label.disabled input {
+    cursor: not-allowed;
+}
+
 .version-toggle input {
     appearance: none;
     width: 10px;

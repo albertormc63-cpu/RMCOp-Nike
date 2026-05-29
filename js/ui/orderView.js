@@ -12,6 +12,10 @@
         return checked ? checked.value : "Home";
     }
 
+    function isStandardVariant(state) {
+        return getVariant(state.selectedVariant) === "Standard";
+    }
+
     function getProductLine(fallback) {
         const select = document.getElementById("productLineSelect");
         return select && select.value ? select.value : fallback;
@@ -44,7 +48,7 @@
         const select = document.getElementById("styleCode");
         const lineConfig = catalog.getLineConfig(state.selectedLine);
         const currentAudience = select && select.value ? select.value.charAt(0) : "A";
-        const suffix = catalog.getVersionStyleSuffix(getVersion());
+        const suffix = isStandardVariant(state) ? catalog.getVersionStyleSuffix(getVersion()) : "";
 
         if (!select) return;
 
@@ -67,6 +71,19 @@
         }
     }
 
+    function renderVersionControls(state) {
+        // IH no usa Home/Away en ruta por ahora, asi que bloqueamos esos radios en el panel.
+        const isStandard = isStandardVariant(state);
+
+        document.querySelectorAll("input[name='version']").forEach(function (input) {
+            input.disabled = !isStandard;
+        });
+
+        document.querySelectorAll(".version-toggle label").forEach(function (label) {
+            label.classList.toggle("disabled", !isStandard);
+        });
+    }
+
     function updateSelectedSummary(state) {
         const selectedTeamName = document.getElementById("selectedTeamName");
         const selectedPreview = document.getElementById("selectedPreview");
@@ -76,7 +93,7 @@
             line: state.selectedLine,
             team: state.selectedTeam,
             variant: getVariant(state.selectedVariant),
-            version: getVersion()
+            version: isStandardVariant(state) ? getVersion() : "Overview"
         });
     }
 
@@ -153,6 +170,7 @@
         }
 
         renderStyleOptions(state);
+        renderVersionControls(state);
         updateSelectedSummary(state);
         resetProcessPreview();
     }
@@ -224,6 +242,7 @@
         getVersion: getVersion,
         renderVariants: renderVariants,
         renderStyleOptions: renderStyleOptions,
+        renderVersionControls: renderVersionControls,
         bindInputFilters: bindInputFilters,
         updateSelectedSummary: updateSelectedSummary,
         collectOrder: collectOrder,

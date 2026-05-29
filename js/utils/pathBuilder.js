@@ -83,6 +83,22 @@ function getProductConfig(style) {
   throw new Error(`No se pudo detectar categoria desde el style: ${style}`);
 }
 
+function getVariantRootFolder(variant) {
+  return variant === "Indigenous Heritage" ? "INDIGENOUS HERITAGE" : "STANDARD";
+}
+
+function getVariantProductConfig(style, variant) {
+  const productConfig = getProductConfig(style);
+
+  if (variant !== "Indigenous Heritage") {
+    return productConfig;
+  }
+
+  return Object.assign({}, productConfig, {
+    groupFolder: productConfig.nikeCode === "PLL" ? "NIKE IH Mens and Youth" : "NIKE IH Girls and Ladies"
+  });
+}
+
 function findExistingPath(candidates) {
   return candidates.find(function (candidatePath) {
     return fs.existsSync(candidatePath);
@@ -134,9 +150,32 @@ function getTemplateFolderCandidates(basePath, productConfig, team, version) {
   return candidates;
 }
 
+function getIhTeamFolderCandidates(basePath, productConfig, team) {
+  const ihRoot = resolvePathSegments(basePath, [
+    "INDIGENOUS HERITAGE",
+    productConfig.groupFolder,
+    productConfig.productFolder
+  ]);
+
+  return [
+    path.join(ihRoot, `${team.toUpperCase()} IH`),
+    path.join(ihRoot, `${team} IH`)
+  ];
+}
+
 function getCanonicalTemplateName({ teamCode, productConfig, style, size }) {
   // Nuevo nombre objetivo de plantillas: PLL-BOS-A1000A MD.pdf
   return `${productConfig.nikeCode}-${teamCode}-${normalizeStyle(style)} ${size}.pdf`;
+}
+
+function getSizeAliases(size) {
+  const normalizedSize = String(size || "").trim().toUpperCase();
+  const aliases = {
+    SM: ["SM", "SML"],
+    SML: ["SM", "SML"]
+  };
+
+  return aliases[normalizedSize] || [normalizedSize];
 }
 
 function findTemplateByStyleAndSize(folderPath, style, size) {
@@ -144,29 +183,58 @@ function findTemplateByStyleAndSize(folderPath, style, size) {
   if (!fs.existsSync(folderPath)) return null;
 
   const normalizedStyle = normalizeStyle(style);
-  const normalizedSize = String(size || "").trim().toUpperCase();
+  const styleFamily = normalizedStyle.replace(/[HA]$/i, "");
+  const sizeAliases = getSizeAliases(size);
   const files = fs.readdirSync(folderPath);
   const match = files.find(function (fileName) {
     const normalizedFileName = fileName.toUpperCase();
+    const hasSize = sizeAliases.some(function (sizeAlias) {
+      return normalizedFileName.indexOf(` ${sizeAlias}.PDF`) !== -1 ||
+        normalizedFileName.indexOf(` ${sizeAlias} `) !== -1;
+    });
+
     return normalizedFileName.endsWith(".PDF") &&
-      normalizedFileName.indexOf(normalizedStyle) !== -1 &&
-      normalizedFileName.indexOf(` ${normalizedSize}.PDF`) !== -1;
+      (normalizedFileName.indexOf(normalizedStyle) !== -1 || normalizedFileName.indexOf(styleFamily) !== -1) &&
+      hasSize;
   });
 
   return match ? path.join(folderPath, match) : null;
 }
 
-function buildTemplatePath({ basePath, team, version, style, size }) {
-  // Devuelve la plantilla exacta que se copiara para el pedido actual.
-  const teamCode = teams[team];
-  const productConfig = getProductConfig(style);
+function findIhTeamFolder(basePath, productConfig, team) {
+  const candidates = getIhTeamFolderCandidates(basePath, productConfig, team);
+  const existingCandidate = findExistingPath(candidates);
 
-  if (!teamCode) {
-    throw new Error(`Equipo no registrado: ${team}`);
+  if (existingCandidate) {
+    return existingCandidate;
   }
 
-  const folderCandidates = getTemplateFolderCandidates(basePath, productConfig, team, version);
-  const versionPath = resolvePathSegments(basePath, [
+  const ihProductPath = resolvePathSegments(basePath, [
+    "INDIGENOUS HERITAGE",
+    productConfig.groupFolder,
+    productConfig.productFolder
+  ]);
+
+  if (!fs.existsSync(ihProductPath)) {
+    return candidates[0];
+  }
+
+  const teamWords = team.toUpperCase().split(/\s+/);
+  const entries = fs.readdirSync(ihProductPath);
+  const match = entries.find(function (entryName) {
+    const normalizedEntry = entryName.toUpperCase();
+    return teamWords.every(function (word) { return normalizedEntry.indexOf(word) !== -1; }) &&
+      normalizedEntry.indexOf("IH") !== -1;
+  });
+
+  return match ? path.join(ihProductPath, match) : candidates[0];
+}
+
+function buildStandardTemplatePath({ basePath, team, version, style, size, teamCode }) {
+  const productConfig = getVariantProductConfig(style, "Standard");
+  const variantBasePath = resolvePathSegments(basePath, [getVariantRootFolder("Standard")]);
+  const folderCandidates = getTemplateFolderCandidates(variantBasePath, productConfig, team, version);
+  const versionPath = resolvePathSegments(variantBasePath, [
     productConfig.groupFolder,
     productConfig.productFolder,
     version.toUpperCase()
@@ -182,6 +250,33 @@ function buildTemplatePath({ basePath, team, version, style, size }) {
   }
 
   return findTemplateByStyleAndSize(targetFolder, style, size) || canonicalPath;
+}
+
+function buildIhTemplatePath({ basePath, team, style, size }) {
+  const productConfig = getVariantProductConfig(style, "Indigenous Heritage");
+  const targetFolder = findIhTeamFolder(basePath, productConfig, team);
+  const foundTemplate = findTemplateByStyleAndSize(targetFolder, style, size);
+
+  if (foundTemplate) {
+    return foundTemplate;
+  }
+
+  return path.join(targetFolder, `${productConfig.nikeCode}-${team.toUpperCase()} IH ${normalizeStyle(style)} ${size}.pdf`);
+}
+
+function buildTemplatePath({ basePath, team, variant, version, style, size }) {
+  // Devuelve la plantilla exacta que se copiara para el pedido actual.
+  const teamCode = teams[team];
+
+  if (!teamCode) {
+    throw new Error(`Equipo no registrado: ${team}`);
+  }
+
+  if (variant === "Indigenous Heritage") {
+    return buildIhTemplatePath({ basePath, team, style, size });
+  }
+
+  return buildStandardTemplatePath({ basePath, team, version, style, size, teamCode });
 }
 
 function buildOutputName({ wo, team, variant, style, size, number, name }) {

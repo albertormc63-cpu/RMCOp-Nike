@@ -23,16 +23,16 @@
         }
     };
 
-    // Standard reemplaza nombre y numero. IH por ahora solo reemplaza nombre porque el numero es raster.
+    // Standard reemplaza nombre y numero como texto. IH reemplaza nombre y arma numero con arte duplicado.
     function getTextRule(order) {
         const lineRules = textRulesByLine[order.line] || {};
         const placeholders = lineRules[order.team] || null;
 
         if (order.variant !== "Standard") {
             return {
-                mode: "text-only",
+                mode: "raster-number",
                 placeholders: placeholders,
-                message: "Esta variante usa numeros rasterizados; por ahora solo se aplicara el nombre."
+                message: "Esta variante usa numeros rasterizados; el numero se armara duplicando grupos de Illustrator."
             };
         }
 

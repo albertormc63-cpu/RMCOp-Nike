@@ -72,8 +72,12 @@
     function changeVariant(variantName) {
         state.selectedVariant = variantName;
         logFlow(`Variante seleccionada: ${variantName}.`);
+        state.lastOutputPath = "";
+        orderView.renderVersionControls(state);
+        orderView.renderStyleOptions(state);
         renderTeams();
         selectTeam(state.selectedTeam);
+        orderView.resetProcessPreview();
     }
 
     function changeProductLine(lineName) {
@@ -130,6 +134,62 @@
             outputName: outputName,
             destinationFolder: destinationFolder
         };
+    }
+
+    function getStyleFamily(styleCode) {
+        // Convierte A1000H/A1000A -> A1000 y Y1000H/Y1000A -> Y1000.
+        return String(styleCode || "").replace(/[HA]$/i, "");
+    }
+
+    function getTextFitRule(order) {
+        // Busca primero una regla especifica por equipo/estilo/talla y luego usa defaults.
+        const rules = nodeRuntime.services.textFitRules;
+
+        if (!rules) {
+            return null;
+        }
+
+        const styleFamily = getStyleFamily(order.style);
+        const teamRules = rules.teams && rules.teams[order.team];
+        const styleRules = teamRules && teamRules[styleFamily];
+        const sizeRule = styleRules && styleRules[order.size];
+        const defaultRule = rules.defaults && rules.defaults[styleFamily];
+        const resolved = sizeRule || defaultRule;
+
+        if (!resolved) {
+            logFlow(`Sin regla de ajuste para ${order.team} ${styleFamily} ${order.size}.`);
+            return null;
+        }
+
+        return {
+            unit: rules.unit || "in",
+            buffer: Number(rules.buffer || 1),
+            minScale: Number(rules.minScale || 50),
+            nameMaxWidth: Number(resolved.nameMaxWidth || 0),
+            numberMaxWidth: Number(resolved.numberMaxWidth || 0)
+        };
+    }
+
+    function getIhNumberRule() {
+        // Regla para duplicar numeros expandidos/rasterizados de Indigenous Heritage.
+        const services = nodeRuntime.services;
+
+        if (services.ihNumberRules) {
+            return services.ihNumberRules;
+        }
+
+        if (services.path && typeof require === "function") {
+            try {
+                const extensionRoot = services.path.dirname(decodeURIComponent(window.location.pathname).replace(/^\/([A-Za-z]:\/)/, "$1"));
+                services.ihNumberRules = require(services.path.join(extensionRoot, "js/config/ihNumberRules.json"));
+                return services.ihNumberRules;
+            } catch (error) {
+                console.error("No se pudo cargar ihNumberRules.json como fallback:");
+                console.error(error.message);
+            }
+        }
+
+        return null;
     }
 
     // Copia la plantilla al folder On Demand. Si ya existe, pide confirmacion antes de reemplazar.
@@ -211,13 +271,27 @@
         if (rule.mode === "text-only") {
             console.warn(rule.message);
         }
+        if (rule.mode === "raster-number") {
+            console.warn(rule.message);
+        }
+
+        const isIhVariant = order.variant !== "Standard";
+        const shouldReplaceNumber = rule.mode === "text" && !isIhVariant;
+        const fitRule = getTextFitRule(order);
+        const ihNumberRule = isIhVariant ? getIhNumberRule() : null;
+
+        if (isIhVariant && hasNumber && !ihNumberRule) {
+            console.warn("No se cargaron reglas IH desde JSON; Illustrator usara reglas IH internas de respaldo.");
+        }
 
         const message = await illustratorBridge.applyNameNumber({
             namePlaceholder: rule.placeholders.namePlaceholder,
             numberPlaceholder: rule.placeholders.numberPlaceholder,
             name: order.name || " ",
             number: order.number || " ",
-            replaceNumber: rule.mode === "text"
+            replaceNumber: shouldReplaceNumber,
+            fitRule: fitRule,
+            ihNumberRule: ihNumberRule
         });
 
         console.log(message);
@@ -246,9 +320,7 @@
         });
 
         document.getElementById("variantSelect").addEventListener("change", function (event) {
-            state.lastOutputPath = "";
             changeVariant(event.target.value);
-            orderView.resetProcessPreview();
         });
 
         document.getElementById("productLineSelect").addEventListener("change", function (event) {
@@ -271,7 +343,7 @@
                 const preview = buildOrderPreview();
                 const rule = textRules.getTextRule(preview.order);
 
-                if (rule.mode === "text-only") {
+                if (rule.mode === "text-only" || rule.mode === "raster-number") {
                     console.warn(rule.message);
                 }
 
@@ -293,6 +365,7 @@
             openAndApplyOrderData().catch(function (error) {
                 console.error("No se pudo abrir y aplicar datos:");
                 console.error(error.message);
+                alert(error.message);
             });
         });
 
@@ -304,6 +377,7 @@
     document.addEventListener("DOMContentLoaded", function () {
         nodeRuntime.load();
         orderView.renderVariants(state);
+        orderView.renderVersionControls(state);
         orderView.renderStyleOptions(state);
         orderView.bindInputFilters();
         renderTeams();

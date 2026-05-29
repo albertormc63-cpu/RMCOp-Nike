@@ -27,6 +27,15 @@
         return JSON.stringify(String(value == null ? "" : value));
     }
 
+    function toJsxNumber(value) {
+        const numberValue = Number(value);
+        return isFinite(numberValue) && numberValue > 0 ? String(numberValue) : "null";
+    }
+
+    function toJsxJson(value) {
+        return JSON.stringify(JSON.stringify(value || null));
+    }
+
     // Envuelve cs.evalScript en Promise para poder usar async/await en el panel.
     function evalScript(script) {
         return new Promise(function (resolve, reject) {
@@ -70,6 +79,7 @@
 
     async function applyNameNumber(payload) {
         await ensureJsxLoaded();
+        const fitRule = payload.fitRule || {};
 
         return evalScript([
             "RMCNike_applyNameNumber(",
@@ -82,6 +92,18 @@
             toJsxString(payload.number),
             ",",
             payload.replaceNumber ? "true" : "false",
+            ",",
+            toJsxNumber(fitRule.nameMaxWidth),
+            ",",
+            toJsxNumber(fitRule.numberMaxWidth),
+            ",",
+            toJsxNumber(fitRule.buffer),
+            ",",
+            toJsxNumber(fitRule.minScale),
+            ",",
+            toJsxString(fitRule.unit || "in"),
+            ",",
+            toJsxJson(payload.ihNumberRule),
             ")"
         ].join(""));
     }

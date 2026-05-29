@@ -1,0 +1,25 @@
+{
+  "_comment": "Reglas para numeros raster/expandidos de Indigenous Heritage. Unidad: pulgadas.",
+  "unit": "in",
+  "activeZones": ["front", "back"],
+  "zones": {
+    "front": {
+      "sourceContainer": "NUMEROS F",
+      "targetGroup": "N FRONT",
+      "baseGroup": "BASE FRONT",
+      "digitSuffix": " F",
+      "outputGroup": "RMC FRONT NUMBER",
+      "gap": 0.25,
+      "fitToMaxWidth": false
+    },
+    "back": {
+      "sourceContainer": "NUMEROS B",
+      "targetGroup": "N BACK",
+      "baseGroup": "BASE BACK",
+      "digitSuffix": " B",
+      "outputGroup": "RMC BACK NUMBER",
+      "gap": 0.25,
+      "fitToMaxWidth": true
+    }
+  }
+}

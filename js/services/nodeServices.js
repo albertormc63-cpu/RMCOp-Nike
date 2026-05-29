@@ -10,7 +10,9 @@
             fs: null,
             buildTemplatePath: null,
             buildOutputName: null,
-            copyTemplate: null
+            copyTemplate: null,
+            textFitRules: null,
+            ihNumberRules: null
         };
 
         function getExtensionRoot() {
@@ -40,6 +42,10 @@
                 services.path = require("path");
                 services.fs = require("fs");
                 services.config = requireFromExtension("js/config/config.js");
+                // Reglas editables para ajustar ancho de nombre/numero segun equipo, estilo y talla.
+                services.textFitRules = requireFromExtension("js/config/textFitRules.json");
+                // Reglas editables para armar numeros rasterizados de Indigenous Heritage.
+                services.ihNumberRules = requireFromExtension("js/config/ihNumberRules.json");
 
                 const pathBuilder = requireFromExtension("js/utils/pathBuilder.js");
                 services.buildTemplatePath = pathBuilder.buildTemplatePath;
