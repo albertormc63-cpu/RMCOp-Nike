@@ -254,6 +254,11 @@ p {
     min-height: 92px;
 }
 
+.selected-team-nickname {
+    color: var(--muted);
+    font-weight: 600;
+}
+
 .variant-field {
     margin-top: 8px;
 }

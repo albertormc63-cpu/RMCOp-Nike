@@ -87,8 +87,18 @@
     function updateSelectedSummary(state) {
         const selectedTeamName = document.getElementById("selectedTeamName");
         const selectedPreview = document.getElementById("selectedPreview");
+        const nickname = catalog.getTeamNickname(state.selectedLine, state.selectedTeam);
 
-        selectedTeamName.textContent = state.selectedTeam;
+        selectedTeamName.innerHTML = "";
+        selectedTeamName.appendChild(document.createTextNode(state.selectedTeam));
+
+        if (nickname) {
+            const nicknameElement = document.createElement("span");
+            nicknameElement.className = "selected-team-nickname";
+            nicknameElement.textContent = ` - ${nickname}`;
+            selectedTeamName.appendChild(nicknameElement);
+        }
+
         previewView.paintPreview(selectedPreview, {
             line: state.selectedLine,
             team: state.selectedTeam,
