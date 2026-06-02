@@ -5,6 +5,7 @@
 
     const catalog = window.RMC.productCatalog;
     const previewView = window.RMC.ui.previewView;
+    let customDestinationFolder = "";
 
     function getVersion() {
         // Home es el default operativo si por alguna razon no hay radio seleccionado.
@@ -48,7 +49,7 @@
         const select = document.getElementById("styleCode");
         const lineConfig = catalog.getLineConfig(state.selectedLine);
         const currentAudience = select && select.value ? select.value.charAt(0) : "A";
-        const suffix = isStandardVariant(state) ? catalog.getVersionStyleSuffix(getVersion()) : "";
+        const suffix = isStandardVariant(state) ? catalog.getVersionStyleSuffix(getVersion()) : "IH";
 
         if (!select) return;
 
@@ -119,7 +120,8 @@
             size: document.getElementById("size").value,
             number: sanitizeNumber(document.getElementById("playerNumber").value),
             name: document.getElementById("playerName").value.trim().toUpperCase(),
-            demandFolder: document.getElementById("demandFolder").value
+            demandFolder: document.getElementById("demandFolder").value,
+            customDestinationFolder: customDestinationFolder
         };
     }
 
@@ -155,7 +157,7 @@
 
         if (!order.wo) missing.push("Work Order");
         if (!order.style) missing.push("Style");
-        if (!order.demandFolder) missing.push("Carpeta On Demand");
+        if (!order.demandFolder && !order.customDestinationFolder) missing.push("Destino");
 
         if (missing.length) {
             throw new Error(`Faltan datos: ${missing.join(", ")}`);
@@ -170,6 +172,7 @@
         document.getElementById("wo").value = "";
         document.getElementById("playerNumber").value = "";
         document.getElementById("playerName").value = "";
+        clearCustomDestinationFolder();
 
         if (sizeSelect) {
             sizeSelect.value = "SM";
@@ -190,6 +193,68 @@
         document.getElementById("templatePathPreview").textContent = "Pendiente";
         document.getElementById("outputNamePreview").textContent = "Pendiente";
         document.getElementById("destinationPreview").textContent = "Pendiente";
+    }
+
+    function renderCustomDestinationFolder() {
+        // Senal visual para saber si se usara el dropdown On Demand o una carpeta elegida a mano.
+        const preview = document.getElementById("customDestinationPreview");
+        const clearButton = document.getElementById("btnClearDestination");
+        const demandFolderSelect = document.getElementById("demandFolder");
+
+        if (!preview) return;
+
+        if (customDestinationFolder) {
+            preview.textContent = `Destino manual: ${customDestinationFolder}`;
+            preview.classList.add("manual");
+        } else {
+            preview.textContent = "Usando carpeta On Demand seleccionada.";
+            preview.classList.remove("manual");
+        }
+
+        if (clearButton) {
+            clearButton.classList.toggle("hidden", !customDestinationFolder);
+        }
+
+        if (demandFolderSelect) {
+            demandFolderSelect.disabled = Boolean(customDestinationFolder);
+        }
+    }
+
+    function pickFolderFromCep(initialPath) {
+        // CEP abre un dialogo nativo de carpeta dentro del panel de Illustrator.
+        if (!window.cep || !window.cep.fs || !window.cep.fs.showOpenDialog) {
+            throw new Error("El selector de carpeta CEP no esta disponible en este panel.");
+        }
+
+        const result = window.cep.fs.showOpenDialog(false, true, "Elegir carpeta destino", initialPath || "", null);
+
+        if (!result || result.err) {
+            return "";
+        }
+
+        if (Array.isArray(result.data)) {
+            return result.data[0] || "";
+        }
+
+        return result.data || "";
+    }
+
+    function chooseCustomDestinationFolder(initialPath) {
+        const selectedFolder = pickFolderFromCep(initialPath);
+
+        if (!selectedFolder) {
+            return "";
+        }
+
+        customDestinationFolder = selectedFolder;
+        renderCustomDestinationFolder();
+
+        return customDestinationFolder;
+    }
+
+    function clearCustomDestinationFolder() {
+        customDestinationFolder = "";
+        renderCustomDestinationFolder();
     }
 
     function fillDemandFolderOptions(folderNames, placeholder) {
@@ -259,6 +324,9 @@
         validateOrder: validateOrder,
         resetOrderFields: resetOrderFields,
         resetProcessPreview: resetProcessPreview,
+        chooseCustomDestinationFolder: chooseCustomDestinationFolder,
+        clearCustomDestinationFolder: clearCustomDestinationFolder,
+        renderCustomDestinationFolder: renderCustomDestinationFolder,
         loadDemandFolders: loadDemandFolders
     };
 })();

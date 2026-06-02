@@ -341,13 +341,57 @@ select {
     font-size: 12px;
 }
 
+.destination-field select {
+    margin-top: 0;
+}
+
+.folder-picker-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 6px;
+    margin-top: 4px;
+}
+
 .primary-button {
     background: var(--accent);
 }
 
+.secondary-button {
+    min-height: 33px;
+    padding: 0 10px;
+    border: 1px solid #555b64;
+    border-radius: 5px;
+    background: #24262a;
+    color: var(--text);
+    font-size: 11px;
+}
+
+.secondary-button:hover {
+    border-color: var(--focus);
+}
+
+.destination-note {
+    margin-top: 5px;
+    overflow-wrap: anywhere;
+    color: var(--muted);
+    font-family: Menlo, Monaco, Consolas, monospace;
+    font-size: 9px;
+    line-height: 1.35;
+}
+
+.destination-note.manual {
+    color: var(--focus);
+}
+
+.hidden {
+    display: none !important;
+}
+
 #btnReviewOrder,
 #btnCrearCopia,
-#btnAbrirAplicar {
+#btnAbrirAplicar,
+#btnExtractOfficialSwatches,
+.settings-action {
     width: 100%;
     margin-top: 10px;
 }
@@ -397,7 +441,7 @@ select {
 
 #terminal {
     /* Consola interna del panel, alimentada por js/logger.js. */
-    height: 130px;
+    height: 195px;
     padding: 8px;
     overflow-y: auto;
     color: #d7f7d4;

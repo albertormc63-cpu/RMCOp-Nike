@@ -4,12 +4,13 @@
 RMCNike_loadModules();
 
 function RMCNike_loadModules() {
-    // Carga ordenada: utilidades compartidas, Standard/texto, IH/numeros.
+    // Carga ordenada: utilidades compartidas, Standard/texto, IH/numeros y herramientas.
     var root = File($.fileName).parent.fsName;
 
     $.evalFile(new File(root + "/rmcNikeUtils.jsx"));
     $.evalFile(new File(root + "/standardText.jsx"));
     $.evalFile(new File(root + "/ihNumbers.jsx"));
+    $.evalFile(new File(root + "/swatches.jsx"));
 }
 
 function RMCNike_openFile(filePath) {
@@ -33,6 +34,21 @@ function RMCNike_confirmReplace(filePath) {
         var message = "Ya existe este archivo:\n\n" +
             filePath +
             "\n\nSi continuas, se reemplazara con una copia limpia de la plantilla.";
+
+        return confirm(message) ? "OK:YES" : "OK:NO";
+    } catch (error) {
+        return "ERROR:" + error.message;
+    }
+}
+
+function RMCNike_confirmOfficialSwatchesOverwrite(filePath) {
+    try {
+        var docName = app.documents.length ? app.activeDocument.name : "Sin documento abierto";
+        var message = "Se va a reemplazar la lista de muestras oficiales:\n\n" +
+            filePath +
+            "\n\nDocumento activo:\n" +
+            docName +
+            "\n\nContinua solo si este documento tiene las muestras oficiales autorizadas.";
 
         return confirm(message) ? "OK:YES" : "OK:NO";
     } catch (error) {

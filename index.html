@@ -4,6 +4,57 @@
     <meta charset="UTF-8">
     <title>RMC Nike Panel</title>
     <link rel="stylesheet" href="./css/styles.css">
+    <script>
+        // Diagnostico temprano: si CEP truena antes de pintar la UI, mostramos el error en el panel.
+        (function () {
+            function showBootError(message) {
+                var render = function () {
+                    var box = document.getElementById("bootError");
+
+                    if (!box) {
+                        box = document.createElement("pre");
+                        box.id = "bootError";
+                        box.style.cssText = [
+                            "position:fixed",
+                            "inset:8px",
+                            "z-index:99999",
+                            "overflow:auto",
+                            "white-space:pre-wrap",
+                            "background:#1f1111",
+                            "color:#ffd7d7",
+                            "border:1px solid #a94442",
+                            "border-radius:6px",
+                            "padding:10px",
+                            "font:12px/1.4 Menlo,Consolas,monospace"
+                        ].join(";");
+                        document.body.appendChild(box);
+                    }
+
+                    box.textContent += message + "\n";
+                };
+
+                if (document.body) {
+                    render();
+                } else {
+                    document.addEventListener("DOMContentLoaded", render);
+                }
+            }
+
+            window.addEventListener("error", function (event) {
+                showBootError([
+                    "ERROR DE ARRANQUE DEL PANEL",
+                    event.message || "Sin mensaje",
+                    event.filename || "Archivo desconocido",
+                    "Linea: " + (event.lineno || "?") + " Columna: " + (event.colno || "?")
+                ].join("\n"));
+            });
+
+            window.addEventListener("unhandledrejection", function (event) {
+                var reason = event.reason && (event.reason.stack || event.reason.message || event.reason);
+                showBootError("PROMESA RECHAZADA:\n" + reason);
+            });
+        })();
+    </script>
 </head>
 
 <body>
@@ -106,13 +157,18 @@
                     <input type="text" id="playerName" placeholder="Opcional">
                 </label>
 
-                <label class="wide-field">
-                    Carpeta On Demand
-                    <select id="demandFolder">
-                        <option value="NIKE ON DEMAND 8 MAYO">NIKE ON DEMAND 8 MAYO</option>
-                        <option value="NIKE ON DEMAND 15 MAYO">NIKE ON DEMAND 15 MAYO</option>
-                        <option value="NIKE ON DEMAND 22 MAYO" selected>NIKE ON DEMAND 22 MAYO</option>
-                    </select>
+                <label class="wide-field destination-field">
+                    Carpeta On Demand / destino
+                    <div class="folder-picker-row">
+                        <select id="demandFolder">
+                            <option value="NIKE ON DEMAND 8 MAYO">NIKE ON DEMAND 8 MAYO</option>
+                            <option value="NIKE ON DEMAND 15 MAYO">NIKE ON DEMAND 15 MAYO</option>
+                            <option value="NIKE ON DEMAND 22 MAYO" selected>NIKE ON DEMAND 22 MAYO</option>
+                        </select>
+                        <button type="button" id="btnChooseDestination" class="secondary-button">Examinar</button>
+                        <button type="button" id="btnClearDestination" class="secondary-button hidden">Limpiar</button>
+                    </div>
+                    <div id="customDestinationPreview" class="destination-note">Usando carpeta On Demand seleccionada.</div>
                 </label>
             </div>
 
@@ -164,6 +220,9 @@
                     <p id="ordersBasePreview" class="path-preview">Pendiente</p>
                 </div>
             </div>
+
+            <button id="btnExtractOfficialSwatches" class="primary-button">Extraer muestras oficiales</button>
+            <button id="btnValidateOfficialSwatches" class="secondary-button settings-action">Validar muestras de documento</button>
         </section>
     </main>
 

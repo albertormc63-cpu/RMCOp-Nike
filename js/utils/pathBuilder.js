@@ -49,6 +49,11 @@ function normalizeStyle(style) {
   return String(style || "").trim().toUpperCase();
 }
 
+function getStyleSearchFamily(style) {
+  // A1000H/A1000A/A1000IH buscan reglas/plantillas como familia A1000.
+  return normalizeStyle(style).replace(/IH$/i, "").replace(/[HA]$/i, "");
+}
+
 function getNikeCode(style) {
   // 1000 = PLL, 2000 = WLL segun los styles de Nike Lacrosse.
   const normalizedStyle = normalizeStyle(style);
@@ -183,7 +188,7 @@ function findTemplateByStyleAndSize(folderPath, style, size) {
   if (!fs.existsSync(folderPath)) return null;
 
   const normalizedStyle = normalizeStyle(style);
-  const styleFamily = normalizedStyle.replace(/[HA]$/i, "");
+  const styleFamily = getStyleSearchFamily(normalizedStyle);
   const sizeAliases = getSizeAliases(size);
   const files = fs.readdirSync(folderPath);
   const match = files.find(function (fileName) {
@@ -261,7 +266,7 @@ function buildIhTemplatePath({ basePath, team, style, size }) {
     return foundTemplate;
   }
 
-  return path.join(targetFolder, `${productConfig.nikeCode}-${team.toUpperCase()} IH ${normalizeStyle(style)} ${size}.pdf`);
+  return path.join(targetFolder, `${productConfig.nikeCode}-${team.toUpperCase()} IH ${getStyleSearchFamily(style)} ${size}.pdf`);
 }
 
 function buildTemplatePath({ basePath, team, variant, version, style, size }) {
@@ -285,10 +290,12 @@ function buildOutputName({ wo, team, variant, style, size, number, name }) {
   const lineNicknames = teamNicknames[productConfig.lineName] || {};
   const lineDefaultNumbers = defaultTemplateNumbers[productConfig.lineName] || {};
   const nickname = lineNicknames[team] ? ` ${lineNicknames[team]}` : "";
-  const variantPart = variant && variant !== "Standard" ? ` ${variantCodes[variant] || variant}` : "";
+  const variantCode = variant && variant !== "Standard" ? (variantCodes[variant] || variant) : "";
+  const normalizedStyle = normalizeStyle(style);
+  const stylePart = variantCode && normalizedStyle.indexOf(variantCode) === -1 ? `${normalizedStyle}${variantCode}` : normalizedStyle;
   const orderIdentifier = number || name || lineDefaultNumbers[team] || "";
   const identifierPart = orderIdentifier ? ` ${orderIdentifier}` : "";
-  return `${wo} ${productConfig.nikeCode}-${team}${nickname}${variantPart} ${normalizeStyle(style)} ${size}${identifierPart}.pdf`;
+  return `${wo} ${productConfig.nikeCode}-${team}${nickname} ${stylePart} ${size}${identifierPart}.pdf`;
 }
 
 module.exports = {

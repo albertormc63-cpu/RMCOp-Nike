@@ -47,6 +47,11 @@
             }
 
             cs.evalScript(script, function (result) {
+                if (result && result.indexOf("EvalScript error") === 0) {
+                    reject(new Error(result));
+                    return;
+                }
+
                 if (result && result.indexOf("ERROR:") === 0) {
                     reject(new Error(result.replace(/^ERROR:/, "")));
                     return;
@@ -74,6 +79,12 @@
     async function confirmReplace(filePath) {
         await ensureJsxLoaded();
         const result = await evalScript(`RMCNike_confirmReplace(${toJsxString(filePath)})`);
+        return result === "YES";
+    }
+
+    async function confirmOfficialSwatchesOverwrite(filePath) {
+        await ensureJsxLoaded();
+        const result = await evalScript(`RMCNike_confirmOfficialSwatchesOverwrite(${toJsxString(filePath)})`);
         return result === "YES";
     }
 
@@ -108,9 +119,18 @@
         ].join(""));
     }
 
+    async function extractOfficialSwatches() {
+        // Lee las muestras del documento activo y regresa JSON listo para guardarse.
+        await ensureJsxLoaded();
+        await evalScript(`$.evalFile(${toJsxString(`${getExtensionRoot()}/jsx/swatches.jsx`)})`);
+        return evalScript("RMCNike_extractOfficialSwatches()");
+    }
+
     window.RMC.illustrator.bridge = {
         openFile: openFile,
         confirmReplace: confirmReplace,
-        applyNameNumber: applyNameNumber
+        confirmOfficialSwatchesOverwrite: confirmOfficialSwatchesOverwrite,
+        applyNameNumber: applyNameNumber,
+        extractOfficialSwatches: extractOfficialSwatches
     };
 })();

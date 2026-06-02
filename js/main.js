@@ -23,6 +23,20 @@
         return nodeRuntime.getCurrentPaths();
     }
 
+    function getExtensionRootPath() {
+        // Ruta local de la extension; se usa para escribir archivos de configuracion.
+        const services = nodeRuntime.services;
+        const decodedPath = decodeURIComponent(window.location.pathname).replace(/^\/([A-Za-z]:\/)/, "$1");
+
+        return services.path.dirname(decodedPath);
+    }
+
+    function getOfficialSwatchesPath() {
+        const services = nodeRuntime.services;
+
+        return services.path.join(getExtensionRootPath(), "js/config/officialSwatches.json");
+    }
+
     function showPage(pageId) {
         document.querySelectorAll(".page").forEach(function (page) {
             page.classList.toggle("active", page.id === pageId);
@@ -121,7 +135,7 @@
             size: order.size
         });
         const outputName = services.buildOutputName(order);
-        const destinationFolder = services.path.join(paths.ordersBase, order.demandFolder);
+        const destinationFolder = order.customDestinationFolder || services.path.join(paths.ordersBase, order.demandFolder);
 
         document.getElementById("templatePathPreview").textContent = templatePath;
         document.getElementById("outputNamePreview").textContent = outputName;
@@ -137,8 +151,8 @@
     }
 
     function getStyleFamily(styleCode) {
-        // Convierte A1000H/A1000A -> A1000 y Y1000H/Y1000A -> Y1000.
-        return String(styleCode || "").replace(/[HA]$/i, "");
+        // Convierte A1000H/A1000A/A1000IH -> A1000 y Y1000H/Y1000A/Y1000IH -> Y1000.
+        return String(styleCode || "").replace(/IH$/i, "").replace(/[HA]$/i, "");
     }
 
     function getTextFitRule(order) {
@@ -192,7 +206,7 @@
         return null;
     }
 
-    // Copia la plantilla al folder On Demand. Si ya existe, pide confirmacion antes de reemplazar.
+    // Copia la plantilla al destino resuelto: On Demand o carpeta elegida manualmente.
     async function createCopy() {
         const services = nodeRuntime.services;
 
@@ -205,8 +219,7 @@
         const preview = buildOrderPreview();
         const copyCheck = await services.copyTemplate({
             templatePath: preview.templatePath,
-            ordersBase: preview.paths.ordersBase,
-            demandFolder: preview.order.demandFolder,
+            destinationFolder: preview.destinationFolder,
             outputName: preview.outputName,
             dryRun: true
         });
@@ -222,8 +235,7 @@
 
         const copyResult = await services.copyTemplate({
             templatePath: preview.templatePath,
-            ordersBase: preview.paths.ordersBase,
-            demandFolder: preview.order.demandFolder,
+            destinationFolder: preview.destinationFolder,
             outputName: preview.outputName
         });
         const outputPath = typeof copyResult === "string" ? copyResult : copyResult.outputPath;
@@ -303,6 +315,113 @@
         await applyOrderDataToIllustrator();
     }
 
+    function formatOfficialSwatchesJson(swatchData) {
+        // Formato compacto para revisar a mano: una muestra por linea.
+        const lines = [
+            "{",
+            `  "document": ${JSON.stringify(swatchData.document || "")},`,
+            "  \"swatches\": ["
+        ];
+        const swatches = Array.isArray(swatchData.swatches) ? swatchData.swatches : [];
+
+        swatches.forEach(function (swatch, index) {
+            const suffix = index < swatches.length - 1 ? "," : "";
+            lines.push(`    { "name": ${JSON.stringify(swatch.name || "")} }${suffix}`);
+        });
+
+        lines.push("  ]");
+        lines.push("}");
+
+        return lines.join("\n");
+    }
+
+    async function extractOfficialSwatches() {
+        // Herramienta manual: genera la lista maestra desde una plantilla abierta y autorizada.
+        const services = nodeRuntime.services;
+
+        if (!services.fs || !services.path) {
+            throw new Error("Node no esta cargado; no se puede guardar officialSwatches.json.");
+        }
+
+        const outputPath = getOfficialSwatchesPath();
+        const shouldOverwrite = await illustratorBridge.confirmOfficialSwatchesOverwrite(outputPath);
+
+        if (!shouldOverwrite) {
+            console.warn("Extraccion de muestras oficiales cancelada; officialSwatches.json no se modifico.");
+            return;
+        }
+
+        const rawJson = await illustratorBridge.extractOfficialSwatches();
+        const swatchData = parseSwatchesJson(rawJson);
+        const formattedJson = formatOfficialSwatchesJson(swatchData);
+
+        services.fs.writeFileSync(outputPath, formattedJson + "\n", "utf8");
+
+        console.log(`Muestras oficiales extraidas desde: ${swatchData.document || "Documento sin nombre"}`);
+        console.log(`Total de muestras oficiales: ${(swatchData.swatches || []).length}`);
+        console.log(`JSON actualizado: ${outputPath}`);
+    }
+
+    function parseSwatchesJson(rawJson) {
+        const trimmedJson = String(rawJson || "").trim();
+
+        if (trimmedJson.charAt(0) !== "{") {
+            throw new Error(`Illustrator no regreso JSON de muestras. Respuesta recibida: ${trimmedJson || "vacia"}`);
+        }
+
+        return JSON.parse(trimmedJson);
+    }
+
+    async function validateOfficialSwatches() {
+        // Compara el documento abierto contra la lista oficial guardada en config.
+        const services = nodeRuntime.services;
+
+        if (!services.fs || !services.path) {
+            throw new Error("Node no esta cargado; no se puede leer officialSwatches.json.");
+        }
+
+        const officialPath = getOfficialSwatchesPath();
+
+        if (!services.fs.existsSync(officialPath)) {
+            throw new Error(`No existe la lista oficial de muestras:\n${officialPath}`);
+        }
+
+        const officialData = JSON.parse(services.fs.readFileSync(officialPath, "utf8"));
+        const officialNames = (officialData.swatches || [])
+            .map(function (swatch) { return swatch.name; })
+            .filter(Boolean);
+        const officialLookup = {};
+
+        officialNames.forEach(function (name) {
+            officialLookup[name] = true;
+        });
+
+        const currentData = parseSwatchesJson(await illustratorBridge.extractOfficialSwatches());
+        const currentNames = (currentData.swatches || [])
+            .map(function (swatch) { return swatch.name; })
+            .filter(Boolean);
+        const outsideList = [];
+
+        currentNames.forEach(function (name) {
+            if (!officialLookup[name] && outsideList.indexOf(name) === -1) {
+                outsideList.push(name);
+            }
+        });
+
+        console.log(`Validando muestras de: ${currentData.document || "Documento sin nombre"}`);
+        console.log(`Lista oficial: ${officialPath}`);
+
+        if (!outsideList.length) {
+            console.log("Muestras OK: el documento no tiene muestras fuera de la lista oficial.");
+            return;
+        }
+
+        console.warn(`Muestras fuera de lista oficial: ${outsideList.length}`);
+        outsideList.forEach(function (name) {
+            console.warn(`  - ${name}`);
+        });
+    }
+
     function bindEvents() {
         document.querySelectorAll(".step-button").forEach(function (button) {
             button.addEventListener("click", function () {
@@ -338,6 +457,29 @@
             });
         });
 
+        document.getElementById("btnChooseDestination").addEventListener("click", function () {
+            try {
+                const paths = getCurrentPaths();
+                const selectedFolder = orderView.chooseCustomDestinationFolder(paths ? paths.ordersBase : "");
+
+                if (selectedFolder) {
+                    state.lastOutputPath = "";
+                    orderView.resetProcessPreview();
+                    logFlow(`Destino manual seleccionado: ${selectedFolder}.`);
+                }
+            } catch (error) {
+                console.error("No se pudo elegir carpeta destino:");
+                console.error(error.message);
+            }
+        });
+
+        document.getElementById("btnClearDestination").addEventListener("click", function () {
+            state.lastOutputPath = "";
+            orderView.clearCustomDestinationFolder();
+            orderView.resetProcessPreview();
+            logFlow("Destino manual limpiado; se usara la carpeta On Demand seleccionada.");
+        });
+
         document.getElementById("btnReviewOrder").addEventListener("click", function () {
             try {
                 const preview = buildOrderPreview();
@@ -369,6 +511,22 @@
             });
         });
 
+        document.getElementById("btnExtractOfficialSwatches").addEventListener("click", function () {
+            extractOfficialSwatches().catch(function (error) {
+                console.error("No se pudieron extraer las muestras oficiales:");
+                console.error(error.message);
+                alert(error.message);
+            });
+        });
+
+        document.getElementById("btnValidateOfficialSwatches").addEventListener("click", function () {
+            validateOfficialSwatches().catch(function (error) {
+                console.error("No se pudieron validar las muestras:");
+                console.error(error.message);
+                alert(error.message);
+            });
+        });
+
         document.getElementById("btnResetPanel").addEventListener("click", function () {
             location.reload();
         });
@@ -380,6 +538,7 @@
         orderView.renderVersionControls(state);
         orderView.renderStyleOptions(state);
         orderView.bindInputFilters();
+        orderView.renderCustomDestinationFolder();
         renderTeams();
         selectTeam(state.selectedTeam);
         renderSettings();
