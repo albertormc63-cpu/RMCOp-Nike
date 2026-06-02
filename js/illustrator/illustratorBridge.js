@@ -90,6 +90,7 @@
 
     async function applyNameNumber(payload) {
         await ensureJsxLoaded();
+        await evalScript(`$.evalFile(${toJsxString(`${getExtensionRoot()}/jsx/rmcNike.jsx`)})`);
         const fitRule = payload.fitRule || {};
 
         return evalScript([

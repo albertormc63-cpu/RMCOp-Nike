@@ -233,10 +233,25 @@
         }
 
         if (Array.isArray(result.data)) {
-            return result.data[0] || "";
+            return normalizeCepFolderPath(result.data[0] || "");
         }
 
-        return result.data || "";
+        return normalizeCepFolderPath(result.data || "");
+    }
+
+    function normalizeCepFolderPath(folderPath) {
+        // showOpenDialog puede regresar file:///Users/...; Node necesita /Users/... para copiar.
+        const value = String(folderPath || "").trim();
+
+        if (value.indexOf("file://") !== 0) {
+            return value;
+        }
+
+        try {
+            return decodeURIComponent(value.replace(/^file:\/\//, ""));
+        } catch (error) {
+            return value.replace(/^file:\/\//, "");
+        }
     }
 
     function chooseCustomDestinationFolder(initialPath) {

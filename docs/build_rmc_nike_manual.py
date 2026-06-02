@@ -81,6 +81,12 @@ def set_table_borders(table, color="DADCE0"):
 
 def set_table_width(table, width_dxa=9360, indent_dxa=120):
     tbl_pr = table._tbl.tblPr
+    tbl_layout = tbl_pr.first_child_found_in("w:tblLayout")
+    if tbl_layout is None:
+        tbl_layout = OxmlElement("w:tblLayout")
+        tbl_pr.append(tbl_layout)
+    tbl_layout.set(qn("w:type"), "fixed")
+
     tbl_w = tbl_pr.first_child_found_in("w:tblW")
     if tbl_w is None:
         tbl_w = OxmlElement("w:tblW")
@@ -96,6 +102,19 @@ def set_table_width(table, width_dxa=9360, indent_dxa=120):
     tbl_ind.set(qn("w:type"), "dxa")
 
 
+def set_table_grid(table, widths):
+    grid = table._tbl.tblGrid
+    if grid is None:
+        grid = OxmlElement("w:tblGrid")
+        table._tbl.insert(0, grid)
+    for child in list(grid):
+        grid.remove(child)
+    for width in widths:
+        col = OxmlElement("w:gridCol")
+        col.set(qn("w:w"), str(width))
+        grid.append(col)
+
+
 def set_repeat_table_header(row):
     tr_pr = row._tr.get_or_add_trPr()
     tbl_header = OxmlElement("w:tblHeader")
@@ -104,6 +123,7 @@ def set_repeat_table_header(row):
 
 
 def set_fixed_cell_width(cell, width_dxa):
+    cell.width = Inches(width_dxa / 1440)
     tc_pr = cell._tc.get_or_add_tcPr()
     tc_w = tc_pr.find(qn("w:tcW"))
     if tc_w is None:
@@ -188,6 +208,7 @@ def add_table(doc, headers, rows, widths=None):
     set_repeat_table_header(table.rows[0])
     if widths is None:
         widths = [9360 // len(headers)] * len(headers)
+    set_table_grid(table, widths)
 
     for idx, header in enumerate(headers):
         cell = table.rows[0].cells[idx]
@@ -270,7 +291,7 @@ def add_cover(doc):
             ("Version del manual", "1.0"),
             ("Fecha", date(2026, 6, 2).strftime("%d/%m/%Y")),
             ("Proyecto", "RMCOp-Nike"),
-            ("Extension CEP", "com.rmc.nike.panel.main"),
+            ("Extension CEP", "com.rmc.nike.panel.\nmain"),
             ("Aplicacion destino", "Adobe Illustrator / CEP"),
         ],
         widths=[2200, 7160],

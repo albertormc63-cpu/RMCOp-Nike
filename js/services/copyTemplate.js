@@ -5,7 +5,7 @@ const fs = require("fs-extra");
 async function copyTemplate({ templatePath, ordersBase, demandFolder, destinationFolder, outputName, dryRun }) {
 
   // Ruta final de la copia que abrira Illustrator.
-  const finalDestinationFolder = destinationFolder || path.join(ordersBase, demandFolder);
+  const finalDestinationFolder = normalizeFileUrlPath(destinationFolder) || path.join(ordersBase, demandFolder);
   const outputPath = path.join(finalDestinationFolder, outputName);
 
   // Fallamos temprano si la plantilla no existe; evita crear copias vacias o confusas.
@@ -30,6 +30,20 @@ async function copyTemplate({ templatePath, ordersBase, demandFolder, destinatio
     outputPath,
     replaced: willReplace
   };
+}
+
+function normalizeFileUrlPath(folderPath) {
+  const value = String(folderPath || "").trim();
+
+  if (value.indexOf("file://") !== 0) {
+    return value;
+  }
+
+  try {
+    return decodeURIComponent(value.replace(/^file:\/\//, ""));
+  } catch (error) {
+    return value.replace(/^file:\/\//, "");
+  }
 }
 
 // Exportamos la función `copyTemplate` para que pueda ser utilizada en otros módulos.

@@ -70,12 +70,15 @@ function RMCNike_applyNameNumber(namePlaceholder, numberPlaceholder, newName, ne
         var numberFrames = [];
         var fittedName = fitTextFrames(nameFrames, nameMaxWidth, fitBuffer, minScale, fitUnit, "nombre");
         var fittedNumber = 0;
+        var numberSummary = "";
         var ihNumberMessage = "";
 
         if (shouldReplaceNumber && numberPlaceholder !== "") {
             // Standard: el numero es texto editable en la plantilla.
             numberFrames = replaceExactText(doc, numberPlaceholder, safeNumber, "numero");
-            fittedNumber = fitTextFrames(numberFrames, numberMaxWidth, fitBuffer, minScale, fitUnit, "numero");
+            var numberFramesToFit = getLargestTextFrames(numberFrames);
+            fittedNumber = fitTextFrames(numberFramesToFit, numberMaxWidth, fitBuffer, minScale, fitUnit, "numero");
+            numberSummary = " | Medidas numero: " + summarizeTextFrames(numberFrames, fitUnit);
         } else if (safeNumber !== " ") {
             // Indigenous Heritage: el numero se arma duplicando grupos raster/expandidos.
             ihNumberMessage = applyIhNumberRules(doc, safeNumber, ihNumberRuleJson, numberMaxWidth, fitBuffer, minScale, fitUnit);
@@ -90,6 +93,7 @@ function RMCNike_applyNameNumber(namePlaceholder, numberPlaceholder, newName, ne
             " (ajustado: " + fittedName + ")" +
             " | Numero reemplazado: " + numberFrames.length +
             " (ajustado: " + fittedNumber + ")" +
+            numberSummary +
             ihNumberMessage;
     } catch (error) {
         return "ERROR:" + error.message;
