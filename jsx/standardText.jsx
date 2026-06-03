@@ -82,6 +82,47 @@ function fitTextFrames(frames, maxWidth, fitBuffer, minScale, fitUnit, label) {
     return fittedCount;
 }
 
+function fitTextFramesByObjectWidth(frames, maxWidth, fitBuffer, minScale, fitUnit, label) {
+    // Para numeros Standard ajustamos el ancho del objeto, similar al campo Ancho de Propiedades.
+    var fittedCount = 0;
+    var widthLimit = toIllustratorPoints(maxWidth, fitUnit);
+    var buffer = Number(fitBuffer);
+    var minimumScale = Number(minScale);
+
+    if (!widthLimit || widthLimit <= 0) {
+        return fittedCount;
+    }
+
+    if (!buffer || buffer <= 0) {
+        buffer = 1;
+    }
+
+    if (!minimumScale || minimumScale <= 0) {
+        minimumScale = 50;
+    }
+
+    for (var i = 0; i < frames.length; i++) {
+        try {
+            var tf = frames[i];
+
+            if (tf.locked || (tf.layer && tf.layer.locked)) {
+                continue;
+            }
+
+            app.redraw();
+
+            if (getTextFrameWidth(tf) > widthLimit) {
+                resizeTextFrameToWidth(tf, widthLimit, buffer, minimumScale);
+                fittedCount++;
+            }
+        } catch (error) {
+            $.writeln("RMCNike fitTextFramesByObjectWidth omitio " + (label || "texto") + " #" + i + ": " + error.message);
+        }
+    }
+
+    return fittedCount;
+}
+
 function correctTextFrameWidth(tf, widthLimit, buffer, minimumScale) {
     // Illustrator a veces no cae exacto en el primer pase; corregimos suave hacia el limite.
     var tolerance = 0.02 * 72;
@@ -102,6 +143,27 @@ function correctTextFrameWidth(tf, widthLimit, buffer, minimumScale) {
         }
 
         tf.textRange.characterAttributes.horizontalScale = correctedScale;
+        app.redraw();
+    }
+}
+
+function resizeTextFrameToWidth(tf, widthLimit, buffer, minimumScale) {
+    var tolerance = 0.02 * 72;
+
+    for (var i = 0; i < 4; i++) {
+        var currentWidth = getTextFrameWidth(tf);
+
+        if (!currentWidth || currentWidth <= 0 || Math.abs(widthLimit - currentWidth) <= tolerance) {
+            return;
+        }
+
+        var scaleX = (widthLimit / currentWidth) * 100 * buffer;
+
+        if (scaleX < minimumScale) {
+            scaleX = minimumScale;
+        }
+
+        tf.resize(scaleX, 100, true, true, true, true, scaleX, Transformation.CENTER);
         app.redraw();
     }
 }
@@ -160,5 +222,6 @@ function getTextFrameWidth(tf) {
 // API publica del modulo Standard para rmcNike.jsx.
 $.global.replaceExactText = replaceExactText;
 $.global.fitTextFrames = fitTextFrames;
+$.global.fitTextFramesByObjectWidth = fitTextFramesByObjectWidth;
 $.global.summarizeTextFrames = summarizeTextFrames;
 $.global.getLargestTextFrames = getLargestTextFrames;

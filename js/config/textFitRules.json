@@ -1,178 +1,54 @@
 {
-  "_comment": "Reglas iniciales para ajustar ancho de texto en Illustrator. Unidad: pulgadas. Si el texto/numero mide menos que el maximo, no se ajusta.",
+  "_comment": "Reglas de ajuste por equipo y style family. Unidad: pulgadas. A1000/A2000 son adulto; Y1000/Y2000 son youth/nina. Si un equipo necesita ajuste especial, cambia solo su bloque.",
   "unit": "in",
   "buffer": 1,
   "minScale": 50,
   "defaults": {
-    "A1000": {
-      "nameMaxWidth": 11,
-      "numberMaxWidth": 13.5
-    },
-    "Y1000": {
-      "nameMaxWidth": 7.5,
-      "numberMaxWidth": 11
-    }
+    "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13 },
+    "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11 },
+    "A2000": { "nameMaxWidth": 11, "numberMaxWidth": 13 },
+    "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 11 }
   },
   "teams": {
     "Boston": {
-      "A1000": {
-        "XS": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "SM": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "MD": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "LG": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "XL": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "2X": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "3X": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 }
-      },
-      "Y1000": {
-        "XS": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "SM": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "MD": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "LG": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "XL": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "2X": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "3X": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 }
-      }
+      "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13 },
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11 },
+      "A2000": { "nameMaxWidth": 11, "numberMaxWidth": 13 },
+      "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 11 }
     },
     "California": {
-      "A1000": {
-        "XS": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "SM": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "MD": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "LG": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "XL": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "2X": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "3X": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 }
-      },
-      "Y1000": {
-        "XS": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "SM": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "MD": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "LG": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "XL": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "2X": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "3X": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 }
-      }
+      "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13 },
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11 },
+      "A2000": { "nameMaxWidth": 11, "numberMaxWidth": 13 },
+      "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 11 }
     },
     "Carolina": {
-      "A1000": {
-        "XS": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "SM": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "MD": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "LG": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "XL": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "2X": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "3X": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 }
-      },
-      "Y1000": {
-        "XS": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "SM": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "MD": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "LG": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "XL": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "2X": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "3X": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 }
-      }
+      "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13 },
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11 }
     },
     "Denver": {
-      "A1000": {
-        "XS": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "SM": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "MD": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "LG": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "XL": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "2X": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "3X": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 }
-      },
-      "Y1000": {
-        "XS": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "SM": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "MD": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "LG": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "XL": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "2X": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "3X": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 }
-      }
+      "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13 },
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11 }
     },
     "Maryland": {
-      "A1000": {
-        "XS": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "SM": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "MD": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "LG": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "XL": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "2X": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "3X": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 }
-      },
-      "Y1000": {
-        "XS": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "SM": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "MD": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "LG": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "XL": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "2X": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "3X": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 }
-      }
+      "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13 },
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11 },
+      "A2000": { "nameMaxWidth": 11, "numberMaxWidth": 13 },
+      "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 11 }
     },
     "New York": {
-      "A1000": {
-        "XS": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "SM": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "MD": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "LG": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "XL": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "2X": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "3X": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 }
-      },
-      "Y1000": {
-        "XS": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "SM": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "MD": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "LG": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "XL": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "2X": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "3X": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 }
-      }
+      "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13 },
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11 },
+      "A2000": { "nameMaxWidth": 11, "numberMaxWidth": 13 },
+      "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 11 }
     },
     "Philadelphia": {
-      "A1000": {
-        "XS": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "SM": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "MD": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "LG": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "XL": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "2X": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "3X": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 }
-      },
-      "Y1000": {
-        "XS": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "SM": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "MD": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "LG": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "XL": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "2X": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "3X": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 }
-      }
+      "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13 },
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11 }
     },
     "Utah": {
-      "A1000": {
-        "XS": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "SM": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "MD": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "LG": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "XL": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "2X": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 },
-        "3X": { "nameMaxWidth": 11, "numberMaxWidth": 13.5 }
-      },
-      "Y1000": {
-        "XS": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "SM": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "MD": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "LG": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "XL": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "2X": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 },
-        "3X": { "nameMaxWidth": 7.5, "numberMaxWidth": 11 }
-      }
+      "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13 },
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11 }
     }
   }
 }

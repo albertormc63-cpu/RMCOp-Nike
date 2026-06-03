@@ -156,7 +156,7 @@
     }
 
     function getTextFitRule(order) {
-        // Busca primero una regla especifica por equipo/estilo/talla y luego usa defaults.
+        // Busca regla por equipo/style. Si algun dia hay tallas especiales, acepta overrides por talla.
         const rules = nodeRuntime.services.textFitRules;
 
         if (!rules) {
@@ -166,9 +166,9 @@
         const styleFamily = getStyleFamily(order.style);
         const teamRules = rules.teams && rules.teams[order.team];
         const styleRules = teamRules && teamRules[styleFamily];
-        const sizeRule = styleRules && styleRules[order.size];
+        const sizeRule = styleRules && styleRules.sizes && styleRules.sizes[order.size];
         const defaultRule = rules.defaults && rules.defaults[styleFamily];
-        const resolved = sizeRule || defaultRule;
+        const resolved = sizeRule || styleRules || defaultRule;
 
         if (!resolved) {
             logFlow(`Sin regla de ajuste para ${order.team} ${styleFamily} ${order.size}.`);

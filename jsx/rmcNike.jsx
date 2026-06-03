@@ -77,7 +77,7 @@ function RMCNike_applyNameNumber(namePlaceholder, numberPlaceholder, newName, ne
             // Standard: el numero es texto editable en la plantilla.
             numberFrames = replaceExactText(doc, numberPlaceholder, safeNumber, "numero");
             var numberFramesToFit = getLargestTextFrames(numberFrames);
-            fittedNumber = fitTextFrames(numberFramesToFit, numberMaxWidth, fitBuffer, minScale, fitUnit, "numero");
+            fittedNumber = fitTextFramesByObjectWidth(numberFramesToFit, numberMaxWidth, fitBuffer, minScale, fitUnit, "numero");
             numberSummary = " | Medidas numero: " + summarizeTextFrames(numberFrames, fitUnit);
         } else if (safeNumber !== " ") {
             // Indigenous Heritage: el numero se arma duplicando grupos raster/expandidos.
