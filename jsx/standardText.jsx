@@ -30,8 +30,7 @@ function replaceExactText(doc, placeholder, replacement, label) {
 }
 
 function fitTextFrames(frames, maxWidth, fitBuffer, minScale, fitUnit, label) {
-    // Ajusta solo si el texto ya reemplazado se pasa del ancho permitido.
-    // Conservamos el scale base del PDF; resetear a 100 puede achicar numeros importados.
+    // Nombres Standard: mismo criterio que RMC Optimizador, usando tf.width y horizontalScale.
     var fittedCount = 0;
     var widthLimit = toIllustratorPoints(maxWidth, fitUnit);
     var buffer = Number(fitBuffer);
@@ -57,13 +56,13 @@ function fitTextFrames(frames, maxWidth, fitBuffer, minScale, fitUnit, label) {
                 continue;
             }
 
+            tf.textRange.characterAttributes.horizontalScale = 100;
             app.redraw();
 
-            var textWidth = getTextFrameWidth(tf);
+            var textWidth = getTextFramePropertyWidth(tf);
 
             if (textWidth > widthLimit) {
-                var currentScale = Number(tf.textRange.characterAttributes.horizontalScale || 100);
-                var newScale = currentScale * (widthLimit / textWidth) * buffer;
+                var newScale = (widthLimit / textWidth) * 100 * buffer;
 
                 if (newScale < minimumScale) {
                     newScale = minimumScale;
@@ -71,7 +70,6 @@ function fitTextFrames(frames, maxWidth, fitBuffer, minScale, fitUnit, label) {
 
                 tf.textRange.characterAttributes.horizontalScale = newScale;
                 app.redraw();
-                correctTextFrameWidth(tf, widthLimit, buffer, minimumScale);
                 fittedCount++;
             }
         } catch (error) {
@@ -111,7 +109,7 @@ function fitTextFramesByObjectWidth(frames, maxWidth, fitBuffer, minScale, fitUn
 
             app.redraw();
 
-            if (getTextFrameWidth(tf) > widthLimit) {
+            if (getTextFramePropertyWidth(tf) > widthLimit) {
                 resizeTextFrameToWidth(tf, widthLimit, buffer, minimumScale);
                 fittedCount++;
             }
@@ -123,35 +121,11 @@ function fitTextFramesByObjectWidth(frames, maxWidth, fitBuffer, minScale, fitUn
     return fittedCount;
 }
 
-function correctTextFrameWidth(tf, widthLimit, buffer, minimumScale) {
-    // Illustrator a veces no cae exacto en el primer pase; corregimos suave hacia el limite.
-    var tolerance = 0.02 * 72;
-
-    for (var i = 0; i < 3; i++) {
-        var currentWidth = getTextFrameWidth(tf);
-        var delta = Math.abs(widthLimit - currentWidth);
-
-        if (delta <= tolerance || !currentWidth || currentWidth <= 0) {
-            return;
-        }
-
-        var currentScale = Number(tf.textRange.characterAttributes.horizontalScale || 100);
-        var correctedScale = currentScale * (widthLimit / currentWidth) * buffer;
-
-        if (correctedScale < minimumScale) {
-            correctedScale = minimumScale;
-        }
-
-        tf.textRange.characterAttributes.horizontalScale = correctedScale;
-        app.redraw();
-    }
-}
-
 function resizeTextFrameToWidth(tf, widthLimit, buffer, minimumScale) {
     var tolerance = 0.02 * 72;
 
     for (var i = 0; i < 4; i++) {
-        var currentWidth = getTextFrameWidth(tf);
+        var currentWidth = getTextFramePropertyWidth(tf);
 
         if (!currentWidth || currentWidth <= 0 || Math.abs(widthLimit - currentWidth) <= tolerance) {
             return;
@@ -176,7 +150,7 @@ function summarizeTextFrames(frames, fitUnit) {
 
     for (var i = 0; i < frames.length; i++) {
         try {
-            var width = getTextFrameWidth(frames[i]) / divisor;
+            var width = getTextFramePropertyWidth(frames[i]) / divisor;
             var scale = Number(frames[i].textRange.characterAttributes.horizontalScale || 100);
 
             summary.push(roundForLog(width) + unit + "@" + roundForLog(scale) + "%");
@@ -195,7 +169,7 @@ function getLargestTextFrames(frames) {
 
     for (var i = 0; i < frames.length; i++) {
         try {
-            var width = getTextFrameWidth(frames[i]);
+            var width = getTextFramePropertyWidth(frames[i]);
 
             if (width > largestWidth) {
                 largestWidth = width;
@@ -209,14 +183,28 @@ function getLargestTextFrames(frames) {
     return largestFrame ? [largestFrame] : [];
 }
 
+function getTextFramesExceptLargest(frames) {
+    // Complemento de getLargestTextFrames: normalmente son los numeros chicos/front.
+    var largestFrames = getLargestTextFrames(frames);
+    var largestFrame = largestFrames.length ? largestFrames[0] : null;
+    var result = [];
+
+    for (var i = 0; i < frames.length; i++) {
+        if (frames[i] !== largestFrame) {
+            result.push(frames[i]);
+        }
+    }
+
+    return result;
+}
+
 function roundForLog(value) {
     return Math.round(Number(value || 0) * 100) / 100;
 }
 
-function getTextFrameWidth(tf) {
-    // Medimos lo visible. En algunos PDFs tf.width no cambia tras horizontalScale
-    // y eso provocaba un segundo ajuste que dejaba los numeros demasiado pequenos.
-    return getItemBounds(tf).width;
+function getTextFramePropertyWidth(tf) {
+    // Este valor corresponde al Ancho que normalmente se revisa en Propiedades/Transform.
+    return Number(tf.width || 0);
 }
 
 // API publica del modulo Standard para rmcNike.jsx.
@@ -225,3 +213,4 @@ $.global.fitTextFrames = fitTextFrames;
 $.global.fitTextFramesByObjectWidth = fitTextFramesByObjectWidth;
 $.global.summarizeTextFrames = summarizeTextFrames;
 $.global.getLargestTextFrames = getLargestTextFrames;
+$.global.getTextFramesExceptLargest = getTextFramesExceptLargest;

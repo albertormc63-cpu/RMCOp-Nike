@@ -2,34 +2,98 @@ const path = require("path");
 // Copia una plantilla PDF al destino final. Puede hacer dryRun para detectar reemplazos.
 const fs = require("fs-extra");
 
-async function copyTemplate({ templatePath, ordersBase, demandFolder, destinationFolder, outputName, dryRun }) {
+async function copyTemplate({ templatePath, ordersBase, demandFolder, destinationFolder, outputName, number, name, dryRun }) {
 
   // Ruta final de la copia que abrira Illustrator.
   const finalDestinationFolder = normalizeFileUrlPath(destinationFolder) || path.join(ordersBase, demandFolder);
-  const outputPath = path.join(finalDestinationFolder, outputName);
 
   // Fallamos temprano si la plantilla no existe; evita crear copias vacias o confusas.
   const exists = await fs.pathExists(templatePath);
   if (!exists) {
     throw new Error(`No existe la plantilla:\n${templatePath}`);
   }
-  const willReplace = await fs.pathExists(outputPath);
+
+  const destination = await resolveOutputDestination(finalDestinationFolder, outputName, { number, name });
 
   if (dryRun) {
     return {
-      outputPath,
-      replaced: willReplace
+      outputPath: destination.outputPath,
+      outputName: destination.outputName,
+      replaced: destination.replaced
     };
   }
 
-  // overwrite:true permite regenerar una copia limpia si el usuario confirma reemplazo.
+  // Normalmente copiamos a un nombre unico; overwrite queda como defensa si el usuario confirmo reemplazo.
   await fs.ensureDir(finalDestinationFolder);
-  await fs.copy(templatePath, outputPath, { overwrite: true });
+  await fs.copy(templatePath, destination.outputPath, { overwrite: true });
+
+  return {
+    outputPath: destination.outputPath,
+    outputName: destination.outputName,
+    replaced: destination.replaced
+  };
+}
+
+async function resolveOutputDestination(destinationFolder, outputName, orderData) {
+  // Regla tipo RMC Optimizador: numero manda; nombre solo desempata si el archivo ya existe.
+  let candidateName = outputName;
+  let outputPath = path.join(destinationFolder, candidateName);
+  const originalExists = await fs.pathExists(outputPath);
+
+  if (!originalExists) {
+    return {
+      outputPath,
+      outputName: candidateName,
+      replaced: false
+    };
+  }
+
+  const extension = path.extname(outputName) || ".pdf";
+  const baseName = outputName.replace(new RegExp(`${escapeRegExp(extension)}$`, "i"), "");
+  const safeName = sanitizeFilePart(orderData && orderData.name);
+  const safeNumber = sanitizeFilePart(orderData && orderData.number);
+
+  if (safeNumber && safeName) {
+    candidateName = `${baseName} ${safeName}${extension}`;
+  } else {
+    candidateName = `${baseName} DUP${extension}`;
+  }
+
+  outputPath = path.join(destinationFolder, candidateName);
+
+  if (!await fs.pathExists(outputPath)) {
+    return {
+      outputPath,
+      outputName: candidateName,
+      replaced: false
+    };
+  }
+
+  const duplicateBaseName = candidateName.replace(new RegExp(`${escapeRegExp(extension)}$`, "i"), "");
+  let counter = 1;
+
+  do {
+    candidateName = `${duplicateBaseName} (${counter})${extension}`;
+    outputPath = path.join(destinationFolder, candidateName);
+    counter++;
+  } while (await fs.pathExists(outputPath));
 
   return {
     outputPath,
-    replaced: willReplace
+    outputName: candidateName,
+    replaced: false
   };
+}
+
+function sanitizeFilePart(value) {
+  return String(value || "")
+    .trim()
+    .replace(/[\/\\:*?"<>|]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function normalizeFileUrlPath(folderPath) {

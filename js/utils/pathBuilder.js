@@ -49,6 +49,13 @@ function normalizeStyle(style) {
   return String(style || "").trim().toUpperCase();
 }
 
+function sanitizeOutputPart(value) {
+  return String(value || "")
+    .trim()
+    .replace(/[\/\\:*?"<>|]/g, "")
+    .replace(/\s+/g, " ");
+}
+
 function getStyleSearchFamily(style) {
   // A1000H/A1000A/A1000IH buscan reglas/plantillas como familia A1000.
   return normalizeStyle(style).replace(/IH$/i, "").replace(/[HA]$/i, "");
@@ -293,7 +300,7 @@ function buildOutputName({ wo, team, variant, style, size, number, name }) {
   const variantCode = variant && variant !== "Standard" ? (variantCodes[variant] || variant) : "";
   const normalizedStyle = normalizeStyle(style);
   const stylePart = variantCode && normalizedStyle.indexOf(variantCode) === -1 ? `${normalizedStyle}${variantCode}` : normalizedStyle;
-  const orderIdentifier = number || name || lineDefaultNumbers[team] || "";
+  const orderIdentifier = sanitizeOutputPart(number || name || lineDefaultNumbers[team] || "");
   const identifierPart = orderIdentifier ? ` ${orderIdentifier}` : "";
   return `${wo} ${productConfig.nikeCode}-${team}${nickname} ${stylePart} ${size}${identifierPart}.pdf`;
 }

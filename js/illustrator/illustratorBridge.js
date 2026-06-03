@@ -109,6 +109,8 @@
             ",",
             toJsxNumber(fitRule.numberMaxWidth),
             ",",
+            toJsxNumber(fitRule.smallNumberMaxWidth),
+            ",",
             toJsxNumber(fitRule.buffer),
             ",",
             toJsxNumber(fitRule.minScale),

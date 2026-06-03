@@ -180,7 +180,8 @@
             buffer: Number(rules.buffer || 1),
             minScale: Number(rules.minScale || 50),
             nameMaxWidth: Number(resolved.nameMaxWidth || 0),
-            numberMaxWidth: Number(resolved.numberMaxWidth || 0)
+            numberMaxWidth: Number(resolved.numberMaxWidth || 0),
+            smallNumberMaxWidth: Number(resolved.smallNumberMaxWidth || 0)
         };
     }
 
@@ -221,8 +222,16 @@
             templatePath: preview.templatePath,
             destinationFolder: preview.destinationFolder,
             outputName: preview.outputName,
+            number: preview.order.number,
+            name: preview.order.name,
             dryRun: true
         });
+
+        if (copyCheck.outputName && copyCheck.outputName !== preview.outputName) {
+            preview.outputName = copyCheck.outputName;
+            document.getElementById("outputNamePreview").textContent = preview.outputName;
+            console.warn(`Ya existia el nombre base; se usara: ${preview.outputName}`);
+        }
 
         if (copyCheck.replaced) {
             const shouldReplace = await confirmTemplateReplace(copyCheck.outputPath);
@@ -236,7 +245,9 @@
         const copyResult = await services.copyTemplate({
             templatePath: preview.templatePath,
             destinationFolder: preview.destinationFolder,
-            outputName: preview.outputName
+            outputName: preview.outputName,
+            number: preview.order.number,
+            name: preview.order.name
         });
         const outputPath = typeof copyResult === "string" ? copyResult : copyResult.outputPath;
         const replaced = typeof copyResult === "object" && copyResult.replaced;
