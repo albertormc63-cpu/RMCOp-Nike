@@ -62,17 +62,20 @@
         teamsView.markSelected(state.selectedTeam);
     }
 
-    function selectTeam(teamName) {
+    function selectTeam(teamName, shouldUpdateSummary) {
         state.selectedTeam = teamName;
         logFlow(`Equipo seleccionado: ${teamName}.`);
         teamsView.markSelected(teamName);
-        orderView.updateSelectedSummary(state);
+
+        if (shouldUpdateSummary !== false) {
+            orderView.updateSelectedSummary(state);
+        }
     }
 
     function selectTeamAndOpenOrder(teamName) {
         const changedTeam = state.selectedTeam !== teamName;
 
-        selectTeam(teamName);
+        selectTeam(teamName, !changedTeam);
 
         if (changedTeam) {
             state.lastOutputPath = "";
@@ -91,7 +94,7 @@
         orderView.renderVersionControls(state);
         orderView.renderStyleOptions(state);
         renderTeams();
-        selectTeam(state.selectedTeam);
+        orderView.updateSelectedSummary(state);
         orderView.resetProcessPreview();
     }
 
@@ -106,9 +109,7 @@
 
         logFlow(`Linea seleccionada: ${catalog.getLineConfig(state.selectedLine).label}.`);
         state.lastOutputPath = "";
-        orderView.renderStyleOptions(state);
         renderTeams();
-        selectTeam(state.selectedTeam);
         orderView.resetOrderFields(state);
     }
 
@@ -557,7 +558,7 @@
         orderView.bindInputFilters();
         orderView.renderCustomDestinationFolder();
         renderTeams();
-        selectTeam(state.selectedTeam);
+        orderView.updateSelectedSummary(state);
         renderSettings();
         bindEvents();
         orderView.loadDemandFolders(nodeRuntime, logFlow);

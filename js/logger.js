@@ -2,6 +2,7 @@
     // Captura console.log/warn/error y los pinta dentro del panel para ver el flujo sin abrir DevTools.
     const terminal = document.getElementById("terminal");
     const btnClearLog = document.getElementById("btnClearLog");
+    const maxLogLines = 180;
 
     function writeLog(message, className) {
         // Si el HTML no tiene terminal, dejamos que console siga funcionando normal.
@@ -15,6 +16,11 @@
         }
 
         terminal.appendChild(line);
+
+        while (terminal.childNodes.length > maxLogLines) {
+            terminal.removeChild(terminal.firstChild);
+        }
+
         terminal.scrollTop = terminal.scrollHeight;
     }
 

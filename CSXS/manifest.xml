@@ -28,7 +28,6 @@
                 <Resources>
                     <!-- index.html es la entrada visual; Node se habilita para copiar/leer archivos. -->
                     <MainPath>./index.html</MainPath>
-                    <scriptPath>./js/main.js</scriptPath>
                     <CEFCommandLine>
                         <Parameter>--enable-nodejs</Parameter>
                         <Parameter>--mixed-context</Parameter>

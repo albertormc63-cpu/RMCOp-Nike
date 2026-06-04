@@ -456,7 +456,7 @@ select {
 
 #terminal {
     /* Consola interna del panel, alimentada por js/logger.js. */
-    height: 195px;
+    height: 130px;
     padding: 8px;
     overflow-y: auto;
     color: #d7f7d4;
