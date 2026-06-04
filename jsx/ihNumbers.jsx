@@ -1,7 +1,7 @@
 // Flujo Indigenous Heritage: arma numeros duplicando arte expandido desde NUMEROS F/B.
 // No recorre pageItems profundamente para evitar congelar Illustrator.
 
-function applyIhNumberRules(doc, numberValue, ihNumberRuleJson, fallbackMaxWidth, fitBuffer, minScale, fitUnit) {
+function applyIhNumberRules(doc, numberValue, ihNumberRuleJson, fallbackMaxWidth, fallbackSmallMaxWidth, fitBuffer, minScale, fitUnit) {
     // Front y back comparten flujo, pero cada zona tiene su propia regla en ihNumberRules.json.
     var config = parseJsonSafe(ihNumberRuleJson) || getDefaultIhNumberRules();
     var numberText = String(numberValue).replace(/[^0-9]/g, "");
@@ -30,6 +30,7 @@ function applyIhNumberRules(doc, numberValue, ihNumberRuleJson, fallbackMaxWidth
         var zoneMessage = applyIhNumberZone(doc, numberText, zoneConfig, {
             unit: config.unit || "in",
             fallbackMaxWidth: fallbackMaxWidth,
+            fallbackSmallMaxWidth: fallbackSmallMaxWidth,
             fitBuffer: fitBuffer,
             minScale: minScale,
             docGroupIndex: docGroupIndex,
@@ -96,7 +97,7 @@ function applyIhNumberZone(doc, numberText, zoneConfig, context) {
 
         arrangeDigits(digits, gap);
         centerGroupOnTarget(outputGroup, targetGroup);
-        fitIhNumberGroup(outputGroup, zoneConfig, context);
+        fitIhNumberDigits(outputGroup, digits, gap, zoneConfig, context);
         centerGroupOnTarget(outputGroup, targetGroup);
         centerGroupOnBaseIfAvailable(outputGroup, baseGroup);
         targetGroup.hidden = true;
@@ -156,16 +157,15 @@ function centerGroupHorizontallyOnTarget(groupItem, targetItem) {
     groupItem.translate(targetCenter.x - groupCenter.x, 0);
 }
 
-function fitIhNumberGroup(groupItem, zoneConfig, context) {
-    // Para espalda IH se ajusta el grupo completo si rebasa el maximo permitido.
+function fitIhNumberDigits(groupItem, digits, gap, zoneConfig, context) {
+    // Ajusta cada digito y reacomoda con gap fijo; el gap de .25in no debe escalarse.
     if (!zoneConfig.fitToMaxWidth) {
         return false;
     }
 
-    var maxWidth = zoneConfig.maxWidth || context.fallbackMaxWidth;
+    var maxWidth = getIhZoneMaxWidth(zoneConfig, context);
     var widthLimit = toIllustratorPoints(maxWidth, context.unit);
     var buffer = Number(context.fitBuffer);
-    var minimumScale = Number(context.minScale);
     var groupBounds = getItemBounds(groupItem);
 
     if (!widthLimit || widthLimit <= 0 || groupBounds.width <= widthLimit) {
@@ -176,18 +176,50 @@ function fitIhNumberGroup(groupItem, zoneConfig, context) {
         buffer = 1;
     }
 
-    if (!minimumScale || minimumScale <= 0) {
-        minimumScale = 50;
+    if (!digits || digits.length === 0) {
+        return false;
     }
 
-    var scale = (widthLimit / groupBounds.width) * 100 * buffer;
+    var totalGap = gap * Math.max(0, digits.length - 1);
+    var availableDigitWidth = widthLimit - totalGap;
+    var totalDigitWidth = 0;
 
-    if (scale < minimumScale) {
-        scale = minimumScale;
+    if (availableDigitWidth <= 0) {
+        return false;
     }
 
-    groupItem.resize(scale, scale, true, true, true, true, scale, Transformation.CENTER);
+    for (var i = 0; i < digits.length; i++) {
+        totalDigitWidth += getItemBounds(digits[i]).width;
+    }
+
+    if (totalDigitWidth <= 0) {
+        return false;
+    }
+
+    var scale = (availableDigitWidth / totalDigitWidth) * 100 * buffer;
+
+    if (scale >= 100) {
+        return false;
+    }
+
+    for (var j = 0; j < digits.length; j++) {
+        digits[j].resize(scale, scale, true, true, true, true, scale, Transformation.CENTER);
+    }
+
+    arrangeDigits(digits, gap);
     return true;
+}
+
+function getIhZoneMaxWidth(zoneConfig, context) {
+    if (zoneConfig.maxWidth) {
+        return zoneConfig.maxWidth;
+    }
+
+    if (zoneConfig.maxWidthRole === "small") {
+        return context.fallbackSmallMaxWidth || context.fallbackMaxWidth;
+    }
+
+    return context.fallbackMaxWidth;
 }
 
 function getLayerFromCache(doc, layerName, layerCache) {
@@ -295,7 +327,8 @@ function getDefaultIhNumberRules() {
                 digitSuffix: " F",
                 outputGroup: "RMC FRONT NUMBER",
                 gap: 0.25,
-                fitToMaxWidth: false
+                fitToMaxWidth: true,
+                maxWidthRole: "small"
             },
             back: {
                 sourceContainer: "NUMEROS B",
@@ -304,7 +337,8 @@ function getDefaultIhNumberRules() {
                 digitSuffix: " B",
                 outputGroup: "RMC BACK NUMBER",
                 gap: 0.25,
-                fitToMaxWidth: true
+                fitToMaxWidth: true,
+                maxWidthRole: "large"
             }
         }
     };

@@ -23,25 +23,33 @@
     }
 
     function getVariant(fallback) {
-        const select = document.getElementById("variantSelect");
+        const select = document.getElementById("variantSelect") || document.getElementById("teamVariantSelect");
         return select && select.value ? select.value : fallback;
     }
 
     function renderVariants(state) {
-        const select = document.getElementById("variantSelect");
+        const selects = document.querySelectorAll(".variant-select");
 
-        if (!select) return;
+        if (!selects.length) return;
 
-        select.innerHTML = "";
+        selects.forEach(function (select) {
+            select.innerHTML = "";
 
-        catalog.variants.forEach(function (variant) {
-            const option = document.createElement("option");
-            option.value = variant.name;
-            option.textContent = variant.name;
-            select.appendChild(option);
+            catalog.variants.forEach(function (variant) {
+                const option = document.createElement("option");
+                option.value = variant.name;
+                option.textContent = variant.name;
+                select.appendChild(option);
+            });
+
+            select.value = state.selectedVariant;
         });
+    }
 
-        select.value = state.selectedVariant;
+    function syncVariantSelects(state) {
+        document.querySelectorAll(".variant-select").forEach(function (select) {
+            select.value = state.selectedVariant;
+        });
     }
 
     function renderStyleOptions(state) {
@@ -331,6 +339,7 @@
     window.RMC.ui.orderView = {
         getVersion: getVersion,
         renderVariants: renderVariants,
+        syncVariantSelects: syncVariantSelects,
         renderStyleOptions: renderStyleOptions,
         renderVersionControls: renderVersionControls,
         bindInputFilters: bindInputFilters,

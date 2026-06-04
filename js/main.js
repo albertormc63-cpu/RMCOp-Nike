@@ -87,6 +87,7 @@
         state.selectedVariant = variantName;
         logFlow(`Variante seleccionada: ${variantName}.`);
         state.lastOutputPath = "";
+        orderView.syncVariantSelects(state);
         orderView.renderVersionControls(state);
         orderView.renderStyleOptions(state);
         renderTeams();
@@ -407,6 +408,9 @@
             officialLookup[name] = true;
         });
 
+        const addUsedMessage = await illustratorBridge.addUsedColors();
+        console.log(addUsedMessage);
+
         const currentData = parseSwatchesJson(await illustratorBridge.extractOfficialSwatches());
         const currentNames = (currentData.swatches || [])
             .map(function (swatch) { return swatch.name; })
@@ -449,8 +453,10 @@
             });
         });
 
-        document.getElementById("variantSelect").addEventListener("change", function (event) {
-            changeVariant(event.target.value);
+        document.querySelectorAll(".variant-select").forEach(function (select) {
+            select.addEventListener("change", function (event) {
+                changeVariant(event.target.value);
+            });
         });
 
         document.getElementById("productLineSelect").addEventListener("change", function (event) {

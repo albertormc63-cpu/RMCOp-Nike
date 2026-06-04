@@ -31,6 +31,108 @@ function RMCNike_swatchesToJson(documentName, swatches) {
     return json;
 }
 
+function RMCNike_hexEncode(value) {
+    var hex = "";
+
+    for (var i = 0; i < value.length; i++) {
+        hex += value.charCodeAt(i).toString(16);
+    }
+
+    return hex;
+}
+
+function RMCNike_createActionString(actionSetName, actionName) {
+    return "/version 3\n" +
+        "/name [ " + actionSetName.length + "\n" +
+        RMCNike_hexEncode(actionSetName) + "\n" +
+        "]\n" +
+        "/isOpen 0\n" +
+        "/actionCount 1\n" +
+        "/action-1 {\n" +
+        " /name [ " + actionName.length + "\n" +
+        RMCNike_hexEncode(actionName) + "\n" +
+        " ]\n" +
+        " /keyIndex 0\n" +
+        " /colorIndex 0\n" +
+        " /isOpen 1\n" +
+        " /eventCount 1\n" +
+        " /event-1 {\n" +
+        " /useRulersIn1stQuadrant 0\n" +
+        " /internalName (ai_plugin_swatches)\n" +
+        " /localizedName [ 8\n" +
+        " 5377617463686573\n" +
+        " ]\n" +
+        " /isOpen 0\n" +
+        " /isOn 1\n" +
+        " /hasDialog 0\n" +
+        " /parameterCount 2\n" +
+        " /parameter-1 {\n" +
+        " /key 1835363957\n" +
+        " /showInPalette 4294967295\n" +
+        " /type (enumerated)\n" +
+        " /name [ 15\n" +
+        " 416464205573656420436f6c6f7273\n" +
+        " ]\n" +
+        " /value 9\n" +
+        " }\n" +
+        " /parameter-2 {\n" +
+        " /key 1634495605\n" +
+        " /showInPalette 4294967295\n" +
+        " /type (boolean)\n" +
+        " /value 1\n" +
+        " }\n" +
+        " }\n" +
+        "}";
+}
+
+function RMCNike_addUsedColors() {
+    // Ejecuta la accion del panel Muestras: "Add Used Colors".
+    var actionSetName = "RMC Add Used Colors";
+    var actionName = "Add Used Colors";
+    var actionFile = new File(Folder.temp + "/rmc_add_used_colors.aia");
+    var actionLoaded = false;
+
+    try {
+        if (!app.documents.length) {
+            return "ERROR:No hay documento abierto en Illustrator.";
+        }
+
+        var doc = app.activeDocument;
+
+        try {
+            doc.selection = null;
+        } catch (selectionError) {
+            // La accion funciona aunque no podamos limpiar la seleccion.
+        }
+
+        actionFile.open("w");
+        actionFile.write(RMCNike_createActionString(actionSetName, actionName));
+        actionFile.close();
+
+        app.loadAction(actionFile);
+        actionLoaded = true;
+        app.doScript(actionName, actionSetName, false);
+
+        return "OK:Colores usados agregados a Muestras.";
+    } catch (error) {
+        return "ERROR:" + error.message;
+    } finally {
+        if (actionLoaded) {
+            try {
+                app.unloadAction(actionSetName, "");
+            } catch (unloadError) {
+            }
+        }
+
+        if (actionFile.exists) {
+            try {
+                actionFile.remove();
+            } catch (removeError) {
+            }
+        }
+    }
+}
+
 function RMCNike_extractOfficialSwatches() {
     // Devuelve JSON listo para guardarse como js/config/officialSwatches.json.
     try {

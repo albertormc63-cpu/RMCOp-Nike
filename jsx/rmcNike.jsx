@@ -83,7 +83,7 @@ function RMCNike_applyNameNumber(namePlaceholder, numberPlaceholder, newName, ne
             numberSummary = " | Medidas numero: " + summarizeTextFrames(numberFrames, fitUnit);
         } else if (safeNumber !== " ") {
             // Indigenous Heritage: el numero se arma duplicando grupos raster/expandidos.
-            ihNumberMessage = applyIhNumberRules(doc, safeNumber, ihNumberRuleJson, numberMaxWidth, fitBuffer, minScale, fitUnit);
+            ihNumberMessage = applyIhNumberRules(doc, safeNumber, ihNumberRuleJson, numberMaxWidth, smallNumberMaxWidth, fitBuffer, minScale, fitUnit);
 
             if (ihNumberMessage.indexOf("ERROR:") === 0) {
                 return ihNumberMessage;

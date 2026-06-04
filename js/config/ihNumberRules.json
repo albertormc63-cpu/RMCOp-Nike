@@ -10,7 +10,8 @@
       "digitSuffix": " F",
       "outputGroup": "RMC FRONT NUMBER",
       "gap": 0.25,
-      "fitToMaxWidth": false
+      "fitToMaxWidth": true,
+      "maxWidthRole": "small"
     },
     "back": {
       "sourceContainer": "NUMEROS B",
@@ -19,7 +20,8 @@
       "digitSuffix": " B",
       "outputGroup": "RMC BACK NUMBER",
       "gap": 0.25,
-      "fitToMaxWidth": true
+      "fitToMaxWidth": true,
+      "maxWidthRole": "large"
     }
   }
 }

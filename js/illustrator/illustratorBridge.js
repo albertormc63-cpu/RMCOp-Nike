@@ -129,11 +129,19 @@
         return evalScript("RMCNike_extractOfficialSwatches()");
     }
 
+    async function addUsedColors() {
+        // Corre la accion de Illustrator que agrega al panel Muestras los colores usados.
+        await ensureJsxLoaded();
+        await evalScript(`$.evalFile(${toJsxString(`${getExtensionRoot()}/jsx/swatches.jsx`)})`);
+        return evalScript("RMCNike_addUsedColors()");
+    }
+
     window.RMC.illustrator.bridge = {
         openFile: openFile,
         confirmReplace: confirmReplace,
         confirmOfficialSwatchesOverwrite: confirmOfficialSwatchesOverwrite,
         applyNameNumber: applyNameNumber,
-        extractOfficialSwatches: extractOfficialSwatches
+        extractOfficialSwatches: extractOfficialSwatches,
+        addUsedColors: addUsedColors
     };
 })();

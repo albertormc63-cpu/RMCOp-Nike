@@ -148,13 +148,28 @@ select:focus {
 
 .section-heading-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 128px;
+    grid-template-columns: minmax(0, 1fr) minmax(118px, 128px) minmax(132px, 150px);
     gap: 8px;
     align-items: end;
 }
 
-.line-field {
+.section-heading-row h1 {
     min-width: 0;
+}
+
+.line-field,
+.variant-field {
+    min-width: 0;
+}
+
+@media (max-width: 430px) {
+    .section-heading-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .section-heading-row h1 {
+        grid-column: 1 / -1;
+    }
 }
 
 h1 {
@@ -259,7 +274,7 @@ p {
     font-weight: 600;
 }
 
-.variant-field {
+.selected-summary .variant-field {
     margin-top: 8px;
 }
 
