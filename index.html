@@ -218,6 +218,11 @@
                 <button id="btnChooseBatchDestination" class="secondary-button batch-action">Elegir destino por lote</button>
                 <p id="batchDestinationPreview" class="path-preview">Sin destino seleccionado</p>
 
+                <div class="batch-timer">
+                    <span class="eyebrow">Tiempo de proceso</span>
+                    <strong id="batchTimerPreview">00:00.000</strong>
+                </div>
+
                 <div id="batchSummary" class="batch-summary">
                     <div>
                         <span class="eyebrow">Validas</span>
@@ -233,6 +238,13 @@
                     </div>
                 </div>
 
+                <div id="batchStyleFamilyList" class="batch-size-list"></div>
+                <label class="wide-field">
+                    Familia style a procesar
+                    <select id="batchStyleFamilyFilter">
+                        <option value="">Todas</option>
+                    </select>
+                </label>
                 <div id="batchSizeList" class="batch-size-list"></div>
                 <label class="wide-field">
                     Talla a procesar

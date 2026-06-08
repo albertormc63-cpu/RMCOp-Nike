@@ -37,16 +37,18 @@ Archivo analizado en chat:
 /Volumes/Fullsize/NIKE ON DEMAND 12 JUN.XLSX
 ```
 
-Columnas esperadas:
+Columnas esperadas actualmente:
 
-- A: `Work Order`
-- B: `Ship Order` (diseno no lo usa directamente, pero otros procesos si)
+- A: `Ship Order` (diseno no lo usa directamente, pero otros procesos si)
+- B: `WO#` / `Work Order`
 - C: `Style`
 - D: `Color`
 - E: `Size`
 - F: `Qty`
 - G: `Last Name`
 - H: `Player#`
+
+Nota: `js/services/createOrderData.js` detecta columnas por encabezado, asi que tambien tolera el layout anterior `A=Work Order, B=Ship Order`.
 
 Importante: aunque inicialmente se penso que los datos venian despues de la fila 2, el Excel real trae encabezados en fila 1 y datos reales desde fila 2. El importador debe iniciar en fila 2.
 

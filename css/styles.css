@@ -427,6 +427,26 @@ select {
     width: 100%;
 }
 
+.batch-timer {
+    padding: 8px;
+    border: 1px solid #333842;
+    border-radius: 5px;
+    background: #151719;
+}
+
+.batch-timer strong {
+    display: block;
+    margin-top: 3px;
+    color: var(--focus);
+    font-family: Menlo, Monaco, Consolas, monospace;
+    font-size: 16px;
+    line-height: 1.2;
+}
+
+.batch-timer.running strong {
+    color: #7ee787;
+}
+
 .batch-summary {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

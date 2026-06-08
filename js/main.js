@@ -209,8 +209,8 @@
     }
 
     function getStyleFamily(styleCode) {
-        // Convierte A1000H/A1000A/A1000IH -> A1000 y Y1000H/Y1000A/Y1000IH -> Y1000.
-        return String(styleCode || "").replace(/IH$/i, "").replace(/[HA]$/i, "");
+        // Convierte A1000H/A1000A/A1000IH/A1000TB -> A1000.
+        return String(styleCode || "").replace(/IH$/i, "").replace(/TB$/i, "").replace(/[HA]$/i, "");
     }
 
     function getTextFitRule(order) {
@@ -267,12 +267,20 @@
 
     function renderBatchSummary() {
         const batchData = state.batch.data;
-        const validCount = batchData ? batchData.validRows.length : 0;
+        const styleFamilyFilter = document.getElementById("batchStyleFamilyFilter");
+        const selectedStyleFamily = styleFamilyFilter ? styleFamilyFilter.value : "";
+        const filteredRows = batchData ? getRowsByStyleFamily(batchData.validRows, selectedStyleFamily) : [];
+        const validCount = batchData ? filteredRows.length : 0;
         const invalidCount = batchData ? batchData.invalidRows.length : 0;
-        const sizes = batchData ? Object.keys(batchData.groupsBySize).sort() : [];
+        const sizeCounts = countBatchRowsBy(filteredRows, "size");
+        const sizes = Object.keys(sizeCounts).sort();
+        const styleFamilyCounts = batchData ? batchData.counts.byStyleFamily || {} : {};
+        const styleFamilies = Object.keys(styleFamilyCounts).sort();
         const rowsPreview = document.getElementById("batchRowsPreview");
+        const styleFamilyList = document.getElementById("batchStyleFamilyList");
         const sizeList = document.getElementById("batchSizeList");
         const sizeFilter = document.getElementById("batchSizeFilter");
+        const previousStyleFamilyFilter = styleFamilyFilter ? styleFamilyFilter.value : "";
         const previousSizeFilter = sizeFilter ? sizeFilter.value : "";
 
         document.getElementById("batchExcelPreview").textContent = state.batch.excelPath || "Sin Excel seleccionado";
@@ -281,10 +289,31 @@
         document.getElementById("batchInvalidCount").textContent = String(invalidCount);
         document.getElementById("batchSizeCount").textContent = String(sizes.length);
 
+        styleFamilyList.innerHTML = "";
+        styleFamilies.forEach(function (styleFamily) {
+            const item = document.createElement("span");
+            item.textContent = `${styleFamily}: ${styleFamilyCounts[styleFamily]}`;
+            styleFamilyList.appendChild(item);
+        });
+
+        if (styleFamilyFilter) {
+            styleFamilyFilter.innerHTML = "<option value=\"\">Todas</option>";
+            styleFamilies.forEach(function (styleFamily) {
+                const option = document.createElement("option");
+                option.value = styleFamily;
+                option.textContent = `${styleFamily} (${styleFamilyCounts[styleFamily]})`;
+                styleFamilyFilter.appendChild(option);
+            });
+
+            if (styleFamilies.indexOf(previousStyleFamilyFilter) !== -1) {
+                styleFamilyFilter.value = previousStyleFamilyFilter;
+            }
+        }
+
         sizeList.innerHTML = "";
         sizes.forEach(function (size) {
             const item = document.createElement("span");
-            item.textContent = `${size}: ${batchData.groupsBySize[size].length}`;
+            item.textContent = `${size}: ${sizeCounts[size]}`;
             sizeList.appendChild(item);
         });
 
@@ -293,7 +322,7 @@
             sizes.forEach(function (size) {
                 const option = document.createElement("option");
                 option.value = size;
-                option.textContent = `${size} (${batchData.groupsBySize[size].length})`;
+                option.textContent = `${size} (${sizeCounts[size]})`;
                 sizeFilter.appendChild(option);
             });
 
@@ -309,7 +338,9 @@
 
         const lines = [];
         lines.push(`Hoja: ${batchData.sheetName}`);
-        lines.push(`Validas: ${validCount} | Errores: ${invalidCount}`);
+        lines.push(`Encabezados: fila ${batchData.headerRow || 1} | Datos desde fila ${batchData.dataStartRow || 2}`);
+        lines.push(`Filtro style: ${getSelectedBatchStyleFamilyLabel()} | Filtro talla: ${getSelectedBatchSizeLabel()}`);
+        lines.push(`Validas en seleccion: ${getSelectedBatchRows().length} | Errores del Excel: ${invalidCount}`);
 
         if (invalidCount) {
             lines.push("");
@@ -321,34 +352,110 @@
 
         lines.push("");
         lines.push("Primeras filas validas:");
-        batchData.validRows.slice(0, 14).forEach(function (row) {
-            lines.push(`Fila ${row.sourceRow} | ${row.size} | ${row.wo} | ${row.team} | ${row.style} | ${row.name} #${row.number}`);
+        getSelectedBatchRows().slice(0, 14).forEach(function (row) {
+            lines.push(`Fila ${row.sourceRow} | ${row.styleFamily}/${row.size} | ${row.wo} | ${row.team} | ${row.style} | ${row.name} #${row.number}`);
         });
 
         rowsPreview.textContent = lines.join("\n");
     }
 
+    function countBatchRowsBy(rows, key) {
+        return rows.reduce(function (counts, row) {
+            const value = row[key] || "(vacio)";
+            counts[value] = (counts[value] || 0) + 1;
+            return counts;
+        }, {});
+    }
+
+    function getRowsByStyleFamily(rows, styleFamily) {
+        if (!styleFamily) {
+            return rows;
+        }
+
+        return rows.filter(function (row) {
+            return row.styleFamily === styleFamily;
+        });
+    }
+
     function getSelectedBatchRows() {
         const batchData = state.batch.data;
+        const styleFamilyFilter = document.getElementById("batchStyleFamilyFilter");
         const sizeFilter = document.getElementById("batchSizeFilter");
+        const selectedStyleFamily = styleFamilyFilter ? styleFamilyFilter.value : "";
         const selectedSize = sizeFilter ? sizeFilter.value : "";
 
         if (!batchData) {
             return [];
         }
 
-        if (!selectedSize) {
-            return batchData.validRows;
-        }
-
         return batchData.validRows.filter(function (row) {
-            return row.size === selectedSize;
+            const matchesStyleFamily = !selectedStyleFamily || row.styleFamily === selectedStyleFamily;
+            const matchesSize = !selectedSize || row.size === selectedSize;
+            return matchesStyleFamily && matchesSize;
         });
+    }
+
+    function getSelectedBatchStyleFamilyLabel() {
+        const styleFamilyFilter = document.getElementById("batchStyleFamilyFilter");
+        return styleFamilyFilter && styleFamilyFilter.value ? styleFamilyFilter.value : "todas";
     }
 
     function getSelectedBatchSizeLabel() {
         const sizeFilter = document.getElementById("batchSizeFilter");
         return sizeFilter && sizeFilter.value ? sizeFilter.value : "todas";
+    }
+
+    function formatElapsedTime(milliseconds) {
+        const totalMilliseconds = Math.max(0, Math.floor(milliseconds));
+        const minutes = Math.floor(totalMilliseconds / 60000);
+        const seconds = Math.floor((totalMilliseconds % 60000) / 1000);
+        const ms = totalMilliseconds % 1000;
+
+        return [
+            String(minutes).padStart(2, "0"),
+            ":",
+            String(seconds).padStart(2, "0"),
+            ".",
+            String(ms).padStart(3, "0")
+        ].join("");
+    }
+
+    function renderBatchTimer(milliseconds, isRunning) {
+        const timer = document.getElementById("batchTimerPreview");
+        const timerBox = timer && timer.parentNode;
+
+        if (!timer) {
+            return;
+        }
+
+        timer.textContent = formatElapsedTime(milliseconds);
+
+        if (timerBox) {
+            timerBox.classList.toggle("running", Boolean(isRunning));
+        }
+    }
+
+    function startBatchTimer() {
+        const startedAt = Date.now();
+        const intervalId = setInterval(function () {
+            renderBatchTimer(Date.now() - startedAt, true);
+        }, 100);
+
+        renderBatchTimer(0, true);
+
+        return {
+            startedAt: startedAt,
+            intervalId: intervalId
+        };
+    }
+
+    function stopBatchTimer(timerState) {
+        const elapsed = Date.now() - timerState.startedAt;
+
+        clearInterval(timerState.intervalId);
+        renderBatchTimer(elapsed, false);
+
+        return elapsed;
     }
 
     function chooseBatchExcel() {
@@ -371,6 +478,7 @@
         renderBatchSummary();
 
         console.log(`Excel importado: ${excelPath}`);
+        console.log(`Encabezados detectados en fila ${state.batch.data.headerRow}; datos desde fila ${state.batch.data.dataStartRow}.`);
         console.log(`Filas validas: ${state.batch.data.validRows.length}`);
         console.warn(`Filas con error: ${state.batch.data.invalidRows.length}`);
     }
@@ -412,7 +520,8 @@
 
     async function createBatchCopyForOrder(order) {
         const services = nodeRuntime.services;
-        const sizeDestinationFolder = services.path.join(state.batch.destinationFolder, order.size);
+        const styleFamilyFolder = order.styleFamily || getStyleFamily(order.style);
+        const sizeDestinationFolder = services.path.join(state.batch.destinationFolder, styleFamilyFolder, order.size);
         const preview = buildBatchPreview(order, sizeDestinationFolder);
 
         return services.copyTemplate({
@@ -449,7 +558,7 @@
             console.warn(`Se saltaran ${batchData.invalidRows.length} filas invalidas.`);
         }
 
-        logFlow(`Creando copias batch (${getSelectedBatchSizeLabel()}): ${validRows.length} filas validas.`);
+        logFlow(`Creando copias batch (${getSelectedBatchStyleFamilyLabel()} / ${getSelectedBatchSizeLabel()}): ${validRows.length} filas validas.`);
 
         for (let index = 0; index < validRows.length; index++) {
             const order = validRows[index];
@@ -497,48 +606,53 @@
             console.warn(`Se saltaran ${batchData.invalidRows.length} filas invalidas.`);
         }
 
+        const timerState = startBatchTimer();
         let okCount = 0;
         let errorCount = 0;
         const results = [];
 
-        const selectedRows = getSelectedBatchRows();
+        try {
+            const selectedRows = getSelectedBatchRows();
 
-        logFlow(`Procesando batch completo (${getSelectedBatchSizeLabel()}): ${selectedRows.length} filas validas.`);
+            logFlow(`Procesando batch completo (${getSelectedBatchStyleFamilyLabel()} / ${getSelectedBatchSizeLabel()}): ${selectedRows.length} filas validas.`);
 
-        for (let index = 0; index < selectedRows.length; index++) {
-            const order = selectedRows[index];
+            for (let index = 0; index < selectedRows.length; index++) {
+                const order = selectedRows[index];
 
-            try {
-                const copyResult = await createBatchCopyForOrder(order);
+                try {
+                    const copyResult = await createBatchCopyForOrder(order);
 
-                console.log(`Abriendo fila ${order.sourceRow}: ${copyResult.outputPath}`);
-                await openFileInIllustrator(copyResult.outputPath);
-                await applyOrderDataToIllustrator(order);
-                console.log(await illustratorBridge.savePdfAndCloseActiveDocument(copyResult.outputPath));
+                    console.log(`Abriendo fila ${order.sourceRow}: ${copyResult.outputPath}`);
+                    await openFileInIllustrator(copyResult.outputPath);
+                    await applyOrderDataToIllustrator(order);
+                    console.log(await illustratorBridge.savePdfAndCloseActiveDocument(copyResult.outputPath));
 
-                okCount++;
-                results.push({
-                    ok: true,
-                    sourceRow: order.sourceRow,
-                    outputPath: copyResult.outputPath,
-                    outputName: copyResult.outputName,
-                    size: order.size
-                });
-                console.log(`Procesada fila ${order.sourceRow}: ${copyResult.outputName}`);
-            } catch (error) {
-                errorCount++;
-                results.push({
-                    ok: false,
-                    sourceRow: order.sourceRow,
-                    size: order.size,
-                    message: error.message
-                });
-                console.error(`Error batch fila ${order.sourceRow}: ${error.message}`);
+                    okCount++;
+                    results.push({
+                        ok: true,
+                        sourceRow: order.sourceRow,
+                        outputPath: copyResult.outputPath,
+                        outputName: copyResult.outputName,
+                        size: order.size
+                    });
+                    console.log(`Procesada fila ${order.sourceRow}: ${copyResult.outputName}`);
+                } catch (error) {
+                    errorCount++;
+                    results.push({
+                        ok: false,
+                        sourceRow: order.sourceRow,
+                        size: order.size,
+                        message: error.message
+                    });
+                    console.error(`Error batch fila ${order.sourceRow}: ${error.message}`);
+                }
             }
-        }
 
-        state.batch.lastResults = results;
-        console.log(`Batch completo terminado. OK: ${okCount} | Errores: ${errorCount}`);
+            state.batch.lastResults = results;
+        } finally {
+            const elapsed = stopBatchTimer(timerState);
+            console.log(`Batch completo terminado. OK: ${okCount} | Errores: ${errorCount} | Tiempo: ${formatElapsedTime(elapsed)}`);
+        }
     }
 
     // Copia la plantilla al destino resuelto: On Demand o carpeta elegida manualmente.
@@ -903,7 +1017,14 @@
             });
         });
 
+        document.getElementById("batchStyleFamilyFilter").addEventListener("change", function () {
+            renderBatchSummary();
+            const rows = getSelectedBatchRows();
+            console.log(`Familia style seleccionada: ${getSelectedBatchStyleFamilyLabel()} (${rows.length} filas).`);
+        });
+
         document.getElementById("batchSizeFilter").addEventListener("change", function () {
+            renderBatchSummary();
             const rows = getSelectedBatchRows();
             console.log(`Talla batch seleccionada: ${getSelectedBatchSizeLabel()} (${rows.length} filas).`);
         });
