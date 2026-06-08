@@ -11,6 +11,7 @@
             buildTemplatePath: null,
             buildOutputName: null,
             copyTemplate: null,
+            createOrderDataFromExcel: null,
             textFitRules: null,
             ihNumberRules: null
         };
@@ -51,6 +52,7 @@
                 services.buildTemplatePath = pathBuilder.buildTemplatePath;
                 services.buildOutputName = pathBuilder.buildOutputName;
                 services.copyTemplate = requireFromExtension("js/services/copyTemplate.js");
+                services.createOrderDataFromExcel = requireFromExtension("js/services/createOrderData.js").createOrderDataFromExcel;
 
                 logFlow("Servicios Node cargados correctamente.");
             } catch (error) {

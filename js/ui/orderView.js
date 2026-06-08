@@ -13,8 +13,8 @@
         return checked ? checked.value : "Home";
     }
 
-    function isStandardVariant(state) {
-        return getVariant(state.selectedVariant) === "Standard";
+    function variantUsesVersion(state) {
+        return catalog.variantUsesVersion(getVariant(state.selectedVariant));
     }
 
     function getProductLine(fallback) {
@@ -53,11 +53,12 @@
     }
 
     function renderStyleOptions(state) {
-        // El style depende de linea y version: A1000H vs A1000A, etc.
+        // El style depende de linea/variante. Standard usa Home/Away; IH/TB usan sufijo fijo.
         const select = document.getElementById("styleCode");
         const lineConfig = catalog.getLineConfig(state.selectedLine);
         const currentAudience = select && select.value ? select.value.charAt(0) : "A";
-        const suffix = isStandardVariant(state) ? catalog.getVersionStyleSuffix(getVersion()) : "IH";
+        const variantName = getVariant(state.selectedVariant);
+        const suffix = catalog.getVariantStyleSuffix(variantName, getVersion());
 
         if (!select) return;
 
@@ -81,15 +82,15 @@
     }
 
     function renderVersionControls(state) {
-        // IH no usa Home/Away en ruta por ahora, asi que bloqueamos esos radios en el panel.
-        const isStandard = isStandardVariant(state);
+        // Solo las variantes que lo declaran usan Home/Away; las demas bloquean esos radios.
+        const usesVersion = variantUsesVersion(state);
 
         document.querySelectorAll("input[name='version']").forEach(function (input) {
-            input.disabled = !isStandard;
+            input.disabled = !usesVersion;
         });
 
         document.querySelectorAll(".version-toggle label").forEach(function (label) {
-            label.classList.toggle("disabled", !isStandard);
+            label.classList.toggle("disabled", !usesVersion);
         });
     }
 
@@ -112,7 +113,7 @@
             line: state.selectedLine,
             team: state.selectedTeam,
             variant: getVariant(state.selectedVariant),
-            version: isStandardVariant(state) ? getVersion() : "Overview"
+            version: variantUsesVersion(state) ? getVersion() : "Overview"
         });
     }
 

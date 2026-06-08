@@ -23,12 +23,16 @@
         }
     };
 
-    // Standard reemplaza nombre y numero como texto. IH reemplaza nombre y arma numero con arte duplicado.
+    function isIhVariant(variantName) {
+        return variantName === "Indigenous Heritage";
+    }
+
+    // Standard y Throwback reemplazan texto. IH reemplaza nombre y arma/apaga numero con arte.
     function getTextRule(order) {
         const lineRules = textRulesByLine[order.line] || {};
         const placeholders = lineRules[order.team] || null;
 
-        if (order.variant !== "Standard") {
+        if (isIhVariant(order.variant)) {
             return {
                 mode: "raster-number",
                 placeholders: placeholders,

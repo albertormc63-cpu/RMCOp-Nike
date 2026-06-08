@@ -116,7 +116,7 @@ select:focus {
 
 .step-nav {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 5px;
     margin: 10px 0;
 }
@@ -405,6 +405,7 @@ select {
 #btnReviewOrder,
 #btnCrearCopia,
 #btnAbrirAplicar,
+#btnProcessBatchFull,
 #btnExtractOfficialSwatches,
 .settings-action {
     width: 100%;
@@ -412,13 +413,67 @@ select {
 }
 
 .review-panel,
-.settings-list {
+.settings-list,
+.batch-panel {
     display: grid;
     gap: 9px;
     padding: 9px;
     border: 1px solid var(--line);
     border-radius: 6px;
     background: var(--panel);
+}
+
+.batch-action {
+    width: 100%;
+}
+
+.batch-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.batch-summary div,
+.batch-size-list span {
+    min-width: 0;
+    padding: 7px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: #24262a;
+}
+
+.batch-summary strong {
+    display: block;
+    margin-top: 3px;
+    color: var(--text);
+    font-size: 16px;
+}
+
+.batch-size-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.batch-size-list span {
+    color: var(--text);
+    font-family: Menlo, Monaco, Consolas, monospace;
+    font-size: 10px;
+    text-align: center;
+}
+
+.batch-rows-preview {
+    max-height: 180px;
+    padding: 8px;
+    overflow: auto;
+    border: 1px solid #333842;
+    border-radius: 5px;
+    background: #151719;
+    color: var(--muted);
+    font-family: Menlo, Monaco, Consolas, monospace;
+    font-size: 10px;
+    line-height: 1.35;
+    white-space: pre-wrap;
 }
 
 .path-preview {

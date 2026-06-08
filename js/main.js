@@ -12,7 +12,13 @@
         selectedLine: "masculino",
         selectedTeam: catalog.teams[0].name,
         selectedVariant: catalog.variants[0].name,
-        lastOutputPath: ""
+        lastOutputPath: "",
+        batch: {
+            excelPath: "",
+            destinationFolder: "",
+            data: null,
+            lastResults: []
+        }
     };
 
     function logFlow(message) {
@@ -54,6 +60,56 @@
         document.getElementById("modePreview").textContent = config ? config.mode : "Sin Node";
         document.getElementById("templatesBasePreview").textContent = paths ? paths.templatesBase : "No disponible";
         document.getElementById("ordersBasePreview").textContent = paths ? paths.ordersBase : "No disponible";
+    }
+
+    function normalizeCepPath(value) {
+        const pathValue = String(value || "").trim();
+
+        if (pathValue.indexOf("file://") !== 0) {
+            return pathValue;
+        }
+
+        try {
+            return decodeURIComponent(pathValue.replace(/^file:\/\//, ""));
+        } catch (error) {
+            return pathValue.replace(/^file:\/\//, "");
+        }
+    }
+
+    function pickFileFromCep(title, initialPath) {
+        if (!window.cep || !window.cep.fs || !window.cep.fs.showOpenDialog) {
+            throw new Error("El selector CEP no esta disponible. Abre el panel desde Illustrator.");
+        }
+
+        const result = window.cep.fs.showOpenDialog(false, false, title, initialPath || "", null);
+
+        if (!result || result.err) {
+            return "";
+        }
+
+        if (Array.isArray(result.data)) {
+            return normalizeCepPath(result.data[0] || "");
+        }
+
+        return normalizeCepPath(result.data || "");
+    }
+
+    function pickFolderFromCep(title, initialPath) {
+        if (!window.cep || !window.cep.fs || !window.cep.fs.showOpenDialog) {
+            throw new Error("El selector CEP no esta disponible. Abre el panel desde Illustrator.");
+        }
+
+        const result = window.cep.fs.showOpenDialog(false, true, title, initialPath || "", null);
+
+        if (!result || result.err) {
+            return "";
+        }
+
+        if (Array.isArray(result.data)) {
+            return normalizeCepPath(result.data[0] || "");
+        }
+
+        return normalizeCepPath(result.data || "");
     }
 
     function renderTeams() {
@@ -209,6 +265,282 @@
         return null;
     }
 
+    function renderBatchSummary() {
+        const batchData = state.batch.data;
+        const validCount = batchData ? batchData.validRows.length : 0;
+        const invalidCount = batchData ? batchData.invalidRows.length : 0;
+        const sizes = batchData ? Object.keys(batchData.groupsBySize).sort() : [];
+        const rowsPreview = document.getElementById("batchRowsPreview");
+        const sizeList = document.getElementById("batchSizeList");
+        const sizeFilter = document.getElementById("batchSizeFilter");
+        const previousSizeFilter = sizeFilter ? sizeFilter.value : "";
+
+        document.getElementById("batchExcelPreview").textContent = state.batch.excelPath || "Sin Excel seleccionado";
+        document.getElementById("batchDestinationPreview").textContent = state.batch.destinationFolder || "Sin destino seleccionado";
+        document.getElementById("batchValidCount").textContent = String(validCount);
+        document.getElementById("batchInvalidCount").textContent = String(invalidCount);
+        document.getElementById("batchSizeCount").textContent = String(sizes.length);
+
+        sizeList.innerHTML = "";
+        sizes.forEach(function (size) {
+            const item = document.createElement("span");
+            item.textContent = `${size}: ${batchData.groupsBySize[size].length}`;
+            sizeList.appendChild(item);
+        });
+
+        if (sizeFilter) {
+            sizeFilter.innerHTML = "<option value=\"\">Todas</option>";
+            sizes.forEach(function (size) {
+                const option = document.createElement("option");
+                option.value = size;
+                option.textContent = `${size} (${batchData.groupsBySize[size].length})`;
+                sizeFilter.appendChild(option);
+            });
+
+            if (sizes.indexOf(previousSizeFilter) !== -1) {
+                sizeFilter.value = previousSizeFilter;
+            }
+        }
+
+        if (!batchData) {
+            rowsPreview.textContent = "Importa un Excel para revisar filas.";
+            return;
+        }
+
+        const lines = [];
+        lines.push(`Hoja: ${batchData.sheetName}`);
+        lines.push(`Validas: ${validCount} | Errores: ${invalidCount}`);
+
+        if (invalidCount) {
+            lines.push("");
+            lines.push("Errores:");
+            batchData.invalidRows.slice(0, 12).forEach(function (row) {
+                lines.push(`Fila ${row.sourceRow}: ${row.errors.join(", ")} | WO ${row.wo || "?"}`);
+            });
+        }
+
+        lines.push("");
+        lines.push("Primeras filas validas:");
+        batchData.validRows.slice(0, 14).forEach(function (row) {
+            lines.push(`Fila ${row.sourceRow} | ${row.size} | ${row.wo} | ${row.team} | ${row.style} | ${row.name} #${row.number}`);
+        });
+
+        rowsPreview.textContent = lines.join("\n");
+    }
+
+    function getSelectedBatchRows() {
+        const batchData = state.batch.data;
+        const sizeFilter = document.getElementById("batchSizeFilter");
+        const selectedSize = sizeFilter ? sizeFilter.value : "";
+
+        if (!batchData) {
+            return [];
+        }
+
+        if (!selectedSize) {
+            return batchData.validRows;
+        }
+
+        return batchData.validRows.filter(function (row) {
+            return row.size === selectedSize;
+        });
+    }
+
+    function getSelectedBatchSizeLabel() {
+        const sizeFilter = document.getElementById("batchSizeFilter");
+        return sizeFilter && sizeFilter.value ? sizeFilter.value : "todas";
+    }
+
+    function chooseBatchExcel() {
+        const services = nodeRuntime.services;
+        const paths = getCurrentPaths();
+
+        if (!services.createOrderDataFromExcel) {
+            throw new Error("El importador de Excel no esta cargado.");
+        }
+
+        const excelPath = pickFileFromCep("Elegir Excel Nike On Demand", paths ? paths.ordersBase : "");
+
+        if (!excelPath) {
+            return;
+        }
+
+        state.batch.excelPath = excelPath;
+        state.batch.data = services.createOrderDataFromExcel(excelPath);
+        state.batch.lastResults = [];
+        renderBatchSummary();
+
+        console.log(`Excel importado: ${excelPath}`);
+        console.log(`Filas validas: ${state.batch.data.validRows.length}`);
+        console.warn(`Filas con error: ${state.batch.data.invalidRows.length}`);
+    }
+
+    function chooseBatchDestination() {
+        const paths = getCurrentPaths();
+        const folderPath = pickFolderFromCep("Elegir destino batch", paths ? paths.ordersBase : "");
+
+        if (!folderPath) {
+            return;
+        }
+
+        state.batch.destinationFolder = folderPath;
+        renderBatchSummary();
+        console.log(`Destino batch: ${folderPath}`);
+    }
+
+    function buildBatchPreview(order, sizeDestinationFolder) {
+        const services = nodeRuntime.services;
+        const paths = getCurrentPaths();
+        const templatePath = services.buildTemplatePath({
+            basePath: paths.templatesBase,
+            line: order.line,
+            team: order.team,
+            variant: order.variant,
+            version: order.version,
+            style: order.style,
+            size: order.size
+        });
+        const outputName = services.buildOutputName(order);
+
+        return {
+            order: order,
+            templatePath: templatePath,
+            outputName: outputName,
+            destinationFolder: sizeDestinationFolder
+        };
+    }
+
+    async function createBatchCopyForOrder(order) {
+        const services = nodeRuntime.services;
+        const sizeDestinationFolder = services.path.join(state.batch.destinationFolder, order.size);
+        const preview = buildBatchPreview(order, sizeDestinationFolder);
+
+        return services.copyTemplate({
+            templatePath: preview.templatePath,
+            destinationFolder: preview.destinationFolder,
+            outputName: preview.outputName,
+            number: preview.order.number,
+            name: preview.order.name
+        });
+    }
+
+    async function createBatchCopies() {
+        const services = nodeRuntime.services;
+        const batchData = state.batch.data;
+
+        if (!batchData) {
+            throw new Error("Primero importa un Excel.");
+        }
+
+        if (!state.batch.destinationFolder) {
+            throw new Error("Primero elige un destino batch.");
+        }
+
+        if (!services.copyTemplate || !services.buildTemplatePath || !services.buildOutputName || !services.path) {
+            throw new Error("Servicios Node incompletos para batch.");
+        }
+
+        const validRows = getSelectedBatchRows();
+        const results = [];
+        let okCount = 0;
+        let errorCount = 0;
+
+        if (batchData.invalidRows.length) {
+            console.warn(`Se saltaran ${batchData.invalidRows.length} filas invalidas.`);
+        }
+
+        logFlow(`Creando copias batch (${getSelectedBatchSizeLabel()}): ${validRows.length} filas validas.`);
+
+        for (let index = 0; index < validRows.length; index++) {
+            const order = validRows[index];
+
+            try {
+                const copyResult = await createBatchCopyForOrder(order);
+
+                okCount++;
+                results.push({
+                    ok: true,
+                    sourceRow: order.sourceRow,
+                    outputPath: copyResult.outputPath,
+                    outputName: copyResult.outputName,
+                    size: order.size
+                });
+                console.log(`OK fila ${order.sourceRow}: ${copyResult.outputPath}`);
+            } catch (error) {
+                errorCount++;
+                results.push({
+                    ok: false,
+                    sourceRow: order.sourceRow,
+                    size: order.size,
+                    message: error.message
+                });
+                console.error(`Error fila ${order.sourceRow}: ${error.message}`);
+            }
+        }
+
+        state.batch.lastResults = results;
+        console.log(`Batch terminado. OK: ${okCount} | Errores: ${errorCount}`);
+    }
+
+    async function processBatchFull() {
+        const batchData = state.batch.data;
+
+        if (!batchData) {
+            throw new Error("Primero importa un Excel.");
+        }
+
+        if (!state.batch.destinationFolder) {
+            throw new Error("Primero elige un destino batch.");
+        }
+
+        if (batchData.invalidRows.length) {
+            console.warn(`Se saltaran ${batchData.invalidRows.length} filas invalidas.`);
+        }
+
+        let okCount = 0;
+        let errorCount = 0;
+        const results = [];
+
+        const selectedRows = getSelectedBatchRows();
+
+        logFlow(`Procesando batch completo (${getSelectedBatchSizeLabel()}): ${selectedRows.length} filas validas.`);
+
+        for (let index = 0; index < selectedRows.length; index++) {
+            const order = selectedRows[index];
+
+            try {
+                const copyResult = await createBatchCopyForOrder(order);
+
+                console.log(`Abriendo fila ${order.sourceRow}: ${copyResult.outputPath}`);
+                await openFileInIllustrator(copyResult.outputPath);
+                await applyOrderDataToIllustrator(order);
+                console.log(await illustratorBridge.savePdfAndCloseActiveDocument(copyResult.outputPath));
+
+                okCount++;
+                results.push({
+                    ok: true,
+                    sourceRow: order.sourceRow,
+                    outputPath: copyResult.outputPath,
+                    outputName: copyResult.outputName,
+                    size: order.size
+                });
+                console.log(`Procesada fila ${order.sourceRow}: ${copyResult.outputName}`);
+            } catch (error) {
+                errorCount++;
+                results.push({
+                    ok: false,
+                    sourceRow: order.sourceRow,
+                    size: order.size,
+                    message: error.message
+                });
+                console.error(`Error batch fila ${order.sourceRow}: ${error.message}`);
+            }
+        }
+
+        state.batch.lastResults = results;
+        console.log(`Batch completo terminado. OK: ${okCount} | Errores: ${errorCount}`);
+    }
+
     // Copia la plantilla al destino resuelto: On Demand o carpeta elegida manualmente.
     async function createCopy() {
         const services = nodeRuntime.services;
@@ -269,24 +601,37 @@
         }
     }
 
+    async function openFileInIllustrator(filePath) {
+        if (!filePath) {
+            throw new Error("No hay archivo listo para abrir en Illustrator.");
+        }
+
+        const message = await illustratorBridge.openFile(filePath);
+        console.log(message);
+    }
+
     async function openCurrentFileInIllustrator() {
         if (!state.lastOutputPath) {
             throw new Error("Primero crea la copia de plantilla para abrirla en Illustrator.");
         }
 
-        const message = await illustratorBridge.openFile(state.lastOutputPath);
-        console.log(message);
+        await openFileInIllustrator(state.lastOutputPath);
     }
 
-    async function applyOrderDataToIllustrator() {
-        const order = orderView.collectOrder(state);
+    async function applyOrderDataToIllustrator(orderOverride) {
+        const order = orderOverride || orderView.collectOrder(state);
+        const isBatchOrder = Boolean(orderOverride);
         const rule = textRules.getTextRule(order);
         const hasName = order.name !== "";
         const hasNumber = order.number !== "";
 
-        if (!hasName && !hasNumber) {
+        if (!hasName && !hasNumber && !isBatchOrder) {
             console.warn("Sin nombre ni numero: se deja la plantilla tal como viene.");
             return;
+        }
+
+        if (!hasName && !hasNumber && isBatchOrder) {
+            console.warn(`Fila ${order.sourceRow || "batch"} sin nombre/numero: se limpiaran placeholders con espacios.`);
         }
 
         if (!rule.placeholders) {
@@ -300,8 +645,9 @@
             console.warn(rule.message);
         }
 
-        const isIhVariant = order.variant !== "Standard";
-        const shouldReplaceNumber = rule.mode === "text" && !isIhVariant;
+        // La regla decide el motor: Standard/TB reemplazan texto; IH delega numero a arte expandido.
+        const isIhVariant = rule.mode === "raster-number";
+        const shouldReplaceNumber = rule.mode === "text";
         const fitRule = getTextFitRule(order);
         const ihNumberRule = isIhVariant ? getIhNumberRule() : null;
 
@@ -529,6 +875,39 @@
             });
         });
 
+        document.getElementById("btnChooseBatchExcel").addEventListener("click", function () {
+            try {
+                chooseBatchExcel();
+            } catch (error) {
+                console.error("No se pudo importar el Excel:");
+                console.error(error.message);
+                alert(error.message);
+            }
+        });
+
+        document.getElementById("btnChooseBatchDestination").addEventListener("click", function () {
+            try {
+                chooseBatchDestination();
+            } catch (error) {
+                console.error("No se pudo elegir el destino batch:");
+                console.error(error.message);
+                alert(error.message);
+            }
+        });
+
+        document.getElementById("btnProcessBatchFull").addEventListener("click", function () {
+            processBatchFull().catch(function (error) {
+                console.error("No se pudo aplicar el batch completo:");
+                console.error(error.message);
+                alert(error.message);
+            });
+        });
+
+        document.getElementById("batchSizeFilter").addEventListener("change", function () {
+            const rows = getSelectedBatchRows();
+            console.log(`Talla batch seleccionada: ${getSelectedBatchSizeLabel()} (${rows.length} filas).`);
+        });
+
         document.getElementById("btnExtractOfficialSwatches").addEventListener("click", function () {
             extractOfficialSwatches().catch(function (error) {
                 console.error("No se pudieron extraer las muestras oficiales:");
@@ -560,6 +939,7 @@
         renderTeams();
         orderView.updateSelectedSummary(state);
         renderSettings();
+        renderBatchSummary();
         bindEvents();
         orderView.loadDemandFolders(nodeRuntime, logFlow);
 

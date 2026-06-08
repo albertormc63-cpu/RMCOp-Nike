@@ -55,9 +55,11 @@
     };
 
     // replacementMode anticipa como se aplicaran datos en Illustrator para cada variante.
+    // Para agregar variantes: mantener estos campos alineados con js/config/variantRules.js.
     const variants = [
-        { name: "Standard", slug: "standard", code: "STD", replacementMode: "text" },
-        { name: "Indigenous Heritage", slug: "indigenous-heritage", code: "IH", replacementMode: "raster" }
+        { name: "Standard", slug: "standard", code: "STD", replacementMode: "text", usesVersion: true, styleSuffix: { Home: "H", Away: "A" } },
+        { name: "Indigenous Heritage", slug: "indigenous-heritage", code: "IH", replacementMode: "ih-raster-number", usesVersion: false, styleSuffix: "IH" },
+        { name: "Throwback", slug: "throwback", code: "TB", replacementMode: "text", usesVersion: false, styleSuffix: "TB" }
     ];
 
     // Convierte texto de UI a nombre seguro para archivos/carpetas.
@@ -88,6 +90,20 @@
         }) || variants[0];
     }
 
+    function variantUsesVersion(variantName) {
+        return getVariant(variantName).usesVersion !== false;
+    }
+
+    function getVariantStyleSuffix(variantName, version) {
+        const variant = getVariant(variantName);
+
+        if (typeof variant.styleSuffix === "string") {
+            return variant.styleSuffix;
+        }
+
+        return variant.styleSuffix[version] || variant.styleSuffix.Home || "";
+    }
+
     function getVersionStyleSuffix(version) {
         return version === "Away" ? "A" : "H";
     }
@@ -103,6 +119,8 @@
         getVisibleTeams: getVisibleTeams,
         getTeamNickname: getTeamNickname,
         getVariant: getVariant,
+        variantUsesVersion: variantUsesVersion,
+        getVariantStyleSuffix: getVariantStyleSuffix,
         getVersionStyleSuffix: getVersionStyleSuffix
     };
 })();

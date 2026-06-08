@@ -11,6 +11,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "fs-extra": "^11.3.5"
+    "fs-extra": "^11.3.5",
+    "xlsx": "^0.18.5"
   }
 }

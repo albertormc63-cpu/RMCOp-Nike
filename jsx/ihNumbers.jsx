@@ -47,6 +47,58 @@ function applyIhNumberRules(doc, numberValue, ihNumberRuleJson, fallbackMaxWidth
     return messages.length ? " | IH: " + messages.join(" | ") : "";
 }
 
+function hideIhNumberTargets(doc, ihNumberRuleJson) {
+    // Pedido IH sin numero: apaga los grupos/capas N FRONT y N BACK para que no quede placeholder visible.
+    var config = parseJsonSafe(ihNumberRuleJson) || getDefaultIhNumberRules();
+    var activeZones = config.activeZones || [];
+    var docGroupIndex = buildGroupIndex(doc.groupItems, 5000);
+    var layerCache = {};
+    var hiddenTargets = [];
+
+    for (var i = 0; i < activeZones.length; i++) {
+        var zoneName = activeZones[i];
+        var zoneConfig = config.zones ? config.zones[zoneName] : null;
+
+        if (!zoneConfig) {
+            continue;
+        }
+
+        hideNamedGroupOrLayer(doc, zoneConfig.targetGroup, docGroupIndex, layerCache, hiddenTargets);
+
+        if (zoneConfig.outputGroup) {
+            removeGroupByName(docGroupIndex, zoneConfig.outputGroup);
+        }
+    }
+
+    return hiddenTargets.length ? " | IH sin numero: oculto " + hiddenTargets.join(", ") : " | IH sin numero: no encontre grupos N FRONT/N BACK";
+}
+
+function hideNamedGroupOrLayer(doc, itemName, docGroupIndex, layerCache, hiddenTargets) {
+    var groupItem = docGroupIndex[itemName] || null;
+
+    if (groupItem) {
+        groupItem.hidden = true;
+        hiddenTargets.push(itemName);
+        return;
+    }
+
+    var layer = getLayerFromCache(doc, itemName, layerCache);
+
+    if (layer) {
+        layer.visible = false;
+        hiddenTargets.push(itemName);
+    }
+}
+
+function removeGroupByName(docGroupIndex, groupName) {
+    var groupItem = docGroupIndex[groupName] || null;
+
+    if (groupItem) {
+        groupItem.remove();
+        docGroupIndex[groupName] = null;
+    }
+}
+
 function applyIhNumberZone(doc, numberText, zoneConfig, context) {
     var sourceContainer = null;
     var sourceVisibility = null;
@@ -346,3 +398,4 @@ function getDefaultIhNumberRules() {
 
 // API publica del modulo IH para rmcNike.jsx.
 $.global.applyIhNumberRules = applyIhNumberRules;
+$.global.hideIhNumberTargets = hideIhNumberTargets;

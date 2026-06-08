@@ -1,10 +1,12 @@
 const fs = require("fs");
 const path = require("path");
 const teams = require("../data/teams");
+const variantRules = require("../config/variantRules");
 
 // Codigo corto que se agrega al nombre final cuando la variante no es Standard.
 const variantCodes = {
-  "Indigenous Heritage": "IH"
+  "Indigenous Heritage": "IH",
+  Throwback: "TB"
 };
 
 const teamNicknames = {
@@ -57,8 +59,8 @@ function sanitizeOutputPart(value) {
 }
 
 function getStyleSearchFamily(style) {
-  // A1000H/A1000A/A1000IH buscan reglas/plantillas como familia A1000.
-  return normalizeStyle(style).replace(/IH$/i, "").replace(/[HA]$/i, "");
+  // A1000H/A1000A/A1000IH/A1000TB buscan reglas/plantillas como familia A1000.
+  return variantRules.stripVariantSuffix(style);
 }
 
 function getNikeCode(style) {
@@ -96,7 +98,9 @@ function getProductConfig(style) {
 }
 
 function getVariantRootFolder(variant) {
-  return variant === "Indigenous Heritage" ? "INDIGENOUS HERITAGE" : "STANDARD";
+  if (variant === "Indigenous Heritage") return "INDIGENOUS HERITAGE";
+  if (variant === "Throwback") return "THROWBACK";
+  return "STANDARD";
 }
 
 function getVariantProductConfig(style, variant) {
@@ -184,7 +188,17 @@ function getSizeAliases(size) {
   const normalizedSize = String(size || "").trim().toUpperCase();
   const aliases = {
     SM: ["SM", "SML"],
-    SML: ["SM", "SML"]
+    SML: ["SM", "SML"],
+    MD: ["MD", "MED"],
+    MED: ["MD", "MED"],
+    LG: ["LG", "LGE"],
+    LGE: ["LG", "LGE"],
+    XL: ["XL", "XLG"],
+    XLG: ["XL", "XLG"],
+    "2X": ["2X", "2XL"],
+    "2XL": ["2X", "2XL"],
+    "3X": ["3X", "3XL"],
+    "3XL": ["3X", "3XL"]
   };
 
   return aliases[normalizedSize] || [normalizedSize];
@@ -242,9 +256,10 @@ function findIhTeamFolder(basePath, productConfig, team) {
   return match ? path.join(ihProductPath, match) : candidates[0];
 }
 
-function buildStandardTemplatePath({ basePath, team, version, style, size, teamCode }) {
-  const productConfig = getVariantProductConfig(style, "Standard");
-  const variantBasePath = resolvePathSegments(basePath, [getVariantRootFolder("Standard")]);
+function buildTextTemplatePath({ basePath, team, variant, version, style, size, teamCode }) {
+  // Standard y Throwback comparten mecanica: buscar un PDF editable y reemplazar textos.
+  const productConfig = getVariantProductConfig(style, variant);
+  const variantBasePath = resolvePathSegments(basePath, [getVariantRootFolder(variant)]);
   const folderCandidates = getTemplateFolderCandidates(variantBasePath, productConfig, team, version);
   const versionPath = resolvePathSegments(variantBasePath, [
     productConfig.groupFolder,
@@ -288,7 +303,7 @@ function buildTemplatePath({ basePath, team, variant, version, style, size }) {
     return buildIhTemplatePath({ basePath, team, style, size });
   }
 
-  return buildStandardTemplatePath({ basePath, team, version, style, size, teamCode });
+  return buildTextTemplatePath({ basePath, team, variant, version, style, size, teamCode });
 }
 
 function buildOutputName({ wo, team, variant, style, size, number, name }) {
@@ -300,7 +315,7 @@ function buildOutputName({ wo, team, variant, style, size, number, name }) {
   const variantCode = variant && variant !== "Standard" ? (variantCodes[variant] || variant) : "";
   const normalizedStyle = normalizeStyle(style);
   const stylePart = variantCode && normalizedStyle.indexOf(variantCode) === -1 ? `${normalizedStyle}${variantCode}` : normalizedStyle;
-  const orderIdentifier = sanitizeOutputPart(number || name || lineDefaultNumbers[team] || "");
+  const orderIdentifier = sanitizeOutputPart(number || name || "SIN_DATOS");
   const identifierPart = orderIdentifier ? ` ${orderIdentifier}` : "";
   return `${wo} ${productConfig.nikeCode}-${team}${nickname} ${stylePart} ${size}${identifierPart}.pdf`;
 }

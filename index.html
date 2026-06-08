@@ -79,6 +79,7 @@
         <button class="step-button active" data-page="pageTeams">1 Equipo</button>
         <button class="step-button" data-page="pageOrder">2 Pedido</button>
         <button class="step-button" data-page="pageProcess">3 Proceso</button>
+        <button class="step-button" data-page="pageBatch">Por lote</button>
         <button class="step-button" data-page="pageSettings">Rutas</button>
     </nav>
 
@@ -202,6 +203,47 @@
 
             <button id="btnCrearCopia" class="primary-button">Crear copia de plantilla</button>
             <button id="btnAbrirAplicar">Abrir y aplicar datos</button>
+        </section>
+
+        <!-- Por lote: importar Excel y procesar pedidos por talla. -->
+        <section id="pageBatch" class="page">
+            <div class="section-heading">
+                <h1>Por lote</h1>
+            </div>
+
+            <div class="batch-panel">
+                <button id="btnChooseBatchExcel" class="primary-button">Importar Excel</button>
+                <p id="batchExcelPreview" class="path-preview">Sin Excel seleccionado</p>
+
+                <button id="btnChooseBatchDestination" class="secondary-button batch-action">Elegir destino por lote</button>
+                <p id="batchDestinationPreview" class="path-preview">Sin destino seleccionado</p>
+
+                <div id="batchSummary" class="batch-summary">
+                    <div>
+                        <span class="eyebrow">Validas</span>
+                        <strong id="batchValidCount">0</strong>
+                    </div>
+                    <div>
+                        <span class="eyebrow">Errores</span>
+                        <strong id="batchInvalidCount">0</strong>
+                    </div>
+                    <div>
+                        <span class="eyebrow">Tallas</span>
+                        <strong id="batchSizeCount">0</strong>
+                    </div>
+                </div>
+
+                <div id="batchSizeList" class="batch-size-list"></div>
+                <label class="wide-field">
+                    Talla a procesar
+                    <select id="batchSizeFilter">
+                        <option value="">Todas</option>
+                    </select>
+                </label>
+                <div id="batchRowsPreview" class="batch-rows-preview">Importa un Excel para revisar filas.</div>
+            </div>
+
+            <button id="btnProcessBatchFull" class="primary-button batch-action">Crear, aplicar y cerrar talla seleccionada</button>
         </section>
 
         <!-- Vista de apoyo para confirmar rutas activas local/server. -->

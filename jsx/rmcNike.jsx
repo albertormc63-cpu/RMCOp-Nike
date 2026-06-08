@@ -56,6 +56,26 @@ function RMCNike_confirmOfficialSwatchesOverwrite(filePath) {
     }
 }
 
+function RMCNike_savePdfAndCloseActiveDocument(filePath) {
+    try {
+        if (app.documents.length === 0) {
+            return "ERROR:No hay documento abierto en Illustrator.";
+        }
+
+        var doc = app.activeDocument;
+        var pdfFile = new File(filePath);
+        var pdfOptions = new PDFSaveOptions();
+
+        pdfOptions.preserveEditability = true;
+        doc.saveAs(pdfFile, pdfOptions);
+        doc.close(SaveOptions.DONOTSAVECHANGES);
+
+        return "OK:PDF guardado y cerrado: " + pdfFile.fsName;
+    } catch (error) {
+        return "ERROR:" + error.message;
+    }
+}
+
 function RMCNike_applyNameNumber(namePlaceholder, numberPlaceholder, newName, newNumber, shouldReplaceNumber, nameMaxWidth, numberMaxWidth, smallNumberMaxWidth, fitBuffer, minScale, fitUnit, ihNumberRuleJson) {
     // Coordinador general: nombre siempre es texto; numero puede ser Standard(texto) o IH(arte).
     try {
@@ -88,6 +108,9 @@ function RMCNike_applyNameNumber(namePlaceholder, numberPlaceholder, newName, ne
             if (ihNumberMessage.indexOf("ERROR:") === 0) {
                 return ihNumberMessage;
             }
+        } else if (typeof hideIhNumberTargets === "function") {
+            // IH blank desde Excel: no se duplica ningun digito, se apagan N FRONT/N BACK.
+            ihNumberMessage = hideIhNumberTargets(doc, ihNumberRuleJson);
         }
 
         app.redraw();

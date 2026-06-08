@@ -136,12 +136,18 @@
         return evalScript("RMCNike_addUsedColors()");
     }
 
+    async function savePdfAndCloseActiveDocument(filePath) {
+        await ensureJsxLoaded();
+        return evalScript(`RMCNike_savePdfAndCloseActiveDocument(${toJsxString(filePath)})`);
+    }
+
     window.RMC.illustrator.bridge = {
         openFile: openFile,
         confirmReplace: confirmReplace,
         confirmOfficialSwatchesOverwrite: confirmOfficialSwatchesOverwrite,
         applyNameNumber: applyNameNumber,
         extractOfficialSwatches: extractOfficialSwatches,
-        addUsedColors: addUsedColors
+        addUsedColors: addUsedColors,
+        savePdfAndCloseActiveDocument: savePdfAndCloseActiveDocument
     };
 })();
