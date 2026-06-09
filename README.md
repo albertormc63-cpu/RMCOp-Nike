@@ -1,25 +1,36 @@
 # RMCOp-Nike
 
-Panel CEP para Adobe Illustrator usado para preparar pedidos Nike Lacrosse On Demand. El panel copia plantillas PDF, genera nombres de salida, abre la copia en Illustrator y aplica nombre/numero segun la variante seleccionada.
+Ultima actualizacion de contexto: 2026-06-09.
 
-Ultima actualizacion de contexto: 2026-06-04.
+Panel CEP para Adobe Illustrator usado en pedidos Nike Lacrosse On Demand. El panel resuelve plantillas PDF, crea copias con nombre interno, abre la copia en Illustrator y aplica nombre/numero segun la variante. El repo tambien contiene una utileria separada, `tools/mockup-printer`, para anotar mockups PDF de produccion desde Excel.
+
+Si eres otro Codex entrando al proyecto, primero lee:
+
+1. `AGENTS.md`
+2. `CODEX_HANDOFF.md`
+3. este `README.md`
+4. `tools/mockup-printer/README.md` si vas a tocar mockups/impresion
 
 ## Estado Actual
 
+- Flujo manual individual funcionando en el panel CEP.
+- Flujo por lote desde Excel implementado como MVP dentro del panel.
 - Lineas activas: `masculino` y `femenino`.
-- Variantes activas en codigo: `Standard` e `Indigenous Heritage`.
-- Variante nueva anunciada: `Throwback` / `TB`. Todavia no esta implementada; solo se debe agregar despues de analizar rutas, previews, nombres de archivo y modo de reemplazo.
-- Standard usa textos editables para nombre y numero.
-- Indigenous Heritage usa texto editable para nombre, pero arma numeros duplicando arte expandido/rasterizado desde capas `NUMEROS F` y `NUMEROS B`.
-- El selector de Variante aparece en `1 Equipo` y `2 Pedido`; ambos dropdowns se sincronizan.
-- La validacion de muestras primero ejecuta una accion equivalente a `Add Used Colors` / `Anadir colores usados`, y luego compara contra `js/config/officialSwatches.json`.
+- Variantes activas en codigo:
+  - `Standard`: reemplazo de nombre y numero como texto.
+  - `Indigenous Heritage`: nombre como texto y numero armado desde arte expandido/rasterizado.
+  - `Throwback`: registrado como variante de texto, con sufijo `TB`; falta confirmar rutas/plantillas/previews reales antes de darlo por cerrado en produccion.
+- Validacion de muestras oficiales implementada: primero corre accion tipo `Add Used Colors` y despues compara contra `js/config/officialSwatches.json`.
+- Utileria externa `Nike Mockup Printer MVP` implementada en `tools/mockup-printer`.
 
 ## Stack
 
 - CEP / HTML / CSS / JavaScript para el panel.
-- Node.js/CommonJS dentro de CEP para rutas, copias y lectura de JSON.
+- Node.js/CommonJS dentro de CEP para rutas, copias, Excel y JSON.
 - ExtendScript `.jsx` para operaciones dentro de Illustrator.
-- `fs-extra` para copiar archivos.
+- `fs-extra` para copias de archivos.
+- `xlsx` para lectura de Excel.
+- `pdf-lib` en `tools/mockup-printer` para anotar PDFs.
 - macOS como entorno principal.
 
 ## Estructura Principal
@@ -34,6 +45,7 @@ RMCOp-Nike/
     config/
       config.js
       productCatalog.js
+      variantRules.js
       textFitRules.json
       ihNumberRules.json
       officialSwatches.json
@@ -43,6 +55,7 @@ RMCOp-Nike/
     services/
       nodeServices.js
       copyTemplate.js
+      createOrderData.js
     ui/
       orderView.js
       previewView.js
@@ -54,252 +67,262 @@ RMCOp-Nike/
     standardText.jsx
     ihNumbers.jsx
     swatches.jsx
-  previews/
-  temp/
+  tools/mockup-printer/
 ```
 
-## Flujo Operativo
+## Instalacion Base
 
-1. El usuario selecciona Linea, Variante y Equipo.
-2. En Pedido captura Work Order, Style, Talla, Numero, Nombre y destino.
-3. `js/main.js` construye la vista previa con:
-   - `js/utils/pathBuilder.js` para plantilla y nombre final.
-   - `js/services/copyTemplate.js` para detectar duplicados y copiar.
-4. El panel abre la copia en Illustrator via `js/illustrator/illustratorBridge.js`.
-5. `jsx/rmcNike.jsx` aplica nombre/numero:
-   - Standard: `jsx/standardText.jsx`.
-   - Indigenous Heritage: `jsx/ihNumbers.jsx`.
-6. La consola del panel muestra diagnosticos de copia, reemplazo y ajuste.
+En la raiz del repo:
+
+```bash
+npm install
+```
+
+Dependencias actuales:
+
+```text
+fs-extra
+xlsx
+```
+
+El panel debe vivir en la carpeta CEP de Adobe y abrirse desde Illustrator. El `manifest.xml` habilita Node dentro de CEP con `--enable-nodejs`, `--mixed-context` y acceso a archivos.
 
 ## Configuracion De Rutas
 
 Archivo: `js/config/config.js`.
 
+Cambiar `mode` segun entorno:
+
 ```js
-module.exports = {
-  mode: "server",
-  paths: {
-    local: {
-      templatesBase: "/Users/rmlsub1/Documents/pruebas/PATRONES PARA ROLLO/NIKE LACROSSE",
-      ordersBase: "/Users/rmlsub1/Documents/pruebas/TO PRINT/NIKE ORDERS"
-    },
-    server: {
-      templatesBase: "/Volumes/Fullsize/PATRONES ACOMODADOS PARA ROLLO/NIKE LACROSSE/RMCOp-NIKE",
-      ordersBase: "/Volumes/Fullsize/TO PRINT/NIKE ORDERS"
-    }
-  }
-};
+mode: "local"  // pruebas
+mode: "server" // produccion
 ```
 
-Cambiar `mode` entre `local` y `server` segun el entorno. No hardcodear rutas nuevas en `main.js`.
+No hardcodear rutas nuevas en `main.js`. Las rutas activas se muestran en la pagina `Rutas` del panel.
 
-## Catalogo: Lineas, Equipos Y Variantes
+## Flujo Manual
 
-Archivo: `js/config/productCatalog.js`.
+1. Abrir Illustrator y el panel `RMC Nike Panel`.
+2. En `1 Equipo`, seleccionar linea, variante y equipo.
+3. En `2 Pedido`, capturar Work Order, Style, talla, numero, nombre y destino.
+4. Presionar `Revisar pedido`.
+5. Confirmar plantilla, nombre final y destino.
+6. Presionar `Crear copia de plantilla`.
+7. Presionar `Abrir y aplicar datos`.
+8. Revisar visualmente el PDF abierto en Illustrator.
 
-Actualmente contiene:
+## Flujo Por Lote Desde Excel
 
-- Equipos masculinos: Boston, California, Carolina, Denver, Maryland, New York, Philadelphia, Utah.
-- Equipos femeninos: Boston, California, Maryland, New York.
-- Styles base:
-  - Masculino: `A1000`, `Y1000`.
-  - Femenino: `A2000`, `Y2000`.
-- Variantes:
-  - `Standard`, slug `standard`, code `STD`, replacementMode `text`.
-  - `Indigenous Heritage`, slug `indigenous-heritage`, code `IH`, replacementMode `raster`.
+El panel tiene pagina batch para importar Excel Nike On Demand, revisar filas validas/invalidas y procesar por familia de style y talla.
 
-Para agregar Throwback/TB mas adelante, revisar como minimo:
-
-- `js/config/productCatalog.js`: agregar variante `Throwback`, slug probable `throwback`, code `TB`, replacementMode probable `text`.
-- `js/utils/pathBuilder.js`: agregar codigo `TB`, carpeta raiz y reglas de busqueda de plantilla.
-- `js/illustrator/textRules.js`: asegurar que TB sea tratado como texto editable, no como raster.
-- `js/ui/previewView.js`: confirmar nombres esperados de previews.
-- `js/config/textFitRules.json`: si usa mismas medidas que Standard, no deberia requerir reglas nuevas, pero el parser de style debe reconocer sufijo `TB`.
-- Plantillas reales: confirmar estructura de carpetas y nombre final esperado antes de tocar codigo.
-
-## Rutas Y Nombres De Plantilla
-
-Archivo: `js/utils/pathBuilder.js`.
-
-Standard busca dentro de:
+Columnas soportadas por encabezado:
 
 ```text
-STANDARD/
+WO# / WO / Work Order
+Ship Order / SHIP O
+Style
+Color / Team Color / Team / Color
+Size
+Qty / Pzs
+Last Name / Name
+# / Player# / Number
+```
+
+Normalizaciones importantes:
+
+```text
+SML -> SM
+MED -> MD
+LGE -> LG
+XLG -> XL
+2XL -> 2X
+3XL -> 3X
+```
+
+`Color` se usa para detectar equipo por nickname:
+
+```text
+Archers -> Utah
+Atlas -> New York
+Cannons -> Boston
+Chaos -> Carolina
+Outlaws -> Denver
+Whipsnakes -> Maryland
+Waterdogs -> Philadelphia
+Redwoods -> California
+Guard -> Boston
+Palms -> California
+Charm -> Maryland
+Charging -> New York
+```
+
+Salida batch:
+
+```text
+DESTINO/
+  A1000/
+    SM/
+    MD/
+    ...
+  Y1000/
+  A2000/
+  Y2000/
+```
+
+El batch completo hace:
+
+1. Copiar plantilla.
+2. Abrir copia en Illustrator.
+3. Aplicar nombre/numero.
+4. Guardar PDF sobre la misma ruta.
+5. Cerrar documento.
+6. Continuar con la siguiente fila.
+
+## Variantes
+
+Las reglas compartidas viven en `js/config/variantRules.js`.
+
+| Variante | Sufijo | Version | Modo |
+|---|---:|---|---|
+| Standard | `H` / `A` | Home/Away | texto |
+| Indigenous Heritage | `IH` | sin Home/Away | nombre texto + numero arte |
+| Throwback | `TB` | sin Home/Away | texto |
+
+Throwback ya esta modelado en codigo, pero sigue siendo zona de cuidado: antes de cambiar rutas o previews, confirmar estructura real de carpetas y nombres de plantillas.
+
+## Plantillas Y Nombres
+
+`js/utils/pathBuilder.js` resuelve plantilla y nombre final.
+
+Standard/Throwback buscan como flujo de texto:
+
+```text
+STANDARD|THROWBACK/
   NIKE Mens and Youth|NIKE Girls and Ladies/
     MENS|YOUTH|Ladies|Girls/
       HOME|AWAY/
         Equipo Home|Equipo Away/
 ```
 
-El nombre canonico esperado para Standard es:
-
-```text
-PLL-BOS-A1000A MD.pdf
-```
-
-Indigenous Heritage busca dentro de:
+Indigenous Heritage busca:
 
 ```text
 INDIGENOUS HERITAGE/
   NIKE IH Mens and Youth|NIKE IH Girls and Ladies/
     MENS|YOUTH|Ladies|Girls/
-      BOSTON IH/
+      Equipo IH/
 ```
 
-Tiene fallback para encontrar archivos viejos por familia de style y talla.
-
-El nombre final del pedido se arma en `buildOutputName` con:
+Nombre final:
 
 ```text
 WO PLL-Boston Cannons A1000A SM 7.pdf
 WO PLL-Boston Cannons A1000IH SM 7.pdf
+WO PLL-Boston Cannons A1000TB SM 7.pdf
 ```
 
-Nota: para variantes no Standard se agrega el codigo de variante al style si no existe ya. Revisar esto al implementar TB para evitar sufijos duplicados.
+Si no hay nombre ni numero, se usa `SIN_DATOS` en el nombre final para evitar archivos ambiguos.
 
-## Reemplazo Standard
+## Reemplazo En Illustrator
 
-Archivos:
+Archivos principales:
 
 - `js/illustrator/textRules.js`
+- `js/illustrator/illustratorBridge.js`
 - `jsx/rmcNike.jsx`
 - `jsx/standardText.jsx`
-
-Placeholders actuales por equipo:
-
-- Masculino:
-  - Boston: numero `1`, nombre `HOLMAN`
-  - California: `96`, `KAVANAGH`
-  - Carolina: `0`, `RIORDEN`
-  - Denver: `42`, `O'NEILL`
-  - Maryland: `7`, `MALONE`
-  - New York: `9`, `BAPTISTE`
-  - Philadelphia: `22`, `SOWERS`
-  - Utah: `26`, `SCHREIBER`
-- Femenino:
-  - Boston: `8`, `NORTH`
-  - California: `12`, `MASTROIANNI`
-  - Maryland: `11`, `BLACK`
-  - New York: `27`, `SCANE`
-
-Standard reemplaza textFrames cuyo contenido coincida con el placeholder normalizado. El numero grande se detecta como el textFrame mas ancho; los demas se tratan como numeros chicos/front.
-
-## Ajustes De Ancho
-
-Archivo: `js/config/textFitRules.json`.
-
-Unidad: pulgadas.
-
-Campos por style family:
-
-- `nameMaxWidth`: limite de nombre.
-- `numberMaxWidth`: limite de numero grande/back.
-- `smallNumberMaxWidth`: limite de numero chico/front.
-
-Valores base actuales:
-
-```text
-A1000/A2000: name 11, number 13, small 12
-Y1000/Y2000: name 8, number 11, small 10
-```
-
-`minScale` global actual: `50`.
-
-Para Standard, los numeros se ajustan por ancho de objeto, parecido al campo Ancho de Illustrator.
-
-## Indigenous Heritage
-
-Archivos:
-
-- `js/config/ihNumberRules.json`
 - `jsx/ihNumbers.jsx`
 
-IH no escribe el numero como texto. Duplica grupos desde:
+Placeholders actuales:
 
-- Front: capa `NUMEROS F`, grupos `0 F`, `1 F`, etc.
-- Back: capa `NUMEROS B`, grupos `0 B`, `1 B`, etc.
+| Linea | Equipo | Numero | Nombre |
+|---|---|---:|---|
+| masculino | Boston | 1 | HOLMAN |
+| masculino | California | 96 | KAVANAGH |
+| masculino | Carolina | 0 | RIORDEN |
+| masculino | Denver | 42 | O'NEILL |
+| masculino | Maryland | 7 | MALONE |
+| masculino | New York | 9 | BAPTISTE |
+| masculino | Philadelphia | 22 | SOWERS |
+| masculino | Utah | 26 | SCHREIBER |
+| femenino | Boston | 8 | NORTH |
+| femenino | California | 12 | MASTROIANNI |
+| femenino | Maryland | 11 | BLACK |
+| femenino | New York | 27 | SCANE |
 
-Los grupos destino/base esperados:
+Standard y Throwback reemplazan textFrames que coincidan con los placeholders normalizados.
 
-- Front: `N FRONT`, `BASE FRONT`, salida `RMC FRONT NUMBER`.
-- Back: `N BACK`, `BASE BACK`, salida `RMC BACK NUMBER`.
-
-Regla importante: el gap entre digitos es `0.25in` y es obligatorio. La implementacion actual no escala el grupo completo cuando hay 3 digitos; reserva los gaps, escala cada digito si hace falta y luego reacomoda con gap fijo. Esto evita que el gap baje a valores como `.23in` y evita que el back quede gigante por culpa de `minScale`.
-
-## Previews
-
-Modulo: `js/ui/previewView.js`.
-
-Formato recomendado:
-
-```text
-previews/teams/{linea}/{variant-slug}/{team-slug}-{variant-code-or-slug}-{version}.webp
-```
-
-Ejemplos:
+Indigenous Heritage duplica grupos desde:
 
 ```text
-previews/teams/masculino/standard/boston-standard-home.webp
-previews/teams/masculino/standard/boston-standard-away.webp
-previews/teams/masculino/indigenous-heritage/boston-ih-overview.webp
-previews/teams/masculino/indigenous-heritage/boston-indigenous-heritage-overview.webp
+NUMEROS F -> 0 F, 1 F, ...
+NUMEROS B -> 0 B, 1 B, ...
 ```
 
-El modulo prueba varias rutas fallback. Para IH, `version` normalmente se pinta como `overview` porque no usa Home/Away en ruta por ahora.
+Y posiciona sobre:
+
+```text
+N FRONT / BASE FRONT -> RMC FRONT NUMBER
+N BACK / BASE BACK -> RMC BACK NUMBER
+```
+
+El gap IH de `0.25in` es obligatorio. La implementacion debe conservarlo aun con numeros de 3 digitos.
 
 ## Muestras Oficiales
 
-Archivos:
+Botones en `Rutas`:
 
-- `jsx/swatches.jsx`
-- `js/config/officialSwatches.json`
-- `js/main.js`
+- `Extraer muestras oficiales`: pide confirmacion nativa y reemplaza `js/config/officialSwatches.json` con las muestras del documento activo.
+- `Validar muestras de documento`: corre `Add Used Colors`, extrae muestras y advierte las que no esten en la lista oficial.
 
-Botones actuales:
+No hay limpieza automatica de muestras no usadas. Si se agrega, debe ser boton separado con confirmacion.
 
-- `Extraer muestras oficiales`: guarda la lista del documento activo en `officialSwatches.json`. Usar solo con una plantilla autorizada.
-- `Validar muestras de documento`: antes de validar, corre una accion temporal equivalente a `Add Used Colors` / `Anadir colores usados`, para que colores usados pero no listados en Muestras entren a la paleta. Despues compara contra la lista oficial.
+## Nike Mockup Printer
 
-Esto ayuda a detectar colores RGB accidentales o muestras no autorizadas que esten aplicadas en el arte.
+Vive en `tools/mockup-printer` y no debe mezclarse con el CEP.
 
-No se implemento limpieza automatica de muestras no usadas. Recomendacion pendiente: si se agrega, hacerlo como boton separado con confirmacion, no como parte automatica de validar.
+Objetivo: leer Excel de listas On Demand, encontrar mockup PDF correcto, estampar WO/style/fecha/talla/piezas y generar PDFs listos para imprimir.
 
-## UI Reciente
+Uso:
 
-- Paso `1 Equipo` tiene Linea y Variante junto al grid de equipos.
-- Paso `2 Pedido` conserva Variante junto al resumen del equipo.
-- Ambos selects de Variante usan clase `.variant-select` y se sincronizan desde `orderView.syncVariantSelects`.
-- La cabecera de Paso 1 es responsive: en panel angosto el titulo ocupa una fila y los dropdowns bajan a la siguiente para evitar empalmes.
+```bash
+cd tools/mockup-printer
+npm install
+npm start
+```
 
-## Como Probar Cambios
+Abrir:
 
-No hay suite automatica formal. Checks utiles:
+```text
+http://127.0.0.1:3127
+```
+
+Ver mas en `tools/mockup-printer/README.md`.
+
+## Checks Utiles
+
+No hay suite automatica formal. Antes de entregar cambios:
 
 ```bash
 node --check js/main.js
 node --check js/illustrator/illustratorBridge.js
+node --check js/services/createOrderData.js
+node --check js/utils/pathBuilder.js
+node --check jsx/rmcNike.jsx
 node -e "JSON.parse(require('fs').readFileSync('js/config/ihNumberRules.json','utf8')); console.log('ihNumberRules OK')"
 ```
 
-Prueba manual recomendada en Illustrator:
+Para mockup-printer:
 
-1. Abrir el panel CEP.
-2. Seleccionar Linea, Variante y Equipo.
-3. Capturar pedido.
-4. Revisar que la ruta de plantilla exista en Paso 3.
-5. Crear copia.
-6. Abrir y aplicar datos.
-7. Para Standard: probar nombre largo, numero de 1, 2 y 3 digitos.
-8. Para IH: probar numero de 1, 2 y 3 digitos, confirmando gap visual de `0.25in`.
-9. Validar muestras en un documento con un color no autorizado para confirmar que aparece en consola.
+```bash
+cd tools/mockup-printer
+npm start
+```
 
-## Notas Para Otra Sesion De Codex
+## Notas Para Siguiente Sesion
 
-- No revertir cambios no relacionados: el repo suele tener archivos modificados y previews nuevos sin trackear.
-- Antes de tocar Throwback/TB, confirmar estructura real de carpetas y nombres de plantilla.
-- TB fue reportada como variante con numeros editables como Standard y mismas medidas, pero esto aun no esta codificado.
-- Si TB usa texto editable, evitar meterlo al flujo IH/raster.
-- Revisar `textRules.js`: hoy cualquier variante que no sea `Standard` se manda a `raster-number`. Eso debe cambiar antes de implementar TB.
-- Revisar `getStyleFamily` en `main.js` y `getStyleSearchFamily` en `pathBuilder.js`: hoy reconocen `IH` y `H/A`, pero no `TB`.
-- Revisar `variantCodes` y `getVariantRootFolder` en `pathBuilder.js`: hoy solo conocen IH.
-- Si se agregan previews TB, usar `.webp`, minusculas y guiones.
+- No revertir cambios no relacionados; este repo suele tener trabajo local en progreso.
+- Leer `CODEX_HANDOFF.md` antes de tocar arquitectura.
+- Cualquier cambio de rutas, Throwback o batch debe probarse contra Illustrator real.
+- En batch, filas sin nombre/numero son validas: se limpian placeholders y se nombra con `SIN_DATOS`.
+- `Qty/Pzs` no duplica PDFs en los flujos actuales; solo se respeta como dato operativo o visual segun herramienta.

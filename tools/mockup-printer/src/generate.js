@@ -1,0 +1,372 @@
+#!/usr/bin/env node
+
+const fs = require("fs");
+const path = require("path");
+const XLSX = require("xlsx");
+const { PDFDocument, StandardFonts, rgb } = require("pdf-lib");
+
+let fontkit = null;
+
+try {
+  fontkit = require("@pdf-lib/fontkit");
+} catch (error) {
+  fontkit = null;
+}
+
+const INCH = 72;
+const FONT_COLOR = rgb(0x31 / 255, 0x27 / 255, 0x83 / 255);
+const DATE_COLOR = rgb(0xa9 / 255, 0x1e / 255, 0x2f / 255);
+
+const DEFAULT_EXCEL = "/Volumes/Fullsize/TO PRINT/LISTAS ON DEMAND/NIKE OD 12 JUNIO.xlsx";
+const DEFAULT_MOCKUPS = "/Volumes/Fullsize/Nike Lacrosse";
+const DEFAULT_OUT = path.join(__dirname, "..", "output");
+const DEFAULT_ALDRICH_FONT = "/Users/rmlsub1/Library/Fonts/Aldrich-Regular.ttf";
+
+const maleTeams = {
+  ARCHERS: { team: "Utah", nickname: "Archers", code: "X001" },
+  ATLAS: { team: "New York", nickname: "Atlas", code: "X002" },
+  CANNONS: { team: "Boston", nickname: "Cannons", code: "X003" },
+  CHAOS: { team: "Carolina", nickname: "Chaos", code: "X004" },
+  OUTLAWS: { team: "Denver", nickname: "Outlaws", code: "X005" },
+  WHIPSNAKES: { team: "Maryland", nickname: "Whipsnakes", code: "X006" },
+  WATERDOGS: { team: "Philadelphia", nickname: "Waterdogs", code: "X007" },
+  REDWOODS: { team: "California", nickname: "Redwoods", code: "X008" }
+};
+
+const femaleTeams = {
+  GUARD: { team: "Boston", nickname: "Guard" },
+  PALMS: { team: "California", nickname: "Palms" },
+  CHARM: { team: "Maryland", nickname: "Charm" },
+  CHARGING: { team: "New York", nickname: "Charging" }
+};
+
+function parseArgs(argv) {
+  const args = {
+    excel: DEFAULT_EXCEL,
+    mockups: DEFAULT_MOCKUPS,
+    out: DEFAULT_OUT,
+    font: DEFAULT_ALDRICH_FONT,
+    limit: 0
+  };
+
+  for (let index = 2; index < argv.length; index++) {
+    const arg = argv[index];
+    const next = argv[index + 1];
+
+    if (arg === "--excel") {
+      args.excel = next;
+      index++;
+    } else if (arg === "--mockups") {
+      args.mockups = next;
+      index++;
+    } else if (arg === "--out") {
+      args.out = next;
+      index++;
+    } else if (arg === "--font") {
+      args.font = next;
+      index++;
+    } else if (arg === "--limit") {
+      args.limit = Number(next || 0);
+      index++;
+    }
+  }
+
+  return args;
+}
+
+function clean(value) {
+  if (value == null) return "";
+  return String(value).trim().replace(/\s+/g, " ");
+}
+
+function cleanUpper(value) {
+  return clean(value).toUpperCase();
+}
+
+function sanitizeFilePart(value) {
+  return clean(value)
+    .replace(/[\/\\:*?"<>|]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function readExcel(excelPath) {
+  // Layout actual: A2 titulo/fecha, fila 3 encabezados, fila 4+ datos.
+  const workbook = XLSX.readFile(excelPath, { cellDates: false });
+  return readWorkbook(workbook);
+}
+
+function readExcelBuffer(buffer) {
+  const workbook = XLSX.read(buffer, { type: "buffer", cellDates: false });
+  return readWorkbook(workbook);
+}
+
+function readWorkbook(workbook) {
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(sheet, {
+    header: 1,
+    raw: false,
+    defval: ""
+  });
+  const title = clean(rows[1] && rows[1][0]);
+  const dateText = extractDate(title);
+  const dataRows = rows.slice(3)
+    .map(function (cells, index) {
+      return normalizeOrderRow(cells, index + 4);
+    })
+    .filter(function (row) {
+      return row.shipOrder || row.wo || row.style || row.color;
+    });
+
+  return {
+    sheetName,
+    title,
+    dateText,
+    rows: dataRows
+  };
+}
+
+function extractDate(title) {
+  const normalized = cleanUpper(title);
+  const match = normalized.match(/\b(\d{1,2}\s+[A-ZÁÉÍÓÚÑ]+)\b/);
+  return match ? match[1] : normalized;
+}
+
+function normalizeOrderRow(cells, sourceRow) {
+  const style = cleanUpper(cells[2]);
+  const color = clean(cells[3]);
+  const line = inferLine(style);
+  const version = inferVersion(style);
+  const teamInfo = inferTeam(color, line);
+
+  return {
+    sourceRow,
+    shipOrder: clean(cells[0]),
+    wo: clean(cells[1]).replace(/[^0-9-]/g, ""),
+    style,
+    color,
+    size: cleanUpper(cells[4]),
+    qty: Number(clean(cells[5]) || 1),
+    lastName: cleanUpper(cells[6]),
+    playerNumber: clean(cells[7]).replace(/[^0-9]/g, ""),
+    line,
+    version,
+    teamInfo
+  };
+}
+
+function inferLine(style) {
+  if (/^[AY]1000/.test(style)) return "PLL";
+  if (/^[AY]2000/.test(style)) return "WLL";
+  return "";
+}
+
+function inferVersion(style) {
+  if (/A$/.test(style)) return "Away";
+  if (/H$/.test(style)) return "Home";
+  return "";
+}
+
+function inferTeam(color, line) {
+  const normalized = cleanUpper(color);
+  const source = line === "WLL" ? femaleTeams : maleTeams;
+  const key = Object.keys(source).find(function (token) {
+    return normalized.indexOf(token) !== -1;
+  });
+
+  return key ? source[key] : null;
+}
+
+function buildMockupPath(mockupsRoot, order) {
+  if (!order.teamInfo || !order.line || !order.version) {
+    return "";
+  }
+
+  if (order.line === "PLL") {
+    return path.join(
+      mockupsRoot,
+      "Mens and Youth Mockups",
+      "Mens & Youth",
+      `PLL ${order.teamInfo.team} ${order.teamInfo.nickname} ${order.version} ${order.teamInfo.code}.pdf`
+    );
+  }
+
+  return path.join(
+    mockupsRoot,
+    "Ladies and Girls Mockups",
+    `WLL ${order.teamInfo.team} ${order.teamInfo.nickname} ${order.version}.pdf`
+  );
+}
+
+async function annotatePdf({ mockupPath, outputPath, order, dateText, fontPath }) {
+  // Las coordenadas llegan en pulgadas desde abajo/izquierda. PDF usa puntos.
+  const bytes = fs.readFileSync(mockupPath);
+  const pdf = await PDFDocument.load(bytes);
+  const page = pdf.getPages()[0];
+  const font = await loadPreferredFont(pdf, fontPath);
+  const boldFont = font;
+
+  drawText(page, `WO# ${order.wo}`.toUpperCase(), {
+    x: 0.58,
+    y: 7.10,
+    size: 20,
+    font: boldFont
+  });
+
+  drawText(page, order.style.toUpperCase(), {
+    x: 0.58,
+    y: 6.78,
+    size: 20,
+    font: boldFont
+  });
+
+  drawText(page, dateText.toUpperCase(), {
+    x: 0.58,
+    y: 7.38,
+    size: 14,
+    font,
+    color: DATE_COLOR
+  });
+
+  drawQty(page, String(order.qty || 1), {
+    x: 0.80,
+    y: 4.04,
+    numberFont: boldFont,
+    suffixFont: font
+  });
+
+  drawText(page, `Size: ${order.size}`.toUpperCase(), {
+    x: 2.30,
+    y: 2.50,
+    size: 20,
+    font: boldFont
+  });
+
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, await pdf.save());
+}
+
+async function loadPreferredFont(pdf, fontPath) {
+  if (fontkit && fontPath && fs.existsSync(fontPath)) {
+    pdf.registerFontkit(fontkit);
+    return pdf.embedFont(fs.readFileSync(fontPath));
+  }
+
+  return pdf.embedFont(StandardFonts.HelveticaBold);
+}
+
+function drawText(page, text, options) {
+  page.drawText(text, {
+    x: options.x * INCH,
+    y: options.y * INCH,
+    size: options.size,
+    font: options.font,
+    color: options.color || FONT_COLOR
+  });
+}
+
+function drawQty(page, qtyText, options) {
+  const x = options.x * INCH;
+  const y = options.y * INCH;
+  const numberSize = 70;
+  const suffixSize = 14;
+  const numberWidth = options.numberFont.widthOfTextAtSize(qtyText, numberSize);
+
+  page.drawText(qtyText, {
+    x,
+    y,
+    size: numberSize,
+    font: options.numberFont,
+    color: FONT_COLOR
+  });
+
+  page.drawText("pz", {
+    x: x + numberWidth + 3,
+    y: y + 7,
+    size: suffixSize,
+    font: options.suffixFont,
+    color: FONT_COLOR
+  });
+}
+
+function buildOutputPath(outDir, order) {
+  const teamPart = order.teamInfo ? `${order.line} ${order.teamInfo.team} ${order.teamInfo.nickname}` : order.line || "SIN_EQUIPO";
+  const styleFamily = getStyleFamily(order.style);
+  const fileName = [
+    order.wo || `FILA ${String(order.sourceRow).padStart(3, "0")}`,
+    teamPart,
+    order.style,
+    order.qty ? `${order.qty}pz` : "1pz"
+  ].filter(Boolean).map(sanitizeFilePart).join(" - ");
+
+  return path.join(outDir, styleFamily, order.size || "SIN_TALLA", `${fileName}.pdf`);
+}
+
+function getStyleFamily(style) {
+  const match = cleanUpper(style).match(/^[AY][0-9]{4}/);
+  return match ? match[0] : "SIN_STYLE";
+}
+
+async function generateMockups(options) {
+  const excel = options.excelBuffer ? readExcelBuffer(options.excelBuffer) : readExcel(options.excel);
+  const rows = options.limit > 0 ? excel.rows.slice(0, options.limit) : excel.rows;
+  let ok = 0;
+  let missing = 0;
+  const outputs = [];
+  const missingRows = [];
+
+  console.log(`Excel: ${options.excel || "upload"}`);
+  console.log(`Hoja: ${excel.sheetName}`);
+  console.log(`Fecha: ${excel.dateText}`);
+  console.log(`Filas: ${rows.length}`);
+
+  for (const order of rows) {
+    const mockupPath = buildMockupPath(options.mockups, order);
+
+    if (!mockupPath || !fs.existsSync(mockupPath)) {
+      missing++;
+      missingRows.push({ sourceRow: order.sourceRow, style: order.style, color: order.color, mockupPath });
+      console.warn(`Mockup faltante fila ${order.sourceRow}: ${order.style} | ${order.color} | ${mockupPath || "sin ruta"}`);
+      continue;
+    }
+
+    const outputPath = buildOutputPath(options.out, order);
+    await annotatePdf({
+      mockupPath,
+      outputPath,
+      order,
+      dateText: excel.dateText,
+      fontPath: options.font
+    });
+    ok++;
+    outputs.push(outputPath);
+    console.log(`OK fila ${order.sourceRow}: ${outputPath}`);
+  }
+
+  console.log(`Terminado. OK: ${ok} | Faltantes: ${missing}`);
+  return { ok, missing, outputs, missingRows, dateText: excel.dateText, rows: rows.length };
+}
+
+async function main() {
+  const args = parseArgs(process.argv);
+  await generateMockups(args);
+}
+
+if (require.main === module) {
+  main().catch(function (error) {
+    console.error(error.stack || error.message);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  DEFAULT_EXCEL,
+  DEFAULT_MOCKUPS,
+  DEFAULT_OUT,
+  DEFAULT_ALDRICH_FONT,
+  buildMockupPath,
+  buildOutputPath,
+  generateMockups,
+  readExcel,
+  readExcelBuffer
+};

@@ -454,7 +454,9 @@ select {
 }
 
 .batch-summary div,
-.batch-size-list span {
+.batch-size-list > span,
+.batch-choice-card,
+.batch-size-option {
     min-width: 0;
     padding: 7px;
     border: 1px solid var(--line);
@@ -475,11 +477,68 @@ select {
     gap: 6px;
 }
 
-.batch-size-list span {
+.batch-size-list > span,
+.batch-choice-card,
+.batch-size-option {
     color: var(--text);
     font-family: Menlo, Monaco, Consolas, monospace;
     font-size: 10px;
     text-align: center;
+}
+
+.batch-choice-list,
+.batch-checkbox-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.batch-group-label {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.batch-group-label-separated {
+    padding-top: 8px;
+    border-top: 1px solid #3b3f46;
+}
+
+.batch-choice-card {
+    width: 100%;
+    min-height: 31px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.batch-choice-card.active {
+    border-color: var(--focus);
+    background: #4c3d17;
+    color: #fff;
+}
+
+.batch-size-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 31px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.batch-size-option input {
+    width: 11px;
+    min-height: 11px;
+    height: 11px;
+    margin: 0;
+    padding: 0;
+}
+
+.batch-size-option.active {
+    border-color: var(--focus);
+    background: #303a24;
+    color: #fff;
 }
 
 .batch-rows-preview {

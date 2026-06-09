@@ -6,20 +6,20 @@
   "defaults": {
     "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
     "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 },
-    "A2000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
+    "A2000": { "nameMaxWidth": 8, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
     "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 }
   },
   "teams": {
     "Boston": {
       "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
       "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 },
-      "A2000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
+      "A2000": { "nameMaxWidth": 8, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
       "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 }
     },
     "California": {
       "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
       "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 },
-      "A2000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
+      "A2000": { "nameMaxWidth": 8, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
       "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 }
     },
     "Carolina": {
@@ -33,13 +33,13 @@
     "Maryland": {
       "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
       "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 },
-      "A2000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
+      "A2000": { "nameMaxWidth": 8, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
       "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 }
     },
     "New York": {
       "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
       "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 },
-      "A2000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
+      "A2000": { "nameMaxWidth": 8, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
       "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 }
     },
     "Philadelphia": {

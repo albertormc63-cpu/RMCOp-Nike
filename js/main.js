@@ -17,6 +17,8 @@
             excelPath: "",
             destinationFolder: "",
             data: null,
+            selectedStyleFamily: "",
+            selectedSizes: [],
             lastResults: []
         }
     };
@@ -267,8 +269,7 @@
 
     function renderBatchSummary() {
         const batchData = state.batch.data;
-        const styleFamilyFilter = document.getElementById("batchStyleFamilyFilter");
-        const selectedStyleFamily = styleFamilyFilter ? styleFamilyFilter.value : "";
+        const selectedStyleFamily = state.batch.selectedStyleFamily;
         const filteredRows = batchData ? getRowsByStyleFamily(batchData.validRows, selectedStyleFamily) : [];
         const validCount = batchData ? filteredRows.length : 0;
         const invalidCount = batchData ? batchData.invalidRows.length : 0;
@@ -279,9 +280,10 @@
         const rowsPreview = document.getElementById("batchRowsPreview");
         const styleFamilyList = document.getElementById("batchStyleFamilyList");
         const sizeList = document.getElementById("batchSizeList");
-        const sizeFilter = document.getElementById("batchSizeFilter");
-        const previousStyleFamilyFilter = styleFamilyFilter ? styleFamilyFilter.value : "";
-        const previousSizeFilter = sizeFilter ? sizeFilter.value : "";
+
+        state.batch.selectedSizes = state.batch.selectedSizes.filter(function (size) {
+            return sizes.indexOf(size) !== -1;
+        });
 
         document.getElementById("batchExcelPreview").textContent = state.batch.excelPath || "Sin Excel seleccionado";
         document.getElementById("batchDestinationPreview").textContent = state.batch.destinationFolder || "Sin destino seleccionado";
@@ -290,46 +292,16 @@
         document.getElementById("batchSizeCount").textContent = String(sizes.length);
 
         styleFamilyList.innerHTML = "";
+        renderStyleFamilyCard(styleFamilyList, "", "Todas", batchData ? batchData.validRows.length : 0);
         styleFamilies.forEach(function (styleFamily) {
-            const item = document.createElement("span");
-            item.textContent = `${styleFamily}: ${styleFamilyCounts[styleFamily]}`;
-            styleFamilyList.appendChild(item);
+            renderStyleFamilyCard(styleFamilyList, styleFamily, styleFamily, styleFamilyCounts[styleFamily]);
         });
-
-        if (styleFamilyFilter) {
-            styleFamilyFilter.innerHTML = "<option value=\"\">Todas</option>";
-            styleFamilies.forEach(function (styleFamily) {
-                const option = document.createElement("option");
-                option.value = styleFamily;
-                option.textContent = `${styleFamily} (${styleFamilyCounts[styleFamily]})`;
-                styleFamilyFilter.appendChild(option);
-            });
-
-            if (styleFamilies.indexOf(previousStyleFamilyFilter) !== -1) {
-                styleFamilyFilter.value = previousStyleFamilyFilter;
-            }
-        }
 
         sizeList.innerHTML = "";
+        renderSizeCheckbox(sizeList, "", "Todas", filteredRows.length, state.batch.selectedSizes.length === 0);
         sizes.forEach(function (size) {
-            const item = document.createElement("span");
-            item.textContent = `${size}: ${sizeCounts[size]}`;
-            sizeList.appendChild(item);
+            renderSizeCheckbox(sizeList, size, size, sizeCounts[size], state.batch.selectedSizes.indexOf(size) !== -1);
         });
-
-        if (sizeFilter) {
-            sizeFilter.innerHTML = "<option value=\"\">Todas</option>";
-            sizes.forEach(function (size) {
-                const option = document.createElement("option");
-                option.value = size;
-                option.textContent = `${size} (${sizeCounts[size]})`;
-                sizeFilter.appendChild(option);
-            });
-
-            if (sizes.indexOf(previousSizeFilter) !== -1) {
-                sizeFilter.value = previousSizeFilter;
-            }
-        }
 
         if (!batchData) {
             rowsPreview.textContent = "Importa un Excel para revisar filas.";
@@ -359,6 +331,54 @@
         rowsPreview.textContent = lines.join("\n");
     }
 
+    function renderStyleFamilyCard(container, value, label, count) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "batch-choice-card";
+        button.classList.toggle("active", state.batch.selectedStyleFamily === value);
+        button.textContent = `${label}: ${count}`;
+        button.addEventListener("click", function () {
+            state.batch.selectedStyleFamily = value;
+            state.batch.selectedSizes = [];
+            renderBatchSummary();
+            console.log(`Familia style seleccionada: ${getSelectedBatchStyleFamilyLabel()} (${getSelectedBatchRows().length} filas).`);
+        });
+        container.appendChild(button);
+    }
+
+    function renderSizeCheckbox(container, value, label, count, checked) {
+        const option = document.createElement("label");
+        const input = document.createElement("input");
+        const text = document.createElement("span");
+
+        option.className = "batch-size-option";
+        option.classList.toggle("active", checked);
+        input.type = "checkbox";
+        input.checked = checked;
+        text.textContent = `${label}: ${count}`;
+
+        input.addEventListener("change", function () {
+            if (!value) {
+                state.batch.selectedSizes = [];
+            } else if (input.checked) {
+                if (state.batch.selectedSizes.indexOf(value) === -1) {
+                    state.batch.selectedSizes.push(value);
+                }
+            } else {
+                state.batch.selectedSizes = state.batch.selectedSizes.filter(function (size) {
+                    return size !== value;
+                });
+            }
+
+            renderBatchSummary();
+            console.log(`Tallas batch seleccionadas: ${getSelectedBatchSizeLabel()} (${getSelectedBatchRows().length} filas).`);
+        });
+
+        option.appendChild(input);
+        option.appendChild(text);
+        container.appendChild(option);
+    }
+
     function countBatchRowsBy(rows, key) {
         return rows.reduce(function (counts, row) {
             const value = row[key] || "(vacio)";
@@ -379,10 +399,8 @@
 
     function getSelectedBatchRows() {
         const batchData = state.batch.data;
-        const styleFamilyFilter = document.getElementById("batchStyleFamilyFilter");
-        const sizeFilter = document.getElementById("batchSizeFilter");
-        const selectedStyleFamily = styleFamilyFilter ? styleFamilyFilter.value : "";
-        const selectedSize = sizeFilter ? sizeFilter.value : "";
+        const selectedStyleFamily = state.batch.selectedStyleFamily;
+        const selectedSizes = state.batch.selectedSizes;
 
         if (!batchData) {
             return [];
@@ -390,19 +408,17 @@
 
         return batchData.validRows.filter(function (row) {
             const matchesStyleFamily = !selectedStyleFamily || row.styleFamily === selectedStyleFamily;
-            const matchesSize = !selectedSize || row.size === selectedSize;
+            const matchesSize = selectedSizes.length === 0 || selectedSizes.indexOf(row.size) !== -1;
             return matchesStyleFamily && matchesSize;
         });
     }
 
     function getSelectedBatchStyleFamilyLabel() {
-        const styleFamilyFilter = document.getElementById("batchStyleFamilyFilter");
-        return styleFamilyFilter && styleFamilyFilter.value ? styleFamilyFilter.value : "todas";
+        return state.batch.selectedStyleFamily || "todas";
     }
 
     function getSelectedBatchSizeLabel() {
-        const sizeFilter = document.getElementById("batchSizeFilter");
-        return sizeFilter && sizeFilter.value ? sizeFilter.value : "todas";
+        return state.batch.selectedSizes.length ? state.batch.selectedSizes.join(", ") : "todas";
     }
 
     function formatElapsedTime(milliseconds) {
@@ -474,6 +490,8 @@
 
         state.batch.excelPath = excelPath;
         state.batch.data = services.createOrderDataFromExcel(excelPath);
+        state.batch.selectedStyleFamily = "";
+        state.batch.selectedSizes = [];
         state.batch.lastResults = [];
         renderBatchSummary();
 
@@ -1017,16 +1035,11 @@
             });
         });
 
-        document.getElementById("batchStyleFamilyFilter").addEventListener("change", function () {
-            renderBatchSummary();
-            const rows = getSelectedBatchRows();
-            console.log(`Familia style seleccionada: ${getSelectedBatchStyleFamilyLabel()} (${rows.length} filas).`);
-        });
+        document.getElementById("btnToggleBatchDetails").addEventListener("click", function () {
+            const details = document.getElementById("batchRowsPreview");
+            const isHidden = details.classList.toggle("hidden");
 
-        document.getElementById("batchSizeFilter").addEventListener("change", function () {
-            renderBatchSummary();
-            const rows = getSelectedBatchRows();
-            console.log(`Talla batch seleccionada: ${getSelectedBatchSizeLabel()} (${rows.length} filas).`);
+            this.textContent = isHidden ? "Ver mas detalles" : "Ocultar detalles";
         });
 
         document.getElementById("btnExtractOfficialSwatches").addEventListener("click", function () {

@@ -238,21 +238,12 @@
                     </div>
                 </div>
 
-                <div id="batchStyleFamilyList" class="batch-size-list"></div>
-                <label class="wide-field">
-                    Familia style a procesar
-                    <select id="batchStyleFamilyFilter">
-                        <option value="">Todas</option>
-                    </select>
-                </label>
-                <div id="batchSizeList" class="batch-size-list"></div>
-                <label class="wide-field">
-                    Talla a procesar
-                    <select id="batchSizeFilter">
-                        <option value="">Todas</option>
-                    </select>
-                </label>
-                <div id="batchRowsPreview" class="batch-rows-preview">Importa un Excel para revisar filas.</div>
+                <span class="batch-group-label">Style</span>
+                <div id="batchStyleFamilyList" class="batch-size-list batch-choice-list" aria-label="Familia style a procesar"></div>
+                <span class="batch-group-label batch-group-label-separated">Tallas</span>
+                <div id="batchSizeList" class="batch-size-list batch-checkbox-list" aria-label="Tallas a procesar"></div>
+                <button type="button" id="btnToggleBatchDetails" class="secondary-button batch-action">Ver mas detalles</button>
+                <div id="batchRowsPreview" class="batch-rows-preview hidden">Importa un Excel para revisar filas.</div>
             </div>
 
             <button id="btnProcessBatchFull" class="primary-button batch-action">Crear, aplicar y cerrar talla seleccionada</button>
