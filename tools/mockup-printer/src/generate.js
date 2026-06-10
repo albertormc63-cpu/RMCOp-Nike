@@ -18,7 +18,7 @@ const FONT_COLOR = rgb(0x31 / 255, 0x27 / 255, 0x83 / 255);
 const DATE_COLOR = rgb(0xa9 / 255, 0x1e / 255, 0x2f / 255);
 
 const DEFAULT_EXCEL = "/Volumes/Fullsize/TO PRINT/LISTAS ON DEMAND/NIKE OD 12 JUNIO.xlsx";
-const DEFAULT_MOCKUPS = "/Volumes/Fullsize/Nike Lacrosse";
+const DEFAULT_MOCKUPS = "/Volumes/Fullsize/PATRONES ACOMODADOS PARA ROLLO/NIKE LACROSSE/RMCOp-NIKE/MOCKUPS";
 const DEFAULT_OUT = path.join(__dirname, "..", "output");
 const DEFAULT_ALDRICH_FONT = "/Users/rmlsub1/Library/Fonts/Aldrich-Regular.ttf";
 
@@ -65,6 +65,12 @@ function parseArgs(argv) {
     } else if (arg === "--font") {
       args.font = next;
       index++;
+    } else if (arg === "--styles") {
+      args.styles = parseFilterList(next);
+      index++;
+    } else if (arg === "--sizes") {
+      args.sizes = parseFilterList(next);
+      index++;
     } else if (arg === "--limit") {
       args.limit = Number(next || 0);
       index++;
@@ -83,10 +89,50 @@ function cleanUpper(value) {
   return clean(value).toUpperCase();
 }
 
+function parseFilterList(value) {
+  return clean(value)
+    .split(",")
+    .map(cleanUpper)
+    .filter(Boolean);
+}
+
 function sanitizeFilePart(value) {
   return clean(value)
     .replace(/[\/\\:*?"<>|]/g, "")
     .replace(/\s+/g, " ");
+}
+
+function summarizeExcel(excel) {
+  return {
+    sheetName: excel.sheetName,
+    title: excel.title,
+    dateText: excel.dateText,
+    rows: excel.rows.length,
+    styles: uniqueSorted(excel.rows.map(function (row) { return getStyleFamily(row.style); })),
+    sizes: uniqueSorted(excel.rows.map(function (row) { return row.size; })),
+    sizesByStyle: buildSizesByStyle(excel.rows)
+  };
+}
+
+function uniqueSorted(values) {
+  return Array.from(new Set(values.map(cleanUpper).filter(Boolean))).sort();
+}
+
+function buildSizesByStyle(rows) {
+  const sizesByStyle = {};
+
+  rows.forEach(function (row) {
+    const family = getStyleFamily(row.style);
+    if (!family || family === "SIN_STYLE" || !row.size) return;
+    if (!sizesByStyle[family]) sizesByStyle[family] = [];
+    sizesByStyle[family].push(row.size);
+  });
+
+  Object.keys(sizesByStyle).forEach(function (family) {
+    sizesByStyle[family] = uniqueSorted(sizesByStyle[family]);
+  });
+
+  return sizesByStyle;
 }
 
 function readExcel(excelPath) {
@@ -136,6 +182,7 @@ function normalizeOrderRow(cells, sourceRow) {
   const style = cleanUpper(cells[2]);
   const color = clean(cells[3]);
   const line = inferLine(style);
+  const variant = inferVariant(style);
   const version = inferVersion(style);
   const teamInfo = inferTeam(color, line);
 
@@ -150,6 +197,7 @@ function normalizeOrderRow(cells, sourceRow) {
     lastName: cleanUpper(cells[6]),
     playerNumber: clean(cells[7]).replace(/[^0-9]/g, ""),
     line,
+    variant,
     version,
     teamInfo
   };
@@ -161,7 +209,14 @@ function inferLine(style) {
   return "";
 }
 
+function inferVariant(style) {
+  if (/IH$/.test(style)) return "IH";
+  if (/TB$/.test(style)) return "TB";
+  return "STANDARD";
+}
+
 function inferVersion(style) {
+  if (/(IH|TB)$/.test(style)) return "";
   if (/A$/.test(style)) return "Away";
   if (/H$/.test(style)) return "Home";
   return "";
@@ -178,23 +233,35 @@ function inferTeam(color, line) {
 }
 
 function buildMockupPath(mockupsRoot, order) {
-  if (!order.teamInfo || !order.line || !order.version) {
+  if (!order.teamInfo || !order.line) {
     return "";
   }
 
-  if (order.line === "PLL") {
+  if (order.variant === "IH") {
     return path.join(
       mockupsRoot,
-      "Mens and Youth Mockups",
-      "Mens & Youth",
-      `PLL ${order.teamInfo.team} ${order.teamInfo.nickname} ${order.version} ${order.teamInfo.code}.pdf`
+      "INDIGENOUS HERITAGE",
+      `${order.line} ${order.teamInfo.team} ${order.teamInfo.nickname} IH.pdf`
     );
+  }
+
+  if (order.variant === "TB") {
+    return path.join(
+      mockupsRoot,
+      "THROWBACK",
+      `${order.line} ${order.teamInfo.team} ${order.teamInfo.nickname} TB.pdf`
+    );
+  }
+
+  if (!order.version) {
+    return "";
   }
 
   return path.join(
     mockupsRoot,
-    "Ladies and Girls Mockups",
-    `WLL ${order.teamInfo.team} ${order.teamInfo.nickname} ${order.version}.pdf`
+    "STANDARD",
+    order.line === "PLL" ? "MASCULINO" : "FEMENINO",
+    `${order.line} ${order.teamInfo.team} ${order.teamInfo.nickname} ${order.version}.pdf`
   );
 }
 
@@ -209,21 +276,21 @@ async function annotatePdf({ mockupPath, outputPath, order, dateText, fontPath }
   drawText(page, `WO# ${order.wo}`.toUpperCase(), {
     x: 0.58,
     y: 7.10,
-    size: 20,
+    size: 18,
     font: boldFont
   });
 
   drawText(page, order.style.toUpperCase(), {
     x: 0.58,
     y: 6.78,
-    size: 20,
+    size: 18,
     font: boldFont
   });
 
   drawText(page, dateText.toUpperCase(), {
     x: 0.58,
     y: 7.38,
-    size: 14,
+    size: 12,
     font,
     color: DATE_COLOR
   });
@@ -236,14 +303,19 @@ async function annotatePdf({ mockupPath, outputPath, order, dateText, fontPath }
   });
 
   drawText(page, `Size: ${order.size}`.toUpperCase(), {
-    x: 2.30,
+    x: getSizeTextX(order),
     y: 2.50,
-    size: 20,
+    size: 18,
     font: boldFont
   });
 
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, await pdf.save());
+}
+
+function getSizeTextX(order) {
+  if (!order.sizes || order.sizes.length <= 1) return 2.30;
+  return order.sizes.length > 2 ? 1.55 : 1.80;
 }
 
 async function loadPreferredFont(pdf, fontPath) {
@@ -269,7 +341,7 @@ function drawQty(page, qtyText, options) {
   const x = options.x * INCH;
   const y = options.y * INCH;
   const numberSize = 70;
-  const suffixSize = 14;
+  const suffixSize = 12;
   const numberWidth = options.numberFont.widthOfTextAtSize(qtyText, numberSize);
 
   page.drawText(qtyText, {
@@ -309,7 +381,9 @@ function getStyleFamily(style) {
 
 async function generateMockups(options) {
   const excel = options.excelBuffer ? readExcelBuffer(options.excelBuffer) : readExcel(options.excel);
-  const rows = options.limit > 0 ? excel.rows.slice(0, options.limit) : excel.rows;
+  const filteredRows = filterRows(excel.rows, options);
+  const consolidatedRows = consolidateRows(filteredRows);
+  const rows = options.limit > 0 ? consolidatedRows.slice(0, options.limit) : consolidatedRows;
   let ok = 0;
   let missing = 0;
   const outputs = [];
@@ -318,7 +392,9 @@ async function generateMockups(options) {
   console.log(`Excel: ${options.excel || "upload"}`);
   console.log(`Hoja: ${excel.sheetName}`);
   console.log(`Fecha: ${excel.dateText}`);
-  console.log(`Filas: ${rows.length}`);
+  console.log(`Filas Excel: ${excel.rows.length}`);
+  console.log(`Filas seleccionadas: ${filteredRows.length}`);
+  console.log(`Grupos consolidados: ${rows.length}`);
 
   for (const order of rows) {
     const mockupPath = buildMockupPath(options.mockups, order);
@@ -344,7 +420,74 @@ async function generateMockups(options) {
   }
 
   console.log(`Terminado. OK: ${ok} | Faltantes: ${missing}`);
-  return { ok, missing, outputs, missingRows, dateText: excel.dateText, rows: rows.length };
+  return {
+    ok,
+    missing,
+    outputs,
+    missingRows,
+    dateText: excel.dateText,
+    rows: rows.length,
+    selectedRows: filteredRows.length,
+    totalRows: excel.rows.length,
+    styles: uniqueSorted(rows.map(function (row) { return getStyleFamily(row.style); })),
+    sizes: uniqueSorted(rows.map(function (row) { return row.size; }))
+  };
+}
+
+function consolidateRows(rows) {
+  const groups = new Map();
+
+  rows.forEach(function (row) {
+    const key = [
+      row.shipOrder,
+      row.wo,
+      row.style,
+      cleanUpper(row.color)
+    ].join("||");
+    const existing = groups.get(key);
+
+    if (!existing) {
+      const first = Object.assign({}, row, {
+        qty: normalizeQty(row.qty),
+        sizes: row.size ? [row.size] : [],
+        sourceRows: [row.sourceRow]
+      });
+      groups.set(key, first);
+      return;
+    }
+
+    existing.qty += normalizeQty(row.qty);
+    existing.sourceRows.push(row.sourceRow);
+    if (row.size && existing.sizes.indexOf(row.size) === -1) {
+      existing.sizes.push(row.size);
+      existing.size = existing.sizes.join("-");
+    }
+  });
+
+  return Array.from(groups.values()).map(function (row) {
+    if (row.sizes && row.sizes.length > 1) {
+      row.size = row.sizes.join("-");
+    }
+
+    return row;
+  });
+}
+
+function normalizeQty(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : 1;
+}
+
+function filterRows(rows, options) {
+  const selectedStyles = new Set((options.styles || []).map(cleanUpper).filter(Boolean));
+  const selectedSizes = new Set((options.sizes || []).map(cleanUpper).filter(Boolean));
+
+  return rows.filter(function (row) {
+    const rowFamily = getStyleFamily(row.style);
+    const matchesStyle = selectedStyles.size === 0 || selectedStyles.has(rowFamily) || selectedStyles.has(row.style);
+    const matchesSize = selectedSizes.size === 0 || selectedSizes.has(row.size);
+    return matchesStyle && matchesSize;
+  });
 }
 
 async function main() {
@@ -368,5 +511,6 @@ module.exports = {
   buildOutputPath,
   generateMockups,
   readExcel,
-  readExcelBuffer
+  readExcelBuffer,
+  summarizeExcel
 };

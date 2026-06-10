@@ -1,6 +1,10 @@
 # RMCOp-Nike
 
-Ultima actualizacion de contexto: 2026-06-09.
+Ultima actualizacion de contexto: 2026-06-10.
+
+Palabra clave para retomar contexto: `RMCOP_NIKE_HANDOFF`.
+
+Si eres otro Codex entrando al proyecto, busca `RMCOP_NIKE_HANDOFF` y lee primero `CODEX_HANDOFF.md`.
 
 Panel CEP para Adobe Illustrator usado en pedidos Nike Lacrosse On Demand. El panel resuelve plantillas PDF, crea copias con nombre interno, abre la copia en Illustrator y aplica nombre/numero segun la variante. El repo tambien contiene una utileria separada, `tools/mockup-printer`, para anotar mockups PDF de produccion desde Excel.
 
@@ -19,9 +23,12 @@ Si eres otro Codex entrando al proyecto, primero lee:
 - Variantes activas en codigo:
   - `Standard`: reemplazo de nombre y numero como texto.
   - `Indigenous Heritage`: nombre como texto y numero armado desde arte expandido/rasterizado.
-  - `Throwback`: registrado como variante de texto, con sufijo `TB`; falta confirmar rutas/plantillas/previews reales antes de darlo por cerrado en produccion.
+  - `Throwback`: variante de texto con sufijo `TB`; rutas adulto confirmadas en carpeta `THROWBACK/NIKE TB ...`.
 - Validacion de muestras oficiales implementada: primero corre accion tipo `Add Used Colors` y despues compara contra `js/config/officialSwatches.json`.
 - Utileria externa `Nike Mockup Printer MVP` implementada en `tools/mockup-printer`.
+  - Usa carpeta base nueva `.../RMCOp-NIKE/MOCKUPS`.
+  - Soporta variantes `STANDARD`, `INDIGENOUS HERITAGE` y `THROWBACK`.
+  - Consolida filas repetidas por `WO#` + `SHIP O` + `Style` + `Team / Color`, sumando `Pzs`.
 
 ## Stack
 
@@ -188,20 +195,35 @@ Las reglas compartidas viven en `js/config/variantRules.js`.
 | Indigenous Heritage | `IH` | sin Home/Away | nombre texto + numero arte |
 | Throwback | `TB` | sin Home/Away | texto |
 
-Throwback ya esta modelado en codigo, pero sigue siendo zona de cuidado: antes de cambiar rutas o previews, confirmar estructura real de carpetas y nombres de plantillas.
+Throwback ya esta modelado como variante de texto. Sus plantillas no usan Home/Away en ruta.
 
 ## Plantillas Y Nombres
 
 `js/utils/pathBuilder.js` resuelve plantilla y nombre final.
 
-Standard/Throwback buscan como flujo de texto:
+Standard busca como flujo de texto con Home/Away:
 
 ```text
-STANDARD|THROWBACK/
+STANDARD/
   NIKE Mens and Youth|NIKE Girls and Ladies/
     MENS|YOUTH|Ladies|Girls/
       HOME|AWAY/
         Equipo Home|Equipo Away/
+```
+
+Throwback busca como variante especial sin Home/Away:
+
+```text
+THROWBACK/
+  NIKE TB Mens and Youth|NIKE TB Girls and Ladies/
+    MENS|YOUTH|Ladies|Girls/
+      Equipo TB/
+```
+
+Nombre de plantilla TB adulto esperado:
+
+```text
+PLL Utah TB A1000 SM.pdf
 ```
 
 Indigenous Heritage busca:

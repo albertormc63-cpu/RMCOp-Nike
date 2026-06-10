@@ -1,5 +1,7 @@
 # Nike Mockup Printer MVP
 
+Palabra clave para retomar contexto: `RMCOP_NIKE_HANDOFF`.
+
 Herramienta externa al CEP para leer listas Nike On Demand, encontrar el mockup PDF correcto, estampar datos de produccion en la parte superior izquierda y generar PDFs listos para imprimir.
 
 Este flujo no debe mezclarse con el panel CEP de Illustrator. Vive aqui como utileria web/local independiente.
@@ -11,11 +13,17 @@ Evitar escribir a mano datos de impresion sobre mockups PDF.
 Entrada:
 
 - Excel de lista On Demand.
-- Carpeta de mockups PDF.
+- Carpeta de mockups PDF:
+
+```text
+/Volumes/Fullsize/PATRONES ACOMODADOS PARA ROLLO/NIKE LACROSSE/RMCOp-NIKE/MOCKUPS
+```
 
 Salida:
 
 - Un PDF anotado por fila del Excel.
+- Si varias filas comparten `WO#`, `SHIP O`, `Style` y `Team / Color`, se consolidan en un solo PDF.
+- En filas consolidadas se suma `Pzs`; si hay varias tallas se imprime como `Size: LGE-MED` y se recorre el texto hacia la izquierda.
 - El nombre de salida no lleva prefijo `WO`; ejemplo: `173194 - PLL Maryland Whipsnakes - Y1000H - 1pz.pdf`.
 - La salida se separa por familia y talla: `A1000/2XL`, `Y1000/SML`, `A2000/MED`, etc.
 - No se duplican paginas si `Pzs` es mayor a 1; `Pzs` solo se imprime como dato visual.
@@ -74,6 +82,8 @@ Version desde `Style`:
 ```text
 ...H -> Home
 ...A -> Away
+...IH -> Indigenous Heritage
+...TB -> Throwback
 ```
 
 Linea desde `Style`:
@@ -86,13 +96,17 @@ A2000 / Y2000 -> WLL femenino
 Mockups:
 
 ```text
-PLL Boston Cannons Home X003.pdf
-PLL Boston Cannons Away X003.pdf
-WLL Boston Guard Home.pdf
-WLL Boston Guard Away.pdf
+/Volumes/Fullsize/PATRONES ACOMODADOS PARA ROLLO/NIKE LACROSSE/RMCOp-NIKE/MOCKUPS
+
+STANDARD/MASCULINO/PLL Boston Cannons Home.pdf
+STANDARD/MASCULINO/PLL Boston Cannons Away.pdf
+STANDARD/FEMENINO/WLL Boston Guard Home.pdf
+STANDARD/FEMENINO/WLL Boston Guard Away.pdf
+INDIGENOUS HERITAGE/PLL California Redwoods IH.pdf
+THROWBACK/PLL Boston Cannons TB.pdf
 ```
 
-Nota: femenino/WLL no usa numero `X###` en el nombre del mockup.
+Nota: Standard usa Home/Away. IH y TB no usan Home/Away en el nombre del mockup.
 
 ## Datos A Estampar
 
@@ -131,21 +145,21 @@ Campos:
 ```text
 WO:
   Texto: "WO# " + WO#
-  Font: 20 pt
+  Font: 18 pt
   X: 0.58 in
   Y: 7.10 in
   Mayusculas
 
 STYLE:
   Texto: Style
-  Font: 20 pt
+  Font: 18 pt
   X: 0.58 in
   Y: 6.78 in
   Mayusculas
 
 FECHA:
   Texto: fecha de A2 normalizada
-  Font: 14 pt
+  Font: 12 pt
   X: 0.58 in
   Y: 7.38 in
   Mayusculas
@@ -153,7 +167,7 @@ FECHA:
 
 SIZE:
   Texto: "Size: " + Size
-  Font: 20 pt
+  Font: 18 pt
   X: 2.30 in
   Y: 2.50 in
   Mayusculas
@@ -165,7 +179,7 @@ PZS:
     X: 0.80 in
     Y: 4.04 in
   "pz":
-    Font: 14 pt
+    Font: 12 pt
     Va concatenado visualmente despues del numero
 ```
 
@@ -186,8 +200,11 @@ http://localhost:3127
 Desde el navegador:
 
 - Seleccionar Excel.
-- Confirmar carpeta de mockups.
-- Escribir carpeta donde guardar PDFs listos.
+- Confirmar carpeta de mockups con `Examinar`.
+- Confirmar carpeta donde guardar PDFs listos con `Examinar`.
+- Confirmar fuente Aldrich con `Examinar`.
+- Elegir familias de style: `A1000`, `Y1000`, `A2000`, `Y2000`; cada familia procesa Home/Away si existen en el Excel.
+- Elegir `Tallas`: todas, una o varias. La lista se ajusta a las familias seleccionadas.
 - Generar.
 
 Comando local alterno:
@@ -195,13 +212,14 @@ Comando local alterno:
 ```bash
 node src/generate.js \
   --excel "/Volumes/Fullsize/TO PRINT/LISTAS ON DEMAND/NIKE OD 12 JUNIO.xlsx" \
-  --mockups "/Volumes/Fullsize/Nike Lacrosse" \
+  --mockups "/Volumes/Fullsize/PATRONES ACOMODADOS PARA ROLLO/NIKE LACROSSE/RMCOp-NIKE/MOCKUPS" \
   --font "/Users/rmlsub1/Library/Fonts/Aldrich-Regular.ttf" \
-  --out "./output"
+  --out "./output" \
+  --styles "A1000,Y1000" \
+  --sizes "MED,SML"
 ```
 
 Pendiente para siguiente iteracion:
 
 - Selector de impresora.
 - Envio a cola usando `lp`.
-- Selector nativo de carpeta de salida. Por seguridad del navegador, en este MVP la ruta de salida se escribe como texto.

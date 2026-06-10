@@ -106,13 +106,19 @@ function getVariantRootFolder(variant) {
 function getVariantProductConfig(style, variant) {
   const productConfig = getProductConfig(style);
 
-  if (variant !== "Indigenous Heritage") {
-    return productConfig;
+  if (variant === "Indigenous Heritage") {
+    return Object.assign({}, productConfig, {
+      groupFolder: productConfig.nikeCode === "PLL" ? "NIKE IH Mens and Youth" : "NIKE IH Girls and Ladies"
+    });
   }
 
-  return Object.assign({}, productConfig, {
-    groupFolder: productConfig.nikeCode === "PLL" ? "NIKE IH Mens and Youth" : "NIKE IH Girls and Ladies"
-  });
+  if (variant === "Throwback") {
+    return Object.assign({}, productConfig, {
+      groupFolder: productConfig.nikeCode === "PLL" ? "NIKE TB Mens and Youth" : "NIKE TB Girls and Ladies"
+    });
+  }
+
+  return productConfig;
 }
 
 function findExistingPath(candidates) {
@@ -176,6 +182,19 @@ function getIhTeamFolderCandidates(basePath, productConfig, team) {
   return [
     path.join(ihRoot, `${team.toUpperCase()} IH`),
     path.join(ihRoot, `${team} IH`)
+  ];
+}
+
+function getVariantTeamFolderCandidates(basePath, variant, productConfig, team, variantCode) {
+  const variantRoot = resolvePathSegments(basePath, [
+    getVariantRootFolder(variant),
+    productConfig.groupFolder,
+    productConfig.productFolder
+  ]);
+
+  return [
+    path.join(variantRoot, `${team.toUpperCase()} ${variantCode}`),
+    path.join(variantRoot, `${team} ${variantCode}`)
   ];
 }
 
@@ -256,8 +275,37 @@ function findIhTeamFolder(basePath, productConfig, team) {
   return match ? path.join(ihProductPath, match) : candidates[0];
 }
 
+function findVariantTeamFolder(basePath, variant, productConfig, team, variantCode) {
+  const candidates = getVariantTeamFolderCandidates(basePath, variant, productConfig, team, variantCode);
+  const existingCandidate = findExistingPath(candidates);
+
+  if (existingCandidate) {
+    return existingCandidate;
+  }
+
+  const variantProductPath = resolvePathSegments(basePath, [
+    getVariantRootFolder(variant),
+    productConfig.groupFolder,
+    productConfig.productFolder
+  ]);
+
+  if (!fs.existsSync(variantProductPath)) {
+    return candidates[0];
+  }
+
+  const teamWords = team.toUpperCase().split(/\s+/);
+  const entries = fs.readdirSync(variantProductPath);
+  const match = entries.find(function (entryName) {
+    const normalizedEntry = entryName.toUpperCase();
+    return teamWords.every(function (word) { return normalizedEntry.indexOf(word) !== -1; }) &&
+      normalizedEntry.indexOf(variantCode) !== -1;
+  });
+
+  return match ? path.join(variantProductPath, match) : candidates[0];
+}
+
 function buildTextTemplatePath({ basePath, team, variant, version, style, size, teamCode }) {
-  // Standard y Throwback comparten mecanica: buscar un PDF editable y reemplazar textos.
+  // Standard busca un PDF editable por Home/Away y reemplaza textos.
   const productConfig = getVariantProductConfig(style, variant);
   const variantBasePath = resolvePathSegments(basePath, [getVariantRootFolder(variant)]);
   const folderCandidates = getTemplateFolderCandidates(variantBasePath, productConfig, team, version);
@@ -277,6 +325,18 @@ function buildTextTemplatePath({ basePath, team, variant, version, style, size, 
   }
 
   return findTemplateByStyleAndSize(targetFolder, style, size) || canonicalPath;
+}
+
+function buildThrowbackTemplatePath({ basePath, team, style, size }) {
+  const productConfig = getVariantProductConfig(style, "Throwback");
+  const targetFolder = findVariantTeamFolder(basePath, "Throwback", productConfig, team, "TB");
+  const foundTemplate = findTemplateByStyleAndSize(targetFolder, style, size);
+
+  if (foundTemplate) {
+    return foundTemplate;
+  }
+
+  return path.join(targetFolder, `${productConfig.nikeCode} ${team} TB ${getStyleSearchFamily(style)} ${size}.pdf`);
 }
 
 function buildIhTemplatePath({ basePath, team, style, size }) {
@@ -301,6 +361,10 @@ function buildTemplatePath({ basePath, team, variant, version, style, size }) {
 
   if (variant === "Indigenous Heritage") {
     return buildIhTemplatePath({ basePath, team, style, size });
+  }
+
+  if (variant === "Throwback") {
+    return buildThrowbackTemplatePath({ basePath, team, style, size });
   }
 
   return buildTextTemplatePath({ basePath, team, variant, version, style, size, teamCode });

@@ -1,6 +1,10 @@
 # RMCOp-Nike - Handoff Para Otro Codex
 
-Ultima actualizacion: 2026-06-09.
+Ultima actualizacion: 2026-06-10.
+
+Palabra clave para retomar contexto: `RMCOP_NIKE_HANDOFF`.
+
+Si otro Codex entra al proyecto, buscar `RMCOP_NIKE_HANDOFF` en el repo. Esta etiqueta marca los archivos que resumen el flujo actual del CEP y del tool externo de mockups.
 
 Este archivo es la memoria corta-larga del proyecto. La idea es que otro Codex pueda entrar al repo y, si el usuario pregunta "Que tranza?", lea esto junto con `AGENTS.md` y se ubique sin depender de los chats originales.
 
@@ -233,14 +237,42 @@ IH:
 
 Ubicacion: `tools/mockup-printer`.
 
+Palabra clave relacionada: `RMCOP_NIKE_HANDOFF`.
+
 No es parte del CEP. Es una herramienta web/local para generar mockups PDF listos para imprimir:
 
 - Lee Excel con layout de listas On Demand.
-- Detecta mockup PDF correcto.
+- Detecta mockup PDF correcto desde la carpeta base nueva:
+
+```text
+/Volumes/Fullsize/PATRONES ACOMODADOS PARA ROLLO/NIKE LACROSSE/RMCOp-NIKE/MOCKUPS
+```
+
+- Estructura de mockups:
+
+```text
+STANDARD/MASCULINO/PLL Boston Cannons Home.pdf
+STANDARD/FEMENINO/WLL California Palms Away.pdf
+INDIGENOUS HERITAGE/PLL California Redwoods IH.pdf
+THROWBACK/PLL Boston Cannons TB.pdf
+```
+
 - Estampa fecha, WO, style, talla y piezas.
 - Usa `pdf-lib`.
 - Intenta incrustar Aldrich desde `/Users/rmlsub1/Library/Fonts/Aldrich-Regular.ttf`; si no existe, cae a Helvetica Bold.
 - Salida por familia style y talla.
+- UI web local con filtros por familia (`A1000`, `Y1000`, `A2000`, `Y2000`) y tallas disponibles segun familia.
+- Los campos de ruta estan bloqueados; se llenan con botones `Examinar`.
+- Consolida filas repetidas antes de generar:
+  - mismo `WO#`, `SHIP O`, `Style` y `Team / Color` -> un solo PDF.
+  - suma `Pzs`.
+  - si hay varias tallas, imprime `Size: LGE-MED` y mueve el texto hacia la izquierda.
+- No duplica paginas por `Pzs`; solo imprime el total visual.
+- Textos actuales:
+  - WO, Style y Size: 18 pt.
+  - Fecha: 12 pt en rojo `#A91E2F`.
+  - Numero grande de piezas: 70 pt.
+  - Sufijo `pz`: 12 pt.
 
 Comandos:
 
