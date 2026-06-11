@@ -19,8 +19,10 @@ const DATE_COLOR = rgb(0xa9 / 255, 0x1e / 255, 0x2f / 255);
 
 const DEFAULT_EXCEL = "/Volumes/Fullsize/TO PRINT/LISTAS ON DEMAND/NIKE OD 12 JUNIO.xlsx";
 const DEFAULT_MOCKUPS = "/Volumes/Fullsize/PATRONES ACOMODADOS PARA ROLLO/NIKE LACROSSE/RMCOp-NIKE/MOCKUPS";
-const DEFAULT_OUT = path.join(__dirname, "..", "output");
+const DEFAULT_OUT = "/Volumes/Fullsize/TO PRINT/LISTAS ON DEMAND";
 const DEFAULT_ALDRICH_FONT = "/Users/rmlsub1/Library/Fonts/Aldrich-Regular.ttf";
+const MODE_BULK = "bulk";
+const MODE_SAMPLES = "samples";
 
 const maleTeams = {
   ARCHERS: { team: "Utah", nickname: "Archers", code: "X001" },
@@ -46,6 +48,7 @@ function parseArgs(argv) {
     mockups: DEFAULT_MOCKUPS,
     out: DEFAULT_OUT,
     font: DEFAULT_ALDRICH_FONT,
+    mode: MODE_BULK,
     limit: 0
   };
 
@@ -64,6 +67,9 @@ function parseArgs(argv) {
       index++;
     } else if (arg === "--font") {
       args.font = next;
+      index++;
+    } else if (arg === "--mode") {
+      args.mode = normalizeMode(next);
       index++;
     } else if (arg === "--styles") {
       args.styles = parseFilterList(next);
@@ -102,14 +108,23 @@ function sanitizeFilePart(value) {
     .replace(/\s+/g, " ");
 }
 
+function normalizeMode(value) {
+  const mode = cleanUpper(value);
+  return mode === "SAMPLES" || mode === "GENERICAS" || mode === "GENERICAS/MUESTRAS" ? MODE_SAMPLES : MODE_BULK;
+}
+
 function summarizeExcel(excel) {
   return {
     sheetName: excel.sheetName,
     title: excel.title,
     dateText: excel.dateText,
     rows: excel.rows.length,
+    mode: excel.mode || MODE_BULK,
     styles: uniqueSorted(excel.rows.map(function (row) { return getStyleFamily(row.style); })),
     sizes: uniqueSorted(excel.rows.map(function (row) { return row.size; })),
+    teams: uniqueSorted(excel.rows.map(function (row) {
+      return row.teamInfo ? `${row.line} ${row.teamInfo.team} ${row.teamInfo.nickname}` : "";
+    })),
     sizesByStyle: buildSizesByStyle(excel.rows)
   };
 }
@@ -135,18 +150,25 @@ function buildSizesByStyle(rows) {
   return sizesByStyle;
 }
 
-function readExcel(excelPath) {
-  // Layout actual: A2 titulo/fecha, fila 3 encabezados, fila 4+ datos.
+function readExcel(excelPath, mode) {
   const workbook = XLSX.readFile(excelPath, { cellDates: false });
-  return readWorkbook(workbook);
+  return readWorkbook(workbook, mode);
 }
 
-function readExcelBuffer(buffer) {
+function readExcelBuffer(buffer, mode) {
   const workbook = XLSX.read(buffer, { type: "buffer", cellDates: false });
-  return readWorkbook(workbook);
+  return readWorkbook(workbook, mode);
 }
 
-function readWorkbook(workbook) {
+function readWorkbook(workbook, mode) {
+  if (normalizeMode(mode) === MODE_SAMPLES) {
+    return readSamplesWorkbook(workbook);
+  }
+
+  return readBulkWorkbook(workbook);
+}
+
+function readBulkWorkbook(workbook) {
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
   const rows = XLSX.utils.sheet_to_json(sheet, {
@@ -165,10 +187,115 @@ function readWorkbook(workbook) {
     });
 
   return {
+    mode: MODE_BULK,
     sheetName,
     title,
     dateText,
     rows: dataRows
+  };
+}
+
+function readSamplesWorkbook(workbook) {
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(sheet, {
+    header: 1,
+    raw: false,
+    defval: ""
+  });
+  const headerRowIndex = findSamplesHeaderRow(rows);
+  const headerCells = rows[headerRowIndex] || [];
+  const columns = buildSamplesColumns(headerCells);
+  const dataRows = rows.slice(headerRowIndex + 1)
+    .map(function (cells, index) {
+      return normalizeSampleRow(cells, headerRowIndex + index + 2, columns);
+    })
+    .filter(function (row) {
+      return row.wo || row.style || row.roster || row.color;
+    });
+
+  return {
+    mode: MODE_SAMPLES,
+    sheetName,
+    title: "",
+    dateText: "",
+    rows: dataRows
+  };
+}
+
+function findSamplesHeaderRow(rows) {
+  for (let index = 0; index < Math.min(rows.length, 25); index++) {
+    const normalized = (rows[index] || []).map(normalizeHeader);
+    const hasWo = normalized.some(function (value) { return value === "WO" || value === "WO#"; });
+    const hasStyle = normalized.some(function (value) { return value === "STYLE" || value === "ESTILO"; });
+    const hasRoster = normalized.some(function (value) { return value.indexOf("ROSTER") !== -1; });
+    const hasQty = normalized.some(function (value) { return value === "QTY" || value === "PZS" || value === "PZ"; });
+
+    if (hasWo && hasStyle && hasRoster && hasQty) return index;
+  }
+
+  return 1;
+}
+
+function buildSamplesColumns(headerCells) {
+  return {
+    wo: findColumn(headerCells, ["WO", "WO#", "WORK ORDER"]),
+    style: findColumn(headerCells, ["STYLE", "ESTILO"]),
+    roster: findColumn(headerCells, ["ROSTER", "ROSTER#"]),
+    qty: findColumn(headerCells, ["QTY", "PZS", "PZ", "QTY/PZS"]),
+    color: findColumn(headerCells, ["COLOR", "COLOR / EQUIPO", "EQUIPO", "TEAM"]),
+    shipDate: findColumn(headerCells, ["FECHA EMBARQUE", "EMBARQUE", "EMB", "SHIP DATE"])
+  };
+}
+
+function findColumn(headerCells, aliases) {
+  const normalizedAliases = aliases.map(normalizeHeader);
+  const index = headerCells.findIndex(function (cell) {
+    const header = normalizeHeader(cell);
+    return normalizedAliases.some(function (alias) {
+      return header === alias || header.indexOf(alias) !== -1;
+    });
+  });
+
+  return index === -1 ? null : index;
+}
+
+function normalizeHeader(value) {
+  return cleanUpper(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function readCell(cells, index) {
+  return index == null || index < 0 ? "" : cells[index];
+}
+
+function normalizeSampleRow(cells, sourceRow, columns) {
+  const style = cleanUpper(readCell(cells, columns.style));
+  const color = clean(readCell(cells, columns.color));
+  const line = inferLine(style) || inferLineFromColor(color);
+  const variant = inferVariant(style) || inferVariantFromColor(color);
+  const version = inferVersion(style);
+  const teamInfo = inferTeam(color, line);
+
+  return {
+    sourceRow,
+    shipOrder: "",
+    wo: clean(readCell(cells, columns.wo)).replace(/[^0-9-]/g, ""),
+    style,
+    color,
+    size: "",
+    qty: Number(clean(readCell(cells, columns.qty)) || 1),
+    roster: cleanUpper(readCell(cells, columns.roster)),
+    shipDate: cleanUpper(readCell(cells, columns.shipDate)),
+    lastName: "",
+    playerNumber: "",
+    line,
+    variant,
+    version,
+    teamInfo
   };
 }
 
@@ -220,6 +347,20 @@ function inferVersion(style) {
   if (/A$/.test(style)) return "Away";
   if (/H$/.test(style)) return "Home";
   return "";
+}
+
+function inferLineFromColor(color) {
+  const normalized = cleanUpper(color);
+  if (normalized.indexOf("WLL") !== -1) return "WLL";
+  if (normalized.indexOf("PLL") !== -1) return "PLL";
+  return "";
+}
+
+function inferVariantFromColor(color) {
+  const normalized = cleanUpper(color);
+  if (normalized.indexOf("INDIGENOUS") !== -1 || normalized.indexOf(" IH") !== -1) return "IH";
+  if (normalized.indexOf("THROWBACK") !== -1) return "TB";
+  return "STANDARD";
 }
 
 function inferTeam(color, line) {
@@ -313,6 +454,55 @@ async function annotatePdf({ mockupPath, outputPath, order, dateText, fontPath }
   fs.writeFileSync(outputPath, await pdf.save());
 }
 
+async function annotateSamplesPdf({ mockupPath, outputPath, order, fontPath }) {
+  const bytes = fs.readFileSync(mockupPath);
+  const pdf = await PDFDocument.load(bytes);
+  const page = pdf.getPages()[0];
+  const font = await loadPreferredFont(pdf, fontPath);
+  const boldFont = font;
+
+  drawText(page, `WO# ${order.wo}`.toUpperCase(), {
+    x: 0.58,
+    y: 7.10,
+    size: 18,
+    font: boldFont
+  });
+
+  drawText(page, order.style.toUpperCase(), {
+    x: 0.58,
+    y: 6.78,
+    size: 18,
+    font: boldFont
+  });
+
+  if (order.shipDate) {
+    drawText(page, order.shipDate.toUpperCase(), {
+      x: 0.58,
+      y: 7.38,
+      size: 12,
+      font,
+      color: DATE_COLOR
+    });
+  }
+
+  drawQty(page, String(order.qty || 1), {
+    x: 0.80,
+    y: 4.04,
+    numberFont: boldFont,
+    suffixFont: font
+  });
+
+  drawText(page, `Roster: ${order.roster || "SIN ROSTER"}`.toUpperCase(), {
+    x: 1.80,
+    y: 2.50,
+    size: 18,
+    font: boldFont
+  });
+
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, await pdf.save());
+}
+
 function getSizeTextX(order) {
   if (!order.sizes || order.sizes.length <= 1) return 2.30;
   return order.sizes.length > 2 ? 1.55 : 1.80;
@@ -374,22 +564,46 @@ function buildOutputPath(outDir, order) {
   return path.join(outDir, styleFamily, order.size || "SIN_TALLA", `${fileName}.pdf`);
 }
 
+function buildSamplesOutputPath(outDir, order) {
+  const teamPart = order.teamInfo ? `${order.line} ${order.teamInfo.team} ${order.teamInfo.nickname}` : order.line || "SIN_EQUIPO";
+  const dateFolder = sanitizeFilePart(order.shipDate || "SIN_FECHA");
+  const fileName = [
+    order.wo || `FILA ${String(order.sourceRow).padStart(3, "0")}`,
+    order.roster || "SIN_ROSTER",
+    teamPart,
+    order.style,
+    order.qty ? `${order.qty}pz` : "1pz"
+  ].filter(Boolean).map(sanitizeFilePart).join(" - ");
+
+  return path.join(outDir, dateFolder, `${fileName}.pdf`);
+}
+
+function getSectionOutputRoot(outDir, sectionName, excelName) {
+  const baseName = sanitizeFilePart(path.basename(clean(excelName) || "Excel", path.extname(clean(excelName) || ""))) || "Excel";
+  return path.join(outDir, sectionName, baseName);
+}
+
 function getStyleFamily(style) {
   const match = cleanUpper(style).match(/^[AY][0-9]{4}/);
   return match ? match[0] : "SIN_STYLE";
 }
 
 async function generateMockups(options) {
-  const excel = options.excelBuffer ? readExcelBuffer(options.excelBuffer) : readExcel(options.excel);
+  const mode = normalizeMode(options.mode);
+  const excelName = options.excelName || options.excel || "Excel";
+  const excel = options.excelBuffer ? readExcelBuffer(options.excelBuffer, mode) : readExcel(options.excel, mode);
   const filteredRows = filterRows(excel.rows, options);
-  const consolidatedRows = consolidateRows(filteredRows);
+  const consolidatedRows = mode === MODE_SAMPLES ? consolidateSampleRows(filteredRows) : consolidateRows(filteredRows);
   const rows = options.limit > 0 ? consolidatedRows.slice(0, options.limit) : consolidatedRows;
+  const sectionName = mode === MODE_SAMPLES ? "Genericas Muestras" : "Por lote";
+  const outputRoot = getSectionOutputRoot(options.out, sectionName, excelName);
   let ok = 0;
   let missing = 0;
   const outputs = [];
   const missingRows = [];
 
-  console.log(`Excel: ${options.excel || "upload"}`);
+  console.log(`Excel: ${options.excel || excelName || "upload"}`);
+  console.log(`Modo: ${mode}`);
   console.log(`Hoja: ${excel.sheetName}`);
   console.log(`Fecha: ${excel.dateText}`);
   console.log(`Filas Excel: ${excel.rows.length}`);
@@ -406,8 +620,9 @@ async function generateMockups(options) {
       continue;
     }
 
-    const outputPath = buildOutputPath(options.out, order);
-    await annotatePdf({
+    const outputPath = mode === MODE_SAMPLES ? buildSamplesOutputPath(outputRoot, order) : buildOutputPath(outputRoot, order);
+    const annotate = mode === MODE_SAMPLES ? annotateSamplesPdf : annotatePdf;
+    await annotate({
       mockupPath,
       outputPath,
       order,
@@ -426,12 +641,41 @@ async function generateMockups(options) {
     outputs,
     missingRows,
     dateText: excel.dateText,
+    mode,
+    out: outputRoot,
     rows: rows.length,
     selectedRows: filteredRows.length,
     totalRows: excel.rows.length,
     styles: uniqueSorted(rows.map(function (row) { return getStyleFamily(row.style); })),
     sizes: uniqueSorted(rows.map(function (row) { return row.size; }))
   };
+}
+
+function consolidateSampleRows(rows) {
+  const groups = new Map();
+
+  rows.forEach(function (row) {
+    const key = [
+      row.wo,
+      row.roster,
+      row.style,
+      cleanUpper(row.color)
+    ].join("||");
+    const existing = groups.get(key);
+
+    if (!existing) {
+      groups.set(key, Object.assign({}, row, {
+        qty: normalizeQty(row.qty),
+        sourceRows: [row.sourceRow]
+      }));
+      return;
+    }
+
+    existing.qty += normalizeQty(row.qty);
+    existing.sourceRows.push(row.sourceRow);
+  });
+
+  return Array.from(groups.values());
 }
 
 function consolidateRows(rows) {
@@ -507,8 +751,11 @@ module.exports = {
   DEFAULT_MOCKUPS,
   DEFAULT_OUT,
   DEFAULT_ALDRICH_FONT,
+  MODE_BULK,
+  MODE_SAMPLES,
   buildMockupPath,
   buildOutputPath,
+  buildSamplesOutputPath,
   generateMockups,
   readExcel,
   readExcelBuffer,

@@ -25,10 +25,12 @@ Salida:
 - Si varias filas comparten `WO#`, `SHIP O`, `Style` y `Team / Color`, se consolidan en un solo PDF.
 - En filas consolidadas se suma `Pzs`; si hay varias tallas se imprime como `Size: LGE-MED` y se recorre el texto hacia la izquierda.
 - El nombre de salida no lleva prefijo `WO`; ejemplo: `173194 - PLL Maryland Whipsnakes - Y1000H - 1pz.pdf`.
-- La salida se separa por familia y talla: `A1000/2XL`, `Y1000/SML`, `A2000/MED`, etc.
+- La salida de Por lote se guarda en `Por lote/nombre-del-Excel/` y se separa por familia y talla: `A1000/2XL`, `Y1000/SML`, `A2000/MED`, etc.
 - No se duplican paginas si `Pzs` es mayor a 1; `Pzs` solo se imprime como dato visual.
 
 ## Excel Esperado
+
+### Por lote
 
 Archivo ejemplo:
 
@@ -54,6 +56,32 @@ F = Pzs
 G = Last Name
 H = #
 ```
+
+### Genericas/Muestras
+
+Esta seccion usa los mismos mockups base, pero lee un layout separado por encabezados. Formato observado:
+
+```text
+/Volumes/Fullsize/TO PRINT/LISTAS ON DEMAND/FORMATO LISTA NIKE JUNIO.xlsx
+```
+
+Columnas observadas:
+
+```text
+A = WO#
+B = ESTILO / STYLE
+D = ROSTER#
+E = Pzs / QTY
+F = COLOR / EQUIPO
+H = Emb / FECHA EMBARQUE
+```
+
+Notas:
+
+- El equipo se detecta desde el nickname dentro de `COLOR / EQUIPO`.
+- `Emb` se imprime como fecha en rojo.
+- `ROSTER#` se imprime en el area donde Por lote imprime la talla.
+- La salida se guarda en `Genericas Muestras/nombre-del-Excel/fecha-embarque/`, sin separar por equipo.
 
 ## Reglas De Mockup
 
@@ -197,26 +225,46 @@ Abrir:
 http://localhost:3127
 ```
 
+Para cerrar el server:
+
+- Desde la terminal donde corre `npm start`, presionar `Ctrl+C`.
+- Desde la UI, usar `Apagar server`.
+
+La UI muestra un punto verde cuando el server responde. Si el server esta apagado, el navegador no puede iniciarlo por si solo; hay que arrancarlo con `npm start` y despues usar `Conectar` para revisar el estado.
+
 Desde el navegador:
 
 - Seleccionar Excel.
+- Elegir seccion: `Por lote` o `Genericas/Muestras`.
 - Confirmar carpeta de mockups con `Examinar`.
-- Confirmar carpeta donde guardar PDFs listos con `Examinar`.
+- Confirmar carpeta base donde guardar PDFs listos con `Examinar`.
 - Confirmar fuente Aldrich con `Examinar`.
 - Elegir familias de style: `A1000`, `Y1000`, `A2000`, `Y2000`; cada familia procesa Home/Away si existen en el Excel.
-- Elegir `Tallas`: todas, una o varias. La lista se ajusta a las familias seleccionadas.
+- En Por lote, elegir `Tallas`: todas, una o varias. La lista se ajusta a las familias seleccionadas.
 - Generar.
 
 Comando local alterno:
 
 ```bash
 node src/generate.js \
+  --mode bulk \
   --excel "/Volumes/Fullsize/TO PRINT/LISTAS ON DEMAND/NIKE OD 12 JUNIO.xlsx" \
   --mockups "/Volumes/Fullsize/PATRONES ACOMODADOS PARA ROLLO/NIKE LACROSSE/RMCOp-NIKE/MOCKUPS" \
   --font "/Users/rmlsub1/Library/Fonts/Aldrich-Regular.ttf" \
-  --out "./output" \
+  --out "/Volumes/Fullsize/TO PRINT/LISTAS ON DEMAND" \
   --styles "A1000,Y1000" \
   --sizes "MED,SML"
+```
+
+Para Genericas/Muestras:
+
+```bash
+node src/generate.js \
+  --mode samples \
+  --excel "/Volumes/Fullsize/TO PRINT/LISTAS ON DEMAND/FORMATO LISTA NIKE JUNIO.xlsx" \
+  --mockups "/Volumes/Fullsize/PATRONES ACOMODADOS PARA ROLLO/NIKE LACROSSE/RMCOp-NIKE/MOCKUPS" \
+  --font "/Users/rmlsub1/Library/Fonts/Aldrich-Regular.ttf" \
+  --out "/Volumes/Fullsize/TO PRINT/LISTAS ON DEMAND"
 ```
 
 Pendiente para siguiente iteracion:
