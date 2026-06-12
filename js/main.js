@@ -45,6 +45,236 @@
         return services.path.join(getExtensionRootPath(), "js/config/officialSwatches.json");
     }
 
+    function getPortfolioBaseFolder() {
+        const services = nodeRuntime.services;
+        const homePath = typeof process !== "undefined" && process.env ? process.env.HOME : "";
+        const configPath = services.config && services.config.portfolio ? services.config.portfolio.basePath : "";
+
+        if (configPath) {
+            return configPath;
+        }
+
+        if (!homePath || !services.path) {
+            return "";
+        }
+
+        return services.path.join(homePath, "Documents/RMC - CEP/RMCOp-Nike Portafolio interno");
+    }
+
+    function getPortfolioLogsFolder() {
+        const services = nodeRuntime.services;
+        const portfolioBase = getPortfolioBaseFolder();
+
+        if (!portfolioBase) {
+            return "";
+        }
+
+        return services.path.join(portfolioBase, "06_Logs");
+    }
+
+    function getPortfolioDbPath() {
+        const services = nodeRuntime.services;
+        const homePath = typeof process !== "undefined" && process.env ? process.env.HOME : "";
+        const configPath = services.config && services.config.portfolio ? services.config.portfolio.databasePath : "";
+
+        if (configPath) {
+            return configPath;
+        }
+
+        if (!homePath || !services.path) {
+            return "";
+        }
+
+        return services.path.join(homePath, "Documents/RMC - CEP/RMC_BD/RMC_CEP.sqlite");
+    }
+
+    function escapeCsvValue(value) {
+        const text = value == null ? "" : String(value);
+
+        if (/[",\r\n]/.test(text)) {
+            return `"${text.replace(/"/g, '""')}"`;
+        }
+
+        return text;
+    }
+
+    function appendBatchProcessLog(selectedRows, results, elapsedMs) {
+        const services = nodeRuntime.services;
+
+        if (!services.fs || !services.path) {
+            return;
+        }
+
+        const logsFolder = getPortfolioLogsFolder();
+
+        if (!logsFolder) {
+            return;
+        }
+
+        const now = new Date();
+        const dateText = [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, "0"),
+            String(now.getDate()).padStart(2, "0")
+        ].join("-");
+        const timeText = now.toTimeString().slice(0, 8);
+        const batchId = `${dateText.replace(/-/g, "")}-${timeText.replace(/:/g, "")}`;
+        const finishedAt = now.toISOString();
+        const startedAt = new Date(now.getTime() - elapsedMs).toISOString();
+        const csvPath = services.path.join(logsFolder, "rmcop_nike_batch_log.csv");
+        const jsonlPath = services.path.join(logsFolder, "rmcop_nike_batch_log.jsonl");
+        const rowsBySource = selectedRows.reduce(function (map, order) {
+            map[String(order.sourceRow)] = order;
+            return map;
+        }, {});
+        const csvHeader = [
+            "fecha",
+            "hora",
+            "herramienta",
+            "batch_id",
+            "wo",
+            "style",
+            "equipo",
+            "variante",
+            "size",
+            "piezas",
+            "tiempo_segundos",
+            "ruta_destino",
+            "estado",
+            "errores"
+        ];
+        const csvRows = results.map(function (result) {
+            const order = result.order || rowsBySource[String(result.sourceRow)] || {};
+            const durationSeconds = Math.max(1, Math.round((result.durationMs || 0) / 1000));
+
+            return [
+                dateText,
+                timeText,
+                "RMCOp-Nike Por Lote",
+                batchId,
+                order.wo || "",
+                order.style || "",
+                order.team || "",
+                order.variant || "",
+                order.size || result.size || "",
+                order.qty || 1,
+                durationSeconds,
+                result.outputPath || "",
+                result.ok ? "Completado" : "Error",
+                result.ok ? 0 : (result.message || "Error desconocido")
+            ].map(escapeCsvValue).join(",");
+        });
+        const jsonEntries = results.map(function (result) {
+            const order = result.order || rowsBySource[String(result.sourceRow)] || {};
+
+            return JSON.stringify({
+                fecha: dateText,
+                hora: timeText,
+                herramienta: "RMCOp-Nike Por Lote",
+                batchId: batchId,
+                sourceRow: result.sourceRow,
+                wo: order.wo || "",
+                shipOrder: order.shipOrder || "",
+                style: order.style || "",
+                equipo: order.team || "",
+                variante: order.variant || "",
+                size: order.size || result.size || "",
+                piezas: order.qty || 1,
+                tiempoSegundos: Math.max(1, Math.round((result.durationMs || 0) / 1000)),
+                tiempoLoteSegundos: Math.round(elapsedMs / 1000),
+                rutaDestino: result.outputPath || "",
+                estado: result.ok ? "Completado" : "Error",
+                errores: result.ok ? [] : [result.message || "Error desconocido"]
+            });
+        });
+
+        if (!csvRows.length) {
+            return;
+        }
+
+        services.fs.mkdirSync(logsFolder, { recursive: true });
+
+        if (!services.fs.existsSync(csvPath)) {
+            services.fs.writeFileSync(csvPath, `${csvHeader.join(",")}\n`, "utf8");
+        }
+
+        services.fs.appendFileSync(csvPath, `${csvRows.join("\n")}\n`, "utf8");
+        services.fs.appendFileSync(jsonlPath, `${jsonEntries.join("\n")}\n`, "utf8");
+        console.log(`Log batch guardado: ${csvPath}`);
+
+        if (services.portfolioDb) {
+            const dbResult = services.portfolioDb.recordBatchRun({
+                fs: services.fs,
+                path: services.path,
+                childProcess: services.childProcess
+            }, getPortfolioDbPath(), {
+                run: {
+                    id: batchId,
+                    startedAt: startedAt,
+                    finishedAt: finishedAt,
+                    fecha: dateText,
+                    herramienta: "RMCOp-Nike Por Lote",
+                    sourceExcel: state.batch.excelPath || "",
+                    destinationFolder: state.batch.destinationFolder || "",
+                    styleFilter: getSelectedBatchStyleFamilyLabel(),
+                    sizeFilter: getSelectedBatchSizeLabel(),
+                    elapsedSeconds: Math.round(elapsedMs / 1000),
+                    notes: "Registro automatico desde panel CEP."
+                },
+                results: results
+            });
+
+            console.log(`BD produccion actualizada: ${dbResult.dbPath}`);
+        }
+    }
+
+    function recordManualProcessLog(order, outputPath, elapsedMs) {
+        const services = nodeRuntime.services;
+
+        if (!services.portfolioDb || !services.fs || !services.path) {
+            return;
+        }
+
+        const now = new Date();
+        const dateText = [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, "0"),
+            String(now.getDate()).padStart(2, "0")
+        ].join("-");
+        const timeText = now.toTimeString().slice(0, 8);
+        const runId = `manual-${dateText.replace(/-/g, "")}-${timeText.replace(/:/g, "")}`;
+        const outputName = outputPath ? services.path.basename(outputPath) : "";
+        const dbResult = services.portfolioDb.recordBatchRun({
+            fs: services.fs,
+            path: services.path,
+            childProcess: services.childProcess
+        }, getPortfolioDbPath(), {
+            run: {
+                id: runId,
+                startedAt: new Date(now.getTime() - elapsedMs).toISOString(),
+                finishedAt: now.toISOString(),
+                fecha: dateText,
+                herramienta: "RMCOp-Nike Manual",
+                destinationFolder: outputPath ? services.path.dirname(outputPath) : "",
+                styleFilter: order.style || "",
+                sizeFilter: order.size || "",
+                elapsedSeconds: Math.max(1, Math.round(elapsedMs / 1000)),
+                notes: "Registro automatico desde flujo manual."
+            },
+            results: [{
+                ok: true,
+                sourceRow: 0,
+                outputPath: outputPath,
+                outputName: outputName,
+                size: order.size,
+                durationMs: elapsedMs,
+                order: order
+            }]
+        });
+
+        console.log(`BD produccion actualizada: ${dbResult.dbPath}`);
+    }
+
     function showPage(pageId) {
         document.querySelectorAll(".page").forEach(function (page) {
             page.classList.toggle("active", page.id === pageId);
@@ -628,14 +858,16 @@
         let okCount = 0;
         let errorCount = 0;
         const results = [];
+        let selectedRows = [];
 
         try {
-            const selectedRows = getSelectedBatchRows();
+            selectedRows = getSelectedBatchRows();
 
             logFlow(`Procesando batch completo (${getSelectedBatchStyleFamilyLabel()} / ${getSelectedBatchSizeLabel()}): ${selectedRows.length} filas validas.`);
 
             for (let index = 0; index < selectedRows.length; index++) {
                 const order = selectedRows[index];
+                const rowStartedAt = Date.now();
 
                 try {
                     const copyResult = await createBatchCopyForOrder(order);
@@ -651,7 +883,9 @@
                         sourceRow: order.sourceRow,
                         outputPath: copyResult.outputPath,
                         outputName: copyResult.outputName,
-                        size: order.size
+                        size: order.size,
+                        durationMs: Date.now() - rowStartedAt,
+                        order: order
                     });
                     console.log(`Procesada fila ${order.sourceRow}: ${copyResult.outputName}`);
                 } catch (error) {
@@ -660,7 +894,9 @@
                         ok: false,
                         sourceRow: order.sourceRow,
                         size: order.size,
-                        message: error.message
+                        message: error.message,
+                        durationMs: Date.now() - rowStartedAt,
+                        order: order
                     });
                     console.error(`Error batch fila ${order.sourceRow}: ${error.message}`);
                 }
@@ -670,6 +906,11 @@
         } finally {
             const elapsed = stopBatchTimer(timerState);
             console.log(`Batch completo terminado. OK: ${okCount} | Errores: ${errorCount} | Tiempo: ${formatElapsedTime(elapsed)}`);
+            try {
+                appendBatchProcessLog(selectedRows, results, elapsed);
+            } catch (error) {
+                console.warn(`No se pudo guardar el log batch: ${error.message}`);
+            }
         }
     }
 
@@ -802,8 +1043,17 @@
 
     // Flujo del boton final: abre el PDF copiado y aplica datos si existen.
     async function openAndApplyOrderData() {
+        const startedAt = Date.now();
+        const order = orderView.collectOrder(state);
+
         await openCurrentFileInIllustrator();
-        await applyOrderDataToIllustrator();
+        await applyOrderDataToIllustrator(order);
+
+        try {
+            recordManualProcessLog(order, state.lastOutputPath, Date.now() - startedAt);
+        } catch (error) {
+            console.warn(`No se pudo guardar el registro manual: ${error.message}`);
+        }
     }
 
     function formatOfficialSwatchesJson(swatchData) {

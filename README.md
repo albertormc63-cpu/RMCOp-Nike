@@ -1,19 +1,48 @@
 # RMCOp-Nike
 
-Ultima actualizacion de contexto: 2026-06-10.
+Ultima actualizacion de contexto: 2026-06-11.
 
 Palabra clave para retomar contexto: `RMCOP_NIKE_HANDOFF`.
 
 Si eres otro Codex entrando al proyecto, busca `RMCOP_NIKE_HANDOFF` y lee primero `CODEX_HANDOFF.md`.
 
-Panel CEP para Adobe Illustrator usado en pedidos Nike Lacrosse On Demand. El panel resuelve plantillas PDF, crea copias con nombre interno, abre la copia en Illustrator y aplica nombre/numero segun la variante. El repo tambien contiene una utileria separada, `tools/mockup-printer`, para anotar mockups PDF de produccion desde Excel.
+Panel CEP para Adobe Illustrator usado en pedidos Nike Lacrosse On Demand. El panel resuelve plantillas PDF, crea copias con nombre interno, abre la copia en Illustrator y aplica nombre/numero segun la variante.
+
+Este repositorio es para el CEP `RMCOp-Nike`. El producto activo de mockups vive como CEP separado en `RMC MockupTool`.
 
 Si eres otro Codex entrando al proyecto, primero lee:
 
 1. `AGENTS.md`
 2. `CODEX_HANDOFF.md`
 3. este `README.md`
-4. `tools/mockup-printer/README.md` si vas a tocar mockups/impresion
+4. Si vas a tocar mockups/impresion, trabaja en el repo/carpeta `RMC MockupTool`.
+
+## Limite Del Repo
+
+`RMCOp-Nike` cubre:
+
+- UI CEP dentro de Illustrator.
+- Resolucion de plantillas Nike On Demand.
+- Batch desde Excel para crear/aplicar PDFs en Illustrator.
+- Reglas de variantes `Standard`, `Indigenous Heritage` y `Throwback`.
+
+`RMC MockupTool` cubre otro producto:
+
+- Leer listas On Demand.
+- Encontrar mockups PDF base.
+- Estampar WO/style/fecha/talla/piezas/firma.
+- Generar PDFs listos para imprimir.
+
+Por claridad de chats, historial y mantenimiento, los mockups se separaron a:
+
+```text
+/Users/rmlsub1/Library/Application Support/Adobe/CEP/extensions/RMC MockupTool
+origin https://github.com/albertormc63-cpu/RMC-MockupTool.git
+```
+
+No importar UI, dependencias ni servidor de MockupTool desde el CEP principal.
+
+La version CEP de mockups debe seguir siendo extension separada, con su propio `manifest.xml`, nombre de panel, dependencias y README. Puede compartir criterios de negocio con Nike On Demand, pero no debe vivir dentro del panel `RMC Nike Panel`.
 
 ## Estado Actual
 
@@ -25,10 +54,14 @@ Si eres otro Codex entrando al proyecto, primero lee:
   - `Indigenous Heritage`: nombre como texto y numero armado desde arte expandido/rasterizado.
   - `Throwback`: variante de texto con sufijo `TB`; rutas adulto confirmadas en carpeta `THROWBACK/NIKE TB ...`.
 - Validacion de muestras oficiales implementada: primero corre accion tipo `Add Used Colors` y despues compara contra `js/config/officialSwatches.json`.
-- Utileria externa `Nike Mockup Printer MVP` implementada en `tools/mockup-printer`.
-  - Usa carpeta base nueva `.../RMCOp-NIKE/MOCKUPS`.
-  - Soporta variantes `STANDARD`, `INDIGENOUS HERITAGE` y `THROWBACK`.
-  - Consolida filas repetidas por `WO#` + `SHIP O` + `Style` + `Team / Color`, sumando `Pzs`.
+- Mockups/impresion viven como producto separado en `RMC MockupTool`; no deben crecer dentro de este repo.
+- Registro local de produccion conectado a SQLite compartido:
+  - BD: `/Users/rmlsub1/Documents/RMC - CEP/RMC_BD/RMC_CEP.sqlite`.
+  - Tablas propias: `rmcop_nike_runs`, `rmcop_nike_items`, `rmcop_nike_git_commits`.
+  - `RMCOp-Nike Manual` y `RMCOp-Nike Por Lote` escriben rondas/items sin levantar server.
+  - La diferencia entre metodos se guarda en el campo `herramienta`.
+  - `created_at` guarda fecha `DD/MM/AAAA`; `started_at`, `finished_at` y `tiempo` guardan horas/duracion `HH:MM:SS`.
+  - `rmcop_nike_items` guarda `archivo`, no `output_path`.
 
 ## Stack
 
@@ -37,7 +70,7 @@ Si eres otro Codex entrando al proyecto, primero lee:
 - ExtendScript `.jsx` para operaciones dentro de Illustrator.
 - `fs-extra` para copias de archivos.
 - `xlsx` para lectura de Excel.
-- `pdf-lib` en `tools/mockup-printer` para anotar PDFs.
+- `/usr/bin/sqlite3` para registros locales sin servidor.
 - macOS como entorno principal.
 
 ## Estructura Principal
@@ -74,7 +107,6 @@ RMCOp-Nike/
     standardText.jsx
     ihNumbers.jsx
     swatches.jsx
-  tools/mockup-printer/
 ```
 
 ## Instalacion Base
@@ -299,27 +331,22 @@ Botones en `Rutas`:
 
 No hay limpieza automatica de muestras no usadas. Si se agrega, debe ser boton separado con confirmacion.
 
-## Nike Mockup Printer
+## RMC MockupTool
 
-Vive en `tools/mockup-printer` y no debe mezclarse con el CEP.
+Los mockups viven como CEP separado:
+
+```text
+/Users/rmlsub1/Library/Application Support/Adobe/CEP/extensions/RMC MockupTool
+```
 
 Objetivo: leer Excel de listas On Demand, encontrar mockup PDF correcto, estampar WO/style/fecha/talla/piezas y generar PDFs listos para imprimir.
 
-Uso:
+Decision actual:
 
-```bash
-cd tools/mockup-printer
-npm install
-npm start
-```
-
-Abrir:
-
-```text
-http://127.0.0.1:3127
-```
-
-Ver mas en `tools/mockup-printer/README.md`.
+- Mantenerlo separado del panel `RMC Nike Panel`.
+- No agregar dependencias de MockupTool al `package.json` raiz del CEP Nike.
+- Hacer cambios nuevos de mockups en `RMC MockupTool`.
+- No reintroducir el flujo de MockupTool en el CEP principal de RMCOp-Nike.
 
 ## Checks Utiles
 
@@ -334,17 +361,11 @@ node --check jsx/rmcNike.jsx
 node -e "JSON.parse(require('fs').readFileSync('js/config/ihNumberRules.json','utf8')); console.log('ihNumberRules OK')"
 ```
 
-Para mockup-printer:
-
-```bash
-cd tools/mockup-printer
-npm start
-```
-
 ## Notas Para Siguiente Sesion
 
 - No revertir cambios no relacionados; este repo suele tener trabajo local en progreso.
 - Leer `CODEX_HANDOFF.md` antes de tocar arquitectura.
+- Mantener separada la linea de trabajo de mockups; el desarrollo nuevo va en `RMC MockupTool`.
 - Cualquier cambio de rutas, Throwback o batch debe probarse contra Illustrator real.
 - En batch, filas sin nombre/numero son validas: se limpian placeholders y se nombra con `SIN_DATOS`.
 - `Qty/Pzs` no duplica PDFs en los flujos actuales; solo se respeta como dato operativo o visual segun herramienta.

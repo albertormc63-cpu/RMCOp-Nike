@@ -1,22 +1,109 @@
 # RMCOp-Nike - Handoff Para Otro Codex
 
-Ultima actualizacion: 2026-06-10.
+Ultima actualizacion: 2026-06-12.
 
 Palabra clave para retomar contexto: `RMCOP_NIKE_HANDOFF`.
 
-Si otro Codex entra al proyecto, buscar `RMCOP_NIKE_HANDOFF` en el repo. Esta etiqueta marca los archivos que resumen el flujo actual del CEP y del tool externo de mockups.
+Si otro Codex entra al proyecto, buscar `RMCOP_NIKE_HANDOFF` en el repo. Esta etiqueta marca los archivos que resumen el flujo actual del CEP y el antecedente historico del tool externo de mockups.
 
 Este archivo es la memoria corta-larga del proyecto. La idea es que otro Codex pueda entrar al repo y, si el usuario pregunta "Que tranza?", lea esto junto con `AGENTS.md` y se ubique sin depender de los chats originales.
 
+Decision de arquitectura del 2026-06-11: `RMCOp-Nike` debe quedar como repo del panel CEP Nike. El flujo de mockups vive como CEP separado `RMC MockupTool`. No mezclar dependencias, UI ni servidor del MockupTool con el CEP principal.
+
+Repo/carpeta nueva para mockups:
+
+```text
+/Users/rmlsub1/Library/Application Support/Adobe/CEP/extensions/RMC MockupTool
+origin https://github.com/albertormc63-cpu/RMC-MockupTool.git
+```
+
+Ese proyecto ya nacio como CEP separado `RMC MockupTool`.
+
 ## Que Tranza
 
-RMCOp-Nike es un panel CEP para Adobe Illustrator usado en Nike Lacrosse On Demand. Nacio como flujo manual para copiar plantillas PDF, renombrarlas y aplicar nombre/numero en Illustrator. Despues se extendio hacia batch desde Excel y, por separado, hacia una herramienta local para estampar datos sobre mockups PDF de produccion.
+RMCOp-Nike es un panel CEP para Adobe Illustrator usado en Nike Lacrosse On Demand. Nacio como flujo manual para copiar plantillas PDF, renombrarlas y aplicar nombre/numero en Illustrator. Despues se extendio hacia batch desde Excel.
+
+El MockupTool es otro producto: una herramienta local para estampar datos sobre mockups PDF de produccion. Puede convivir operativamente con Nike On Demand, pero no debe crecer dentro del repo/CEP principal.
 
 Hay tres frentes vivos:
 
 1. Panel CEP principal: pedido individual y lote desde Excel.
 2. Reglas Illustrator: Standard/Throwback como texto, Indigenous Heritage con arte expandido/rasterizado.
-3. `tools/mockup-printer`: herramienta web/local externa al CEP para PDFs de mockup listos para imprimir.
+3. `RMC MockupTool`: CEP separado para PDFs de mockup listos para imprimir. No reintroducir ese flujo dentro de este repo.
+
+## Registros Y Base De Datos
+
+El portafolio consolidado de CEP vive en:
+
+```text
+/Users/rmlsub1/Documents/RMC - CEP
+```
+
+`RMCOp-Nike` usa su portafolio en:
+
+```text
+/Users/rmlsub1/Documents/RMC - CEP/RMCOp-Nike Portafolio interno
+```
+
+La BD local compartida para los CEP de RMC es:
+
+```text
+/Users/rmlsub1/Documents/RMC - CEP/RMC_BD/RMC_CEP.sqlite
+```
+
+No requiere server. Cada CEP debe tener sus propias tablas dentro de esa BD.
+
+Tablas de RMCOp-Nike:
+
+```text
+rmcop_nike_runs
+rmcop_nike_items
+rmcop_nike_git_commits
+```
+
+Tablas detectadas de RMC MockupTool:
+
+```text
+rmc_mockuptool_runs
+```
+
+`cep_registry` registra que app escribe en que tabla. No mezclar datos de RMCOp-Nike con las tablas del MockupTool.
+
+Cuando se corre `RMCOp-Nike Manual` o `RMCOp-Nike Por Lote`, `js/main.js` inserta rondas/items en SQLite via `js/services/portfolioDb.js`.
+El batch tambien conserva CSV/JSONL en `06_Logs` como respaldo plano.
+
+RMCOp-Nike tiene dos metodos de generacion:
+
+```text
+RMCOp-Nike Manual   -> 1 Equipo / 2 Pedido / 3 Proceso, usado tambien para Genericas.
+RMCOp-Nike Por Lote -> Excel batch, usado para Personalizadas/lotes.
+```
+
+Ambos deben guardarse en las mismas tablas `rmcop_nike_runs` y `rmcop_nike_items`.
+La diferencia se guarda en el campo `herramienta`.
+No crear tablas separadas por metodo salvo que exista una necesidad real de datos incompatibles.
+
+Formato actual de `rmcop_nike_runs`:
+
+```text
+created_at  -> solo fecha DD/MM/AAAA
+started_at  -> solo hora HH:MM:SS
+finished_at -> solo hora HH:MM:SS
+tiempo      -> duracion HH:MM:SS
+herramienta -> RMCOp-Nike Manual | RMCOp-Nike Por Lote
+```
+
+No usar columna `fecha`, `source_excel` ni `destination_folder`.
+
+Formato actual de `rmcop_nike_items`:
+
+```text
+run_id      -> enlaza con rmcop_nike_runs.id
+herramienta -> permite leer Manual/Por Lote desde el item
+archivo     -> nombre de archivo final
+```
+
+No guardar `output_path`.
 
 ## Chats/Lineas De Trabajo Detectadas
 
@@ -32,16 +119,10 @@ No se pudo leer el cuerpo completo de todos los chats desde la herramienta de th
 
 ## Estado Del Repo
 
-Archivos modificados/no limpios al momento de este handoff:
+Este repo suele tener trabajo local en progreso. Tratar cambios locales como trabajo del usuario/proyecto.
+No hacer `git reset`, no revertir archivos sin permiso y revisar `git status --short` antes de editar.
 
-- `.gitignore`
-- `css/styles.css`
-- `index.html`
-- `js/config/textFitRules.json`
-- `js/main.js`
-- `tools/`
-
-Tratar cambios locales como trabajo del usuario/proyecto. No hacer `git reset`, no revertir archivos sin permiso.
+`tools/mockup-printer` fue separado funcionalmente hacia `RMC MockupTool`; si aparece eliminado o ausente, no restaurarlo salvo pedido explicito.
 
 ## Arquitectura Principal
 
@@ -57,6 +138,7 @@ js/config/ihNumberRules.json
 js/services/nodeServices.js
 js/services/copyTemplate.js
 js/services/createOrderData.js
+js/services/portfolioDb.js
 js/utils/pathBuilder.js
 js/illustrator/illustratorBridge.js
 js/illustrator/textRules.js
@@ -64,7 +146,6 @@ jsx/rmcNike.jsx
 jsx/standardText.jsx
 jsx/ihNumbers.jsx
 jsx/swatches.jsx
-tools/mockup-printer/
 ```
 
 ## Flujo Manual Actual
@@ -233,13 +314,24 @@ IH:
 - Luego compara contra lista oficial.
 - No limpiar muestras automaticamente sin boton dedicado y confirmacion.
 
-## Mockup Printer
+## RMC MockupTool
 
-Ubicacion: `tools/mockup-printer`.
+Ubicacion CEP: `/Users/rmlsub1/Library/Application Support/Adobe/CEP/extensions/RMC MockupTool`.
 
 Palabra clave relacionada: `RMCOP_NIKE_HANDOFF`.
 
-No es parte del CEP. Es una herramienta web/local para generar mockups PDF listos para imprimir:
+No es parte del CEP `RMC Nike Panel`. El flujo ya se separo como CEP propio `RMC MockupTool`.
+
+Si se toca el nuevo CEP, hacerlo en su repo/carpeta separada:
+
+- Repo separado, por ejemplo `Nike-Mockup-Printer` o `RMCOp-Nike-Mockups`.
+- `manifest.xml` propio.
+- Panel, puerto/servidor y dependencias propias.
+- Sin acoplarlo al `RMC Nike Panel`.
+
+Motivo: evita que los chats, la memoria y el mantenimiento del CEP de plantillas se mezclen con el flujo de impresion/mockups.
+
+Alcance actual:
 
 - Lee Excel con layout de listas On Demand.
 - Detecta mockup PDF correcto desde la carpeta base nueva:
@@ -274,19 +366,7 @@ THROWBACK/PLL Boston Cannons TB.pdf
   - Numero grande de piezas: 70 pt.
   - Sufijo `pz`: 12 pt.
 
-Comandos:
-
-```bash
-cd tools/mockup-printer
-npm install
-npm start
-```
-
-URL:
-
-```text
-http://127.0.0.1:3127
-```
+Para correr o modificar mockups, abrir el repo/carpeta `RMC MockupTool` y seguir su README propio.
 
 ## Manual DOCX
 
@@ -312,12 +392,15 @@ Nota: en la sesion del manual, el render formal con LibreOffice fallo por librer
    - previews.
    - placeholders de texto.
 3. Probar IH con 1, 2 y 3 digitos en documentos reales.
-4. Confirmar si `Qty/Pzs` debe aparecer en algun reporte dentro del CEP o seguir ignorado por diseno.
-5. Si se retoma dashboard LAN/admin, hacerlo separado del panel CEP.
-6. Evaluar si conviene agregar tests Node para:
+4. Confirmar registros SQLite desde Illustrator real para `RMCOp-Nike Manual` y `RMCOp-Nike Por Lote`.
+5. Confirmar si `Qty/Pzs` debe aparecer en algun reporte dentro del CEP o seguir ignorado por diseno.
+6. Si se retoma dashboard LAN/admin, hacerlo separado del panel CEP.
+7. Continuar `RMC MockupTool` en su repo/carpeta separada.
+8. Evaluar si conviene agregar tests Node para:
    - `createOrderData.js`.
    - `pathBuilder.js`.
    - `variantRules.js`.
+   - `portfolioDb.js`.
 
 ## Reglas Para Siguiente Codex
 
@@ -327,7 +410,7 @@ Nota: en la sesion del manual, el render formal con LibreOffice fallo por librer
 - Si se toca batch, no romper el flujo manual.
 - Si se toca Throwback, no meterlo al flujo IH.
 - Si se toca IH, conservar gap `0.25in`.
-- Si se toca mockup-printer, no meter dependencias ni UI dentro del CEP.
+- Si se toca mockups, no meter dependencias ni UI dentro del CEP Nike; trabajar en `RMC MockupTool`.
 - Preferir cambios pequenos y probables; este repo depende mucho de validacion en Illustrator real.
 
 ## Checks Rapidos
@@ -336,8 +419,7 @@ Nota: en la sesion del manual, el render formal con LibreOffice fallo por librer
 node --check js/main.js
 node --check js/illustrator/illustratorBridge.js
 node --check js/services/createOrderData.js
+node --check js/services/portfolioDb.js
 node --check js/utils/pathBuilder.js
-node --check tools/mockup-printer/src/generate.js
-node --check tools/mockup-printer/src/server.js
 node -e "JSON.parse(require('fs').readFileSync('js/config/ihNumberRules.json','utf8')); console.log('ihNumberRules OK')"
 ```

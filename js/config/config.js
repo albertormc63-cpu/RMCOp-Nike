@@ -14,5 +14,10 @@ module.exports = {
       //templatesBase: "/Volumes/Fullsize/PATRONES ACOMODADOS PARA ROLLO/NIKE LACROSSE",
       ordersBase: "/Volumes/Fullsize/TO PRINT/NIKE ORDERS"
     }
+  },
+
+  portfolio: {
+    basePath: "/Users/rmlsub1/Documents/RMC - CEP/RMCOp-Nike Portafolio interno",
+    databasePath: "/Users/rmlsub1/Documents/RMC - CEP/RMC_BD/RMC_CEP.sqlite"
   }
 };

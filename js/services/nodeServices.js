@@ -8,10 +8,12 @@
             config: null,
             path: null,
             fs: null,
+            childProcess: null,
             buildTemplatePath: null,
             buildOutputName: null,
             copyTemplate: null,
             createOrderDataFromExcel: null,
+            portfolioDb: null,
             textFitRules: null,
             ihNumberRules: null
         };
@@ -42,6 +44,7 @@
             try {
                 services.path = require("path");
                 services.fs = require("fs");
+                services.childProcess = require("child_process");
                 services.config = requireFromExtension("js/config/config.js");
                 // Reglas editables para ajustar ancho de nombre/numero segun equipo, estilo y talla.
                 services.textFitRules = requireFromExtension("js/config/textFitRules.json");
@@ -53,6 +56,7 @@
                 services.buildOutputName = pathBuilder.buildOutputName;
                 services.copyTemplate = requireFromExtension("js/services/copyTemplate.js");
                 services.createOrderDataFromExcel = requireFromExtension("js/services/createOrderData.js").createOrderDataFromExcel;
+                services.portfolioDb = requireFromExtension("js/services/portfolioDb.js");
 
                 logFlow("Servicios Node cargados correctamente.");
             } catch (error) {
