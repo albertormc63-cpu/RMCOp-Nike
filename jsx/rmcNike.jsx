@@ -56,6 +56,15 @@ function RMCNike_confirmOfficialSwatchesOverwrite(filePath) {
     }
 }
 
+function RMCNike_alert(message) {
+    try {
+        alert(String(message || ""));
+        return "OK:Alerta mostrada en Illustrator.";
+    } catch (error) {
+        return "ERROR:" + error.message;
+    }
+}
+
 function RMCNike_savePdfAndCloseActiveDocument(filePath) {
     try {
         if (app.documents.length === 0) {

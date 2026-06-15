@@ -60,13 +60,17 @@ La version CEP de mockups debe seguir siendo extension separada, con su propio `
   - Tablas propias: `rmcop_nike_runs`, `rmcop_nike_items`, `rmcop_nike_git_commits`.
   - `RMCOp-Nike Manual` y `RMCOp-Nike Por Lote` escriben rondas/items sin levantar server.
   - La diferencia entre metodos se guarda en el campo `herramienta`.
+  - `rmcop_nike_runs.id` es texto legible: `AAAAMMDD-HHMMSS` para lote y `manual-AAAAMMDD-HHMMSS` para manual.
   - `created_at` guarda fecha `DD/MM/AAAA`; `started_at`, `finished_at` y `tiempo` guardan horas/duracion `HH:MM:SS`.
-  - `rmcop_nike_items` guarda `archivo`, no `output_path`.
-- Validacion incremental pendiente:
+  - `rmcop_nike_items` guarda `archivo` y `clave`, no `output_path`.
+- Validacion incremental implementada:
   - El mismo Excel alimenta RMCOp-Nike y RMC MockupTool.
   - Las listas se preparan jueves, se procesan viernes y pueden recibir agregados lunes.
-  - Antes de generar, el panel debe detectar archivos ya creados/faltantes para generar solo faltantes.
-  - La validacion debe ayudar a evitar duplicados en archivos y en SQLite.
+  - Despues de importar Excel y elegir destino batch, el panel detecta archivos ya creados/faltantes para generar solo faltantes.
+  - La validacion ayuda a evitar duplicados en archivos y en SQLite.
+- Alertas visibles al usuario:
+  - Los errores del panel deben mostrarse con alerta nativa de Illustrator via ExtendScript (`RMCNike_alert`) usando `illustratorBridge.showAlert`.
+  - El `alert()` del navegador queda solo como fallback si CEP/Illustrator no esta disponible.
 
 ## Stack
 
@@ -159,7 +163,22 @@ No hardcodear rutas nuevas en `main.js`. Las rutas activas se muestran en la pag
 
 El panel tiene pagina batch para importar Excel Nike On Demand, revisar filas validas/invalidas y procesar por familia de style y talla.
 
-Pendiente operativo: agregar validacion incremental antes de generar. El objetivo es leer el mismo Excel usado por RMCOp-Nike/RMC MockupTool, comparar contra archivos existentes y/o `RMC_CEP.sqlite`, y separar filas ya creadas, faltantes, con conflicto e invalidas. Solo los faltantes deberian generarse.
+Validacion incremental: despues de importar el Excel y elegir destino batch, el panel compara contra archivos existentes y `RMC_CEP.sqlite`, y separa filas ya creadas, faltantes, con conflicto e invalidas. Solo los faltantes se procesan.
+
+La validacion usa `rmcop_nike_items.clave` como base para detectar duplicados. La clave se compone con:
+
+```text
+WO + Ship Order + Style + Team/Color + Size + Nombre + Numero
+```
+
+El destino batch se elige manualmente. Dentro de esa carpeta, el CEP guarda por familia de style y talla:
+
+```text
+DESTINO_ELEGIDO/
+  A1000/
+    2X/
+    XL/
+```
 
 Columnas soportadas por encabezado:
 

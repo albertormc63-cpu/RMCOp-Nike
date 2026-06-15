@@ -39,10 +39,13 @@ No inventes contexto de chats. Usa `CODEX_HANDOFF.md` como memoria principal.
 - No rompas el flujo manual mientras trabajas batch.
 - Si se implementa validacion incremental desde Excel, primero mostrar ya creados/faltantes/conflictos y despues permitir generar; no generar mientras se valida.
 - La validacion debe evitar duplicados de archivos y registros SQLite cuando una lista por lote recibe agregados despues del primer procesamiento.
+- El destino batch de RMCOp-Nike se elige manualmente; la validacion incremental debe correr despues de importar Excel y elegir destino. Dentro del destino se guarda por familia de style y talla.
+- La columna `rmcop_nike_items.clave` es la base de deteccion de duplicados; no quitarla ni cambiar su composicion sin actualizar validacion y docs.
 - RMCOp-Nike registra produccion en la BD compartida `/Users/rmlsub1/Documents/RMC - CEP/RMC_BD/RMC_CEP.sqlite`.
 - Las tablas propias de este CEP son `rmcop_nike_runs`, `rmcop_nike_items` y `rmcop_nike_git_commits`; no tocar tablas de otros CEP.
 - `rmcop_nike_runs.created_at` guarda solo fecha `DD/MM/AAAA`; `started_at`, `finished_at` y `tiempo` guardan `HH:MM:SS`.
 - No reintroducir columnas `fecha`, `source_excel`, `destination_folder` ni `output_path` en las tablas de RMCOp-Nike.
+- Las alertas visibles al usuario deben salir desde Illustrator/ExtendScript via `illustratorBridge.showAlert`; dejar `alert()` del navegador solo como fallback.
 - Throwback (`TB`) es variante de texto, no de Indigenous Heritage.
 - Indigenous Heritage debe conservar gap obligatorio de `0.25in` entre digitos.
 - Cualquier cambio importante debe probarse con checks Node y, si aplica, en Illustrator real.

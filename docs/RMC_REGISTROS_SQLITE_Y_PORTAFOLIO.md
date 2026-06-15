@@ -77,7 +77,7 @@ Esto evita duplicar tablas y mantiene los reportes simples.
 `rmcop_nike_runs` guarda una ronda/proceso:
 
 ```text
-id
+id              TEXT PRIMARY KEY
 created_at      DD/MM/AAAA
 started_at      HH:MM:SS
 finished_at     HH:MM:SS
@@ -90,6 +90,16 @@ ok
 errores
 observaciones
 ```
+
+Formato de `id`:
+
+```text
+Por lote:  AAAAMMDD-HHMMSS
+Manual:    manual-AAAAMMDD-HHMMSS
+Fallback:  run-<timestamp> si no se manda id desde el panel
+```
+
+`rmcop_nike_items.run_id` guarda ese mismo texto para enlazar cada PDF/pieza con su ronda.
 
 `rmcop_nike_items` guarda los PDFs/piezas generadas y se enlaza por `run_id`:
 
@@ -113,6 +123,7 @@ archivo
 estado
 error
 tiempo
+clave
 ```
 
 No se guarda `output_path`.
@@ -172,7 +183,9 @@ Contexto operativo actual:
 Objetivo de la validacion:
 
 - Leer el Excel cargado.
+- Usar el destino batch elegido manualmente por el usuario.
 - Comparar contra la carpeta destino y/o la BD `RMC_CEP.sqlite`.
+- Generar una `clave` estable por fila para consultar duplicados.
 - Separar filas en:
   - ya creadas,
   - faltantes,
@@ -190,11 +203,23 @@ Validar primero; generar despues.
 
 La validacion debe mostrar resumen antes de crear archivos o escribir registros.
 
+Dentro del destino elegido, RMCOp-Nike guarda por familia de style y talla:
+
+```text
+DESTINO_ELEGIDO/
+  A1000/
+    2X/
+    XL/
+```
+
 Clave candidata para detectar duplicados:
 
 ```text
 WO + Ship Order + Style + Team/Color + Size + Nombre + Numero
 ```
+
+Esta clave se guarda en `rmcop_nike_items.clave`.
+Si existen registros viejos con `clave` vacia, `js/services/portfolioDb.js` puede rellenarla desde los campos existentes.
 
 Si una fila no tiene nombre ni numero, usar el mismo criterio de nombre final que el panel (`SIN_DATOS`) para comparar contra archivos existentes.
 
@@ -203,6 +228,19 @@ La validacion debe respetar que:
 - `Qty/Pzs` no duplica PDFs en RMCOp-Nike.
 - RMC MockupTool consolida por `WO# + SHIP O + Style + Team / Color`.
 - RMCOp-Nike y RMC MockupTool tienen tablas separadas, pero comparten la misma BD.
+- El boton principal de Por Lote debe procesar solo faltantes cuando exista validacion.
+
+## Alertas En Illustrator
+
+Los errores visibles para el usuario se muestran como alerta nativa de Illustrator mediante ExtendScript:
+
+```text
+jsx/rmcNike.jsx                       RMCNike_alert(message)
+js/illustrator/illustratorBridge.js   showAlert(message)
+js/main.js                            showIllustratorAlert(message)
+```
+
+El `alert()` del navegador queda solo como fallback cuando el panel no puede hablar con Illustrator/CEP.
 
 ## Git Hook
 

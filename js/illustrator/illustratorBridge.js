@@ -88,6 +88,11 @@
         return result === "YES";
     }
 
+    async function showAlert(message) {
+        await ensureJsxLoaded();
+        return evalScript(`RMCNike_alert(${toJsxString(message)})`);
+    }
+
     async function applyNameNumber(payload) {
         await ensureJsxLoaded();
         await evalScript(`$.evalFile(${toJsxString(`${getExtensionRoot()}/jsx/rmcNike.jsx`)})`);
@@ -145,6 +150,7 @@
         openFile: openFile,
         confirmReplace: confirmReplace,
         confirmOfficialSwatchesOverwrite: confirmOfficialSwatchesOverwrite,
+        showAlert: showAlert,
         applyNameNumber: applyNameNumber,
         extractOfficialSwatches: extractOfficialSwatches,
         addUsedColors: addUsedColors,

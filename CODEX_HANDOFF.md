@@ -86,6 +86,7 @@ No crear tablas separadas por metodo salvo que exista una necesidad real de dato
 Formato actual de `rmcop_nike_runs`:
 
 ```text
+id          -> TEXT PRIMARY KEY; lote usa AAAAMMDD-HHMMSS y manual usa manual-AAAAMMDD-HHMMSS
 created_at  -> solo fecha DD/MM/AAAA
 started_at  -> solo hora HH:MM:SS
 finished_at -> solo hora HH:MM:SS
@@ -94,6 +95,7 @@ herramienta -> RMCOp-Nike Manual | RMCOp-Nike Por Lote
 ```
 
 No usar columna `fecha`, `source_excel` ni `destination_folder`.
+No convertir `id` a autoincremental sin revisar `rmcop_nike_items.run_id`, porque los items enlazan contra ese texto.
 
 Formato actual de `rmcop_nike_items`:
 
@@ -101,6 +103,7 @@ Formato actual de `rmcop_nike_items`:
 run_id      -> enlaza con rmcop_nike_runs.id
 herramienta -> permite leer Manual/Por Lote desde el item
 archivo     -> nombre de archivo final
+clave       -> clave estable para detectar duplicados
 ```
 
 No guardar `output_path`.
@@ -129,6 +132,9 @@ Clave candidata para duplicados en RMCOp-Nike:
 WO + Ship Order + Style + Team/Color + Size + Nombre + Numero
 ```
 
+La clave se guarda en `rmcop_nike_items.clave`.
+`js/services/portfolioDb.js` hace backfill de claves vacias desde los campos existentes al inicializar schema.
+
 Para filas sin nombre/numero, usar el mismo criterio del panel (`SIN_DATOS`) para comparar nombres finales.
 
 Regla de implementacion:
@@ -138,6 +144,30 @@ Validar primero; generar despues.
 ```
 
 La validacion debe ser visible antes de copiar/abrir/aplicar en Illustrator.
+El boton principal de Por Lote debe procesar solo faltantes cuando exista validacion.
+
+El destino batch se elige manualmente. Dentro de esa carpeta, RMCOp-Nike guarda por familia de style y talla:
+
+```text
+DESTINO_ELEGIDO/
+  A1000/
+    2X/
+    XL/
+```
+
+## Alertas Nativas
+
+Los avisos visibles al usuario deben salir desde Illustrator/ExtendScript para sentirse integrados al programa.
+
+Implementacion actual:
+
+```text
+jsx/rmcNike.jsx                       -> RMCNike_alert(message)
+js/illustrator/illustratorBridge.js   -> showAlert(message)
+js/main.js                            -> showIllustratorAlert(message)
+```
+
+No usar `alert(error.message)` directo en handlers del panel salvo como fallback cuando `CSInterface` o Illustrator no esten disponibles.
 
 ## Chats/Lineas De Trabajo Detectadas
 

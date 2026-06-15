@@ -42,6 +42,29 @@ function formatDuration(secondsValue) {
   return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}`;
 }
 
+function normalizeKeyPart(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, " ");
+}
+
+function buildOrderKey(order) {
+  const hasName = normalizeKeyPart(order && order.name) !== "";
+  const hasNumber = normalizeKeyPart(order && order.number) !== "";
+  const keyName = hasName || hasNumber ? order && order.name : "SIN_DATOS";
+
+  return [
+    order && order.wo,
+    order && order.shipOrder,
+    order && order.style,
+    order && order.team,
+    order && order.size,
+    keyName,
+    order && order.number
+  ].map(normalizeKeyPart).join("|");
+}
+
 function execSql(deps, dbPath, sql) {
   if (!deps.childProcess || !deps.fs || !deps.path) {
     throw new Error("Dependencias Node incompletas para SQLite.");
@@ -56,6 +79,73 @@ function execSql(deps, dbPath, sql) {
     input: sql,
     encoding: "utf8"
   });
+}
+
+function columnExists(deps, dbPath, tableName, columnName) {
+  const output = deps.childProcess.execFileSync(SQLITE_BIN, [dbPath, `PRAGMA table_info(${tableName});`], {
+    encoding: "utf8"
+  });
+
+  return output.split(/\r?\n/).some(function (line) {
+    const parts = line.split("|");
+    return parts[1] === columnName;
+  });
+}
+
+function ensureColumn(deps, dbPath, tableName, columnName, definition) {
+  if (columnExists(deps, dbPath, tableName, columnName)) {
+    return;
+  }
+
+  execSql(deps, dbPath, `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition};`);
+}
+
+function parseTabRows(output) {
+  return String(output || "")
+    .split(/\r?\n/)
+    .filter(function (line) { return line.trim() !== ""; })
+    .map(function (line) { return line.split("\t"); });
+}
+
+function backfillMissingItemKeys(deps, dbPath) {
+  const output = deps.childProcess.execFileSync(SQLITE_BIN, [dbPath], {
+    input: `
+.mode tabs
+.headers off
+SELECT id, wo, ship_order, style, equipo, talla, nombre, numero
+FROM ${ITEMS_TABLE}
+WHERE clave IS NULL OR clave = '';
+`,
+    encoding: "utf8"
+  });
+  const rows = parseTabRows(output);
+
+  if (!rows.length) {
+    return 0;
+  }
+
+  const updates = rows.map(function (row) {
+    const id = row[0];
+    const clave = buildOrderKey({
+      wo: row[1],
+      shipOrder: row[2],
+      style: row[3],
+      team: row[4],
+      size: row[5],
+      name: row[6],
+      number: row[7]
+    });
+
+    return `UPDATE ${ITEMS_TABLE} SET clave = ${sqlText(clave)} WHERE id = ${sqlNumber(id)};`;
+  }).join("\n");
+
+  execSql(deps, dbPath, `
+BEGIN TRANSACTION;
+${updates}
+COMMIT;
+`);
+
+  return rows.length;
 }
 
 function ensureSchema(deps, dbPath) {
@@ -105,6 +195,7 @@ CREATE TABLE IF NOT EXISTS ${ITEMS_TABLE} (
   estado TEXT,
   error TEXT,
   tiempo TEXT,
+  clave TEXT,
   FOREIGN KEY (run_id) REFERENCES ${RUNS_TABLE}(id) ON DELETE CASCADE
 );
 
@@ -132,6 +223,10 @@ ON CONFLICT(source_app) DO UPDATE SET
   app_version = excluded.app_version,
   updated_at = datetime('now', 'localtime');
 `);
+
+  ensureColumn(deps, dbPath, ITEMS_TABLE, "clave", "TEXT");
+  backfillMissingItemKeys(deps, dbPath);
+  execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_items_clave ON ${ITEMS_TABLE}(clave);`);
 }
 
 function recordBatchRun(deps, dbPath, payload) {
@@ -179,12 +274,13 @@ DELETE FROM ${ITEMS_TABLE} WHERE run_id = ${sqlText(runId)};
 
   const itemSql = results.map(function (result) {
     const order = result.order || {};
+    const clave = result.clave || buildOrderKey(order);
 
     return `
 INSERT INTO ${ITEMS_TABLE} (
   run_id, herramienta, fila_excel, wo, ship_order, style, style_family,
   equipo, variante, version, talla, piezas, nombre, numero, archivo,
-  estado, error, tiempo
+  estado, error, tiempo, clave
 ) VALUES (
   ${sqlText(runId)},
   ${sqlText(herramienta)},
@@ -203,7 +299,8 @@ INSERT INTO ${ITEMS_TABLE} (
   ${sqlText(result.outputName || "")},
   ${sqlText(result.ok ? "Completado" : "Error")},
   ${sqlText(result.ok ? "" : (result.message || "Error desconocido"))},
-  ${sqlText(formatDuration(Math.max(1, Math.round((result.durationMs || 0) / 1000))))}
+  ${sqlText(formatDuration(Math.max(1, Math.round((result.durationMs || 0) / 1000))))},
+  ${sqlText(clave)}
 );
 `;
   }).join("\n");
@@ -226,7 +323,42 @@ COMMIT;
   };
 }
 
+function listExistingItemKeys(deps, dbPath, keys) {
+  const uniqueKeys = Array.from(new Set((keys || []).filter(Boolean)));
+
+  ensureSchema(deps, dbPath);
+
+  if (!uniqueKeys.length) {
+    return {};
+  }
+
+  const sql = `
+.mode tabs
+.headers off
+SELECT clave, COUNT(*)
+FROM ${ITEMS_TABLE}
+WHERE clave IN (${uniqueKeys.map(sqlText).join(",")})
+GROUP BY clave;
+`;
+  const output = deps.childProcess.execFileSync(SQLITE_BIN, [dbPath], {
+    input: sql,
+    encoding: "utf8"
+  });
+  const lookup = {};
+
+  output.split(/\r?\n/).forEach(function (line) {
+    if (!line.trim()) return;
+    const parts = line.split("\t");
+    lookup[parts[0]] = Number(parts[1] || 0);
+  });
+
+  return lookup;
+}
+
 module.exports = {
+  backfillMissingItemKeys,
+  buildOrderKey,
   ensureSchema,
+  listExistingItemKeys,
   recordBatchRun
 };

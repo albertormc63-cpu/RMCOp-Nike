@@ -19,7 +19,8 @@
             data: null,
             selectedStyleFamily: "",
             selectedSizes: [],
-            lastResults: []
+            lastResults: [],
+            validation: null
         }
     };
 
@@ -535,7 +536,18 @@
 
         if (!batchData) {
             rowsPreview.textContent = "Importa un Excel para revisar filas.";
+            updateBatchProcessButton();
             return;
+        }
+
+        let validation = null;
+        let validationError = "";
+
+        try {
+            validation = validateBatchSelection();
+        } catch (error) {
+            clearBatchValidation();
+            validationError = error.message;
         }
 
         const lines = [];
@@ -543,6 +555,20 @@
         lines.push(`Encabezados: fila ${batchData.headerRow || 1} | Datos desde fila ${batchData.dataStartRow || 2}`);
         lines.push(`Filtro style: ${getSelectedBatchStyleFamilyLabel()} | Filtro talla: ${getSelectedBatchSizeLabel()}`);
         lines.push(`Validas en seleccion: ${getSelectedBatchRows().length} | Errores del Excel: ${invalidCount}`);
+        lines.push("");
+
+        if (!state.batch.destinationFolder) {
+            lines.push("Validacion: elige destino batch para revisar existentes/faltantes.");
+        } else if (validationError) {
+            lines.push(`Validacion: error - ${validationError}`);
+        } else if (validation) {
+            lines.push("Validacion:");
+            lines.push(`  Faltantes: ${validation.counts.FALTANTE || 0}`);
+            lines.push(`  Ya creados: ${validation.counts.YA_CREADO || 0}`);
+            lines.push(`  Archivo sin registro: ${validation.counts.ARCHIVO_SIN_REGISTRO || 0}`);
+            lines.push(`  Registrado sin archivo: ${validation.counts.REGISTRADO_SIN_ARCHIVO || 0}`);
+            lines.push(`  Conflictos: ${validation.counts.CONFLICTO || 0}`);
+        }
 
         if (invalidCount) {
             lines.push("");
@@ -558,7 +584,22 @@
             lines.push(`Fila ${row.sourceRow} | ${row.styleFamily}/${row.size} | ${row.wo} | ${row.team} | ${row.style} | ${row.name} #${row.number}`);
         });
 
+        if (validation) {
+            const skippedRows = validation.rows.filter(function (row) {
+                return row.status !== "FALTANTE";
+            });
+
+            if (skippedRows.length) {
+                lines.push("");
+                lines.push("Primeras filas omitidas por validacion:");
+                skippedRows.slice(0, 12).forEach(function (row) {
+                    lines.push(`Fila ${row.order.sourceRow} | ${row.status} | ${row.outputName}`);
+                });
+            }
+        }
+
         rowsPreview.textContent = lines.join("\n");
+        updateBatchProcessButton();
     }
 
     function renderStyleFamilyCard(container, value, label, count) {
@@ -570,6 +611,7 @@
         button.addEventListener("click", function () {
             state.batch.selectedStyleFamily = value;
             state.batch.selectedSizes = [];
+            clearBatchValidation();
             renderBatchSummary();
             console.log(`Familia style seleccionada: ${getSelectedBatchStyleFamilyLabel()} (${getSelectedBatchRows().length} filas).`);
         });
@@ -600,6 +642,7 @@
                 });
             }
 
+            clearBatchValidation();
             renderBatchSummary();
             console.log(`Tallas batch seleccionadas: ${getSelectedBatchSizeLabel()} (${getSelectedBatchRows().length} filas).`);
         });
@@ -649,6 +692,163 @@
 
     function getSelectedBatchSizeLabel() {
         return state.batch.selectedSizes.length ? state.batch.selectedSizes.join(", ") : "todas";
+    }
+
+    function clearBatchValidation() {
+        state.batch.validation = null;
+    }
+
+    function getPortfolioDbDeps() {
+        const services = nodeRuntime.services;
+
+        return {
+            fs: services.fs,
+            path: services.path,
+            childProcess: services.childProcess
+        };
+    }
+
+    function buildBatchValidationKey(order) {
+        const services = nodeRuntime.services;
+
+        if (services.portfolioDb && services.portfolioDb.buildOrderKey) {
+            return services.portfolioDb.buildOrderKey(order);
+        }
+
+        return [
+            order.wo,
+            order.shipOrder,
+            order.style,
+            order.team,
+            order.size,
+            order.name || (!order.name && !order.number ? "SIN_DATOS" : ""),
+            order.number
+        ].map(function (value) {
+            return String(value || "").trim().toUpperCase().replace(/\s+/g, " ");
+        }).join("|");
+    }
+
+    function buildBatchOutputInfo(order) {
+        const services = nodeRuntime.services;
+        const styleFamilyFolder = order.styleFamily || getStyleFamily(order.style);
+        const destinationFolder = services.path.join(state.batch.destinationFolder, styleFamilyFolder, order.size);
+        const outputName = services.buildOutputName(order);
+
+        return {
+            outputName: outputName,
+            outputPath: services.path.join(destinationFolder, outputName)
+        };
+    }
+
+    function validateBatchSelection() {
+        const services = nodeRuntime.services;
+        const selectedRows = getSelectedBatchRows();
+
+        if (!state.batch.data || !state.batch.destinationFolder) {
+            clearBatchValidation();
+            return null;
+        }
+
+        if (!services.fs || !services.path || !services.portfolioDb) {
+            clearBatchValidation();
+            return null;
+        }
+
+        const keyedRows = selectedRows.map(function (order) {
+            const outputInfo = buildBatchOutputInfo(order);
+
+            return {
+                order: order,
+                clave: buildBatchValidationKey(order),
+                outputName: outputInfo.outputName,
+                outputPath: outputInfo.outputPath
+            };
+        });
+        const keyCounts = keyedRows.reduce(function (counts, row) {
+            counts[row.clave] = (counts[row.clave] || 0) + 1;
+            return counts;
+        }, {});
+        const dbLookup = services.portfolioDb.listExistingItemKeys(getPortfolioDbDeps(), getPortfolioDbPath(), keyedRows.map(function (row) {
+            return row.clave;
+        }));
+        const rows = keyedRows.map(function (row) {
+            const fileExists = services.fs.existsSync(row.outputPath);
+            const registered = Boolean(dbLookup[row.clave]);
+            let status = "FALTANTE";
+
+            if (keyCounts[row.clave] > 1) {
+                status = "CONFLICTO";
+            } else if (fileExists && registered) {
+                status = "YA_CREADO";
+            } else if (fileExists && !registered) {
+                status = "ARCHIVO_SIN_REGISTRO";
+            } else if (!fileExists && registered) {
+                status = "REGISTRADO_SIN_ARCHIVO";
+            }
+
+            return Object.assign({}, row, {
+                fileExists: fileExists,
+                registered: registered,
+                status: status
+            });
+        });
+        const counts = rows.reduce(function (summary, row) {
+            summary[row.status] = (summary[row.status] || 0) + 1;
+            return summary;
+        }, {});
+
+        state.batch.validation = {
+            rows: rows,
+            counts: counts,
+            selectedCount: selectedRows.length
+        };
+
+        return state.batch.validation;
+    }
+
+    function getBatchValidationForSelectedRows() {
+        const selectedRows = getSelectedBatchRows();
+        const validation = state.batch.validation;
+
+        if (!validation || validation.selectedCount !== selectedRows.length) {
+            return validateBatchSelection();
+        }
+
+        return validation;
+    }
+
+    function getBatchRowsForProcessing() {
+        const validation = getBatchValidationForSelectedRows();
+
+        if (!validation) {
+            return getSelectedBatchRows();
+        }
+
+        return validation.rows.filter(function (row) {
+            return row.status === "FALTANTE";
+        }).map(function (row) {
+            return Object.assign({}, row.order, {
+                validationKey: row.clave,
+                expectedOutputName: row.outputName
+            });
+        });
+    }
+
+    function updateBatchProcessButton() {
+        const button = document.getElementById("btnProcessBatchFull");
+        const validation = state.batch.validation;
+
+        if (!button) {
+            return;
+        }
+
+        if (!validation) {
+            button.textContent = "Crear, aplicar y cerrar talla seleccionada";
+            return;
+        }
+
+        const missingCount = validation.counts.FALTANTE || 0;
+        button.textContent = missingCount ? `Procesar faltantes (${missingCount})` : "Sin faltantes por procesar";
     }
 
     function formatElapsedTime(milliseconds) {
@@ -723,6 +923,7 @@
         state.batch.selectedStyleFamily = "";
         state.batch.selectedSizes = [];
         state.batch.lastResults = [];
+        clearBatchValidation();
         renderBatchSummary();
 
         console.log(`Excel importado: ${excelPath}`);
@@ -733,13 +934,14 @@
 
     function chooseBatchDestination() {
         const paths = getCurrentPaths();
-        const folderPath = pickFolderFromCep("Elegir destino batch", paths ? paths.ordersBase : "");
+        const folderPath = pickFolderFromCep("Elegir destino batch", state.batch.destinationFolder || (paths ? paths.ordersBase : ""));
 
         if (!folderPath) {
             return;
         }
 
         state.batch.destinationFolder = folderPath;
+        clearBatchValidation();
         renderBatchSummary();
         console.log(`Destino batch: ${folderPath}`);
     }
@@ -861,9 +1063,19 @@
         let selectedRows = [];
 
         try {
-            selectedRows = getSelectedBatchRows();
+            const validation = getBatchValidationForSelectedRows();
+            const blockedCount = validation ? validation.selectedCount - (validation.counts.FALTANTE || 0) : 0;
+            selectedRows = getBatchRowsForProcessing();
 
-            logFlow(`Procesando batch completo (${getSelectedBatchStyleFamilyLabel()} / ${getSelectedBatchSizeLabel()}): ${selectedRows.length} filas validas.`);
+            if (!selectedRows.length) {
+                throw new Error("No hay faltantes por procesar en la seleccion actual.");
+            }
+
+            if (blockedCount > 0) {
+                console.warn(`Validacion omitio ${blockedCount} filas ya creadas, registradas o con conflicto.`);
+            }
+
+            logFlow(`Procesando faltantes batch (${getSelectedBatchStyleFamilyLabel()} / ${getSelectedBatchSizeLabel()}): ${selectedRows.length} filas.`);
 
             for (let index = 0; index < selectedRows.length; index++) {
                 const order = selectedRows[index];
@@ -885,6 +1097,7 @@
                         outputName: copyResult.outputName,
                         size: order.size,
                         durationMs: Date.now() - rowStartedAt,
+                        clave: order.validationKey,
                         order: order
                     });
                     console.log(`Procesada fila ${order.sourceRow}: ${copyResult.outputName}`);
@@ -896,6 +1109,7 @@
                         size: order.size,
                         message: error.message,
                         durationMs: Date.now() - rowStartedAt,
+                        clave: order.validationKey,
                         order: order
                     });
                     console.error(`Error batch fila ${order.sourceRow}: ${error.message}`);
@@ -903,6 +1117,8 @@
             }
 
             state.batch.lastResults = results;
+            clearBatchValidation();
+            renderBatchSummary();
         } finally {
             const elapsed = stopBatchTimer(timerState);
             console.log(`Batch completo terminado. OK: ${okCount} | Errores: ${errorCount} | Tiempo: ${formatElapsedTime(elapsed)}`);
@@ -971,6 +1187,15 @@
         } catch (error) {
             console.warn("No se pudo mostrar confirmacion nativa de Illustrator; usando confirmacion del panel.");
             return confirm(`Ya existe este archivo:\n\n${outputPath}\n\nSi continuas, se reemplazara con una copia limpia de la plantilla.`);
+        }
+    }
+
+    async function showIllustratorAlert(message) {
+        try {
+            await illustratorBridge.showAlert(message);
+        } catch (error) {
+            console.warn("No se pudo mostrar alerta nativa de Illustrator; usando alerta del panel.");
+            alert(message);
         }
     }
 
@@ -1253,7 +1478,7 @@
             openAndApplyOrderData().catch(function (error) {
                 console.error("No se pudo abrir y aplicar datos:");
                 console.error(error.message);
-                alert(error.message);
+                showIllustratorAlert(error.message);
             });
         });
 
@@ -1263,7 +1488,7 @@
             } catch (error) {
                 console.error("No se pudo importar el Excel:");
                 console.error(error.message);
-                alert(error.message);
+                showIllustratorAlert(error.message);
             }
         });
 
@@ -1273,7 +1498,7 @@
             } catch (error) {
                 console.error("No se pudo elegir el destino batch:");
                 console.error(error.message);
-                alert(error.message);
+                showIllustratorAlert(error.message);
             }
         });
 
@@ -1281,7 +1506,7 @@
             processBatchFull().catch(function (error) {
                 console.error("No se pudo aplicar el batch completo:");
                 console.error(error.message);
-                alert(error.message);
+                showIllustratorAlert(error.message);
             });
         });
 
@@ -1296,7 +1521,7 @@
             extractOfficialSwatches().catch(function (error) {
                 console.error("No se pudieron extraer las muestras oficiales:");
                 console.error(error.message);
-                alert(error.message);
+                showIllustratorAlert(error.message);
             });
         });
 
@@ -1304,7 +1529,7 @@
             validateOfficialSwatches().catch(function (error) {
                 console.error("No se pudieron validar las muestras:");
                 console.error(error.message);
-                alert(error.message);
+                showIllustratorAlert(error.message);
             });
         });
 

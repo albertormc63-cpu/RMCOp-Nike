@@ -31,7 +31,7 @@
 
     console.log = function () {
         const message = Array.prototype.join.call(arguments, " ");
-        writeLog(message, "log-success");
+        writeLog(message);
         originalLog.apply(console, arguments);
     };
 

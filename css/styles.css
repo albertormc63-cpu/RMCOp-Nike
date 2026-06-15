@@ -1,14 +1,39 @@
 :root {
-    /* Variables base del tema oscuro del panel. */
-    --bg: #202124;
-    --panel: #2b2d31;
-    --panel-soft: #34373d;
-    --line: #474b52;
-    --text: #f4f4f2;
-    --muted: #b8bcc4;
-    --accent: #bd1f36;
-    --accent-strong: #e13a50;
-    --focus: #f7c948;
+    /* Tokens compartidos RMC; los aliases mantienen compatible la UI actual. */
+    --rmc-font-ui: Arial;
+    --rmc-font-log: monospace;
+
+    --rmc-bg: #2b2b2b;
+    --rmc-surface: #3a3a3a;
+    --rmc-surface-soft: #333333;
+    --rmc-surface-deep: #1e1e1e;
+    --rmc-field: #181a1d;
+    --rmc-border: #444444;
+    --rmc-border-strong: #666666;
+    --rmc-text: #ffffff;
+    --rmc-text-soft: #eeeeee;
+    --rmc-muted: #cccccc;
+    --rmc-muted-low: #888888;
+    --rmc-primary: #821424;
+    --rmc-primary-hover: #a21a2f;
+    --rmc-primary-strong: #bd1f36;
+    --rmc-secondary: #444444;
+    --rmc-secondary-hover: #555555;
+    --rmc-focus: #f7c948;
+    --rmc-log-text: #00ff00;
+    --rmc-log-success: #50fa7b;
+    --rmc-log-error: #ff5555;
+    --rmc-log-warning: #f1fa8c;
+
+    --bg: var(--rmc-bg);
+    --panel: var(--rmc-surface);
+    --panel-soft: var(--rmc-surface-soft);
+    --line: var(--rmc-border);
+    --text: var(--rmc-text);
+    --muted: var(--rmc-muted);
+    --accent: var(--rmc-primary);
+    --accent-strong: var(--rmc-primary-hover);
+    --focus: var(--rmc-focus);
 }
 
 * {
@@ -23,7 +48,7 @@ body {
     padding: 10px;
     background: var(--bg);
     color: var(--text);
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: var(--rmc-font-ui);
     font-size: 12px;
 }
 
@@ -88,15 +113,17 @@ body {
 button {
     min-height: 34px;
     border: 1px solid transparent;
-    border-radius: 5px;
+    border-radius: 4px;
     background: var(--panel-soft);
     color: var(--text);
     cursor: pointer;
+    font-family: var(--rmc-font-ui);
     font-size: 12px;
 }
 
 button:hover {
     border-color: var(--accent-strong);
+    background: var(--rmc-secondary-hover);
 }
 
 button:focus,
@@ -131,6 +158,11 @@ select:focus {
 .step-button.active {
     background: var(--accent);
     color: #fff;
+}
+
+.step-button.active:hover {
+    background: var(--rmc-primary-hover);
+    box-shadow: 0 0 12px rgba(162, 26, 47, 0.45);
 }
 
 .page {
@@ -205,7 +237,7 @@ p {
 
 .team-card.active {
     border-color: var(--accent-strong);
-    background: #3a2a2f;
+    background: #3f3033;
 }
 
 .team-preview,
@@ -215,7 +247,7 @@ p {
     min-height: 82px;
     border-radius: 5px;
     border: 1px solid #555b64;
-    background-color: #1d1f22;
+    background-color: var(--rmc-surface-deep);
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
@@ -293,7 +325,7 @@ p {
     min-height: 30px;
     border: 1px solid var(--line);
     border-radius: 5px;
-    background: #24262a;
+    background: var(--rmc-secondary);
     color: var(--text);
     font-size: 11px;
 }
@@ -322,7 +354,7 @@ p {
 .version-toggle input:checked {
     border-color: var(--focus);
     background: var(--focus);
-    box-shadow: inset 0 0 0 2px #24262a;
+    box-shadow: inset 0 0 0 2px var(--rmc-secondary);
 }
 
 .form-grid {
@@ -351,8 +383,9 @@ select {
     padding: 7px;
     border: 1px solid #555b64;
     border-radius: 5px;
-    background: #181a1d;
+    background: var(--rmc-field);
     color: var(--text);
+    font-family: var(--rmc-font-ui);
     font-size: 12px;
 }
 
@@ -369,20 +402,28 @@ select {
 
 .primary-button {
     background: var(--accent);
+    color: var(--rmc-text);
+    font-weight: 700;
+}
+
+.primary-button:hover {
+    background: var(--rmc-primary-hover);
+    box-shadow: 0 0 12px rgba(162, 26, 47, 0.45);
 }
 
 .secondary-button {
     min-height: 33px;
     padding: 0 10px;
-    border: 1px solid #555b64;
-    border-radius: 5px;
-    background: #24262a;
-    color: var(--text);
+    border: 1px solid var(--rmc-border-strong);
+    border-radius: 4px;
+    background: var(--rmc-secondary);
+    color: var(--rmc-text-soft);
     font-size: 11px;
 }
 
 .secondary-button:hover {
-    border-color: var(--focus);
+    background: var(--rmc-secondary-hover);
+    color: var(--rmc-text);
 }
 
 .destination-note {
@@ -429,9 +470,9 @@ select {
 
 .batch-timer {
     padding: 8px;
-    border: 1px solid #333842;
+    border: 1px solid var(--rmc-border);
     border-radius: 5px;
-    background: #151719;
+    background: var(--rmc-surface-deep);
 }
 
 .batch-timer strong {
@@ -444,7 +485,7 @@ select {
 }
 
 .batch-timer.running strong {
-    color: #7ee787;
+    color: var(--rmc-log-success);
 }
 
 .batch-summary {
@@ -461,7 +502,7 @@ select {
     padding: 7px;
     border: 1px solid var(--line);
     border-radius: 5px;
-    background: #24262a;
+    background: var(--rmc-secondary);
 }
 
 .batch-summary strong {
@@ -545,9 +586,9 @@ select {
     max-height: 180px;
     padding: 8px;
     overflow: auto;
-    border: 1px solid #333842;
+    border: 1px solid var(--rmc-border);
     border-radius: 5px;
-    background: #151719;
+    background: var(--rmc-surface-deep);
     color: var(--muted);
     font-family: Menlo, Monaco, Consolas, monospace;
     font-size: 10px;
@@ -563,17 +604,19 @@ select {
 }
 
 #log-container {
-    margin-top: 12px;
-    border: 1px solid #333842;
-    border-radius: 5px;
-    background: #151719;
+    margin-top: 20px;
+    border: 1px solid #333333;
+    border-radius: 4px;
+    background: var(--rmc-surface-deep);
+    color: var(--rmc-log-text);
+    font-family: var(--rmc-font-log);
     overflow: hidden;
 }
 
 .log-header {
     min-height: 28px;
     padding: 6px 8px;
-    background: #2b2d31;
+    background: var(--rmc-surface-soft);
     color: var(--muted);
     font-size: 10px;
     font-weight: 700;
@@ -585,37 +628,53 @@ select {
     min-height: 18px;
     margin: -2px 0 0;
     padding: 0 7px;
+    border: 1px solid var(--rmc-border-strong);
+    border-radius: 2px;
+    background: var(--rmc-secondary);
+    color: var(--rmc-text-soft);
     font-size: 9px;
+}
+
+#btnClearLog:hover {
+    background: var(--rmc-secondary-hover);
+    color: var(--rmc-text);
 }
 
 #terminal {
     /* Consola interna del panel, alimentada por js/logger.js. */
-    height: 130px;
+    height: 160px;
     padding: 8px;
     overflow-y: auto;
-    color: #d7f7d4;
-    font-family: Menlo, Monaco, Consolas, monospace;
+    color: var(--rmc-log-text);
+    font-family: var(--rmc-font-log);
     font-size: 10px;
     white-space: pre-wrap;
+    word-break: break-word;
 }
 
-.log-error {
-    color: #ff6b6b;
+#terminal div {
+    color: var(--rmc-log-text);
+    font-family: var(--rmc-font-log);
 }
 
-.log-success {
-    color: #7ee787;
+#terminal .log-error {
+    color: var(--rmc-log-error);
 }
 
-.log-warning {
-    color: #f7c948;
+#terminal .log-success {
+    color: var(--rmc-log-success);
+}
+
+#terminal .log-warning {
+    color: var(--rmc-log-warning);
 }
 
 .footer-credits {
     margin-top: 10px;
-    padding-top: 9px;
+    padding-top: 10px;
     border-top: 1px solid var(--line);
-    color: #8f949d;
+    color: var(--rmc-muted-low);
     text-align: center;
-    font-size: 9px;
+    font-family: var(--rmc-font-ui);
+    font-size: 10px;
 }
