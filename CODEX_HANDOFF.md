@@ -1,6 +1,6 @@
 # RMCOp-Nike - Handoff Para Otro Codex
 
-Ultima actualizacion: 2026-06-12.
+Ultima actualizacion: 2026-06-15.
 
 Palabra clave para retomar contexto: `RMCOP_NIKE_HANDOFF`.
 
@@ -104,6 +104,40 @@ archivo     -> nombre de archivo final
 ```
 
 No guardar `output_path`.
+
+## Validacion Incremental Pendiente
+
+Contexto operativo:
+
+- Las listas por lote se generan jueves.
+- RMCOp-Nike procesa personalizadas normalmente viernes.
+- RMC MockupTool genera mockups despues usando el mismo Excel.
+- Los impresores inician lunes.
+- A veces el lunes se agregan mas filas a la misma lista por lote.
+
+Necesidad:
+
+- Al cargar un Excel, validar contra archivos ya creados y contra `RMC_CEP.sqlite`.
+- Identificar filas ya creadas, faltantes, con conflicto e invalidas.
+- Permitir generar solo faltantes.
+- Evitar duplicar PDFs y evitar duplicar registros SQLite.
+- No romper flujo manual ni batch actual.
+
+Clave candidata para duplicados en RMCOp-Nike:
+
+```text
+WO + Ship Order + Style + Team/Color + Size + Nombre + Numero
+```
+
+Para filas sin nombre/numero, usar el mismo criterio del panel (`SIN_DATOS`) para comparar nombres finales.
+
+Regla de implementacion:
+
+```text
+Validar primero; generar despues.
+```
+
+La validacion debe ser visible antes de copiar/abrir/aplicar en Illustrator.
 
 ## Chats/Lineas De Trabajo Detectadas
 

@@ -37,6 +37,8 @@ No inventes contexto de chats. Usa `CODEX_HANDOFF.md` como memoria principal.
   usuario pide integrar mockups a Illustrator, trabaja en el CEP separado
   `RMC MockupTool`.
 - No rompas el flujo manual mientras trabajas batch.
+- Si se implementa validacion incremental desde Excel, primero mostrar ya creados/faltantes/conflictos y despues permitir generar; no generar mientras se valida.
+- La validacion debe evitar duplicados de archivos y registros SQLite cuando una lista por lote recibe agregados despues del primer procesamiento.
 - RMCOp-Nike registra produccion en la BD compartida `/Users/rmlsub1/Documents/RMC - CEP/RMC_BD/RMC_CEP.sqlite`.
 - Las tablas propias de este CEP son `rmcop_nike_runs`, `rmcop_nike_items` y `rmcop_nike_git_commits`; no tocar tablas de otros CEP.
 - `rmcop_nike_runs.created_at` guarda solo fecha `DD/MM/AAAA`; `started_at`, `finished_at` y `tiempo` guardan `HH:MM:SS`.

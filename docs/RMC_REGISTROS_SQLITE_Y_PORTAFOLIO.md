@@ -1,6 +1,6 @@
 # RMCOp-Nike - Registros, SQLite Y Portafolio
 
-Ultima actualizacion: 2026-06-12.
+Ultima actualizacion: 2026-06-15.
 
 ## Portafolio Interno
 
@@ -147,15 +147,62 @@ La meta es guardar datos en SQLite y despues exportar/resumir a Excel cuando hag
 ## Siguiente Paso Recomendado
 
 1. Dejar que `RMCOp-Nike Manual` y `RMCOp-Nike Por Lote` alimenten `RMC_CEP.sqlite` automaticamente.
-2. Crear un script `Exportar metricas` que lea SQLite y actualice los Excel.
-3. Agregar un hook `post-commit` para guardar commits en `git_commits`.
-4. Crear una pagina `Control` dentro del panel CEP para ver:
+2. Agregar validacion incremental desde Excel para detectar archivos ya creados y faltantes.
+3. Crear un script `Exportar metricas` que lea SQLite y actualice los Excel.
+4. Agregar un hook `post-commit` para guardar commits en `git_commits`.
+5. Crear una pagina `Control` dentro del panel CEP para ver:
    - lotes procesados,
    - piezas,
    - estilos,
    - tiempo,
    - errores,
    - ultimos commits.
+
+## Validacion Incremental Pendiente
+
+Contexto operativo actual:
+
+- Las listas por lote se generan jueves.
+- RMCOp-Nike procesa PDFs de personalizadas normalmente viernes.
+- RMC MockupTool genera PDFs de mockup despues.
+- Los impresores inician trabajo lunes.
+- A veces el lunes se agregan mas filas a la misma lista por lote.
+- El mismo Excel se usa como fuente para RMCOp-Nike y RMC MockupTool.
+
+Objetivo de la validacion:
+
+- Leer el Excel cargado.
+- Comparar contra la carpeta destino y/o la BD `RMC_CEP.sqlite`.
+- Separar filas en:
+  - ya creadas,
+  - faltantes,
+  - con conflicto,
+  - invalidas.
+- Permitir generar solo faltantes.
+- Evitar duplicar PDFs.
+- Evitar duplicar registros en SQLite.
+
+Regla importante:
+
+```text
+Validar primero; generar despues.
+```
+
+La validacion debe mostrar resumen antes de crear archivos o escribir registros.
+
+Clave candidata para detectar duplicados:
+
+```text
+WO + Ship Order + Style + Team/Color + Size + Nombre + Numero
+```
+
+Si una fila no tiene nombre ni numero, usar el mismo criterio de nombre final que el panel (`SIN_DATOS`) para comparar contra archivos existentes.
+
+La validacion debe respetar que:
+
+- `Qty/Pzs` no duplica PDFs en RMCOp-Nike.
+- RMC MockupTool consolida por `WO# + SHIP O + Style + Team / Color`.
+- RMCOp-Nike y RMC MockupTool tienen tablas separadas, pero comparten la misma BD.
 
 ## Git Hook
 

@@ -62,6 +62,11 @@ La version CEP de mockups debe seguir siendo extension separada, con su propio `
   - La diferencia entre metodos se guarda en el campo `herramienta`.
   - `created_at` guarda fecha `DD/MM/AAAA`; `started_at`, `finished_at` y `tiempo` guardan horas/duracion `HH:MM:SS`.
   - `rmcop_nike_items` guarda `archivo`, no `output_path`.
+- Validacion incremental pendiente:
+  - El mismo Excel alimenta RMCOp-Nike y RMC MockupTool.
+  - Las listas se preparan jueves, se procesan viernes y pueden recibir agregados lunes.
+  - Antes de generar, el panel debe detectar archivos ya creados/faltantes para generar solo faltantes.
+  - La validacion debe ayudar a evitar duplicados en archivos y en SQLite.
 
 ## Stack
 
@@ -153,6 +158,8 @@ No hardcodear rutas nuevas en `main.js`. Las rutas activas se muestran en la pag
 ## Flujo Por Lote Desde Excel
 
 El panel tiene pagina batch para importar Excel Nike On Demand, revisar filas validas/invalidas y procesar por familia de style y talla.
+
+Pendiente operativo: agregar validacion incremental antes de generar. El objetivo es leer el mismo Excel usado por RMCOp-Nike/RMC MockupTool, comparar contra archivos existentes y/o `RMC_CEP.sqlite`, y separar filas ya creadas, faltantes, con conflicto e invalidas. Solo los faltantes deberian generarse.
 
 Columnas soportadas por encabezado:
 
@@ -369,3 +376,4 @@ node -e "JSON.parse(require('fs').readFileSync('js/config/ihNumberRules.json','u
 - Cualquier cambio de rutas, Throwback o batch debe probarse contra Illustrator real.
 - En batch, filas sin nombre/numero son validas: se limpian placeholders y se nombra con `SIN_DATOS`.
 - `Qty/Pzs` no duplica PDFs en los flujos actuales; solo se respeta como dato operativo o visual segun herramienta.
+- La proxima mejora importante es validacion incremental de Excel para evitar duplicados cuando una lista recibe agregados despues del primer procesamiento.
