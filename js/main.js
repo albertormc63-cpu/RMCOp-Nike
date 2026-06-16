@@ -243,7 +243,7 @@
             String(now.getDate()).padStart(2, "0")
         ].join("-");
         const timeText = now.toTimeString().slice(0, 8);
-        const runId = `manual-${dateText.replace(/-/g, "")}-${timeText.replace(/:/g, "")}`;
+        const runId = `${dateText.replace(/-/g, "")}-${timeText.replace(/:/g, "")}`;
         const outputName = outputPath ? services.path.basename(outputPath) : "";
         const dbResult = services.portfolioDb.recordBatchRun({
             fs: services.fs,
@@ -552,6 +552,18 @@
 
         const lines = [];
         lines.push(`Hoja: ${batchData.sheetName}`);
+        if (batchData.sourceFormat) {
+            lines.push(`Formato: ${batchData.sourceFormat}`);
+        }
+        if (batchData.rosterName) {
+            lines.push(`Roster: ${batchData.rosterName}`);
+        }
+        if (batchData.defaultWo || batchData.defaultShipOrder) {
+            lines.push(`WO/Ship: ${batchData.defaultWo || "sin WO"} / ${batchData.defaultShipOrder || "sin Ship Order"}`);
+        }
+        if (batchData.totalPieces) {
+            lines.push(`Piezas roster: ${batchData.totalPieces}`);
+        }
         lines.push(`Encabezados: fila ${batchData.headerRow || 1} | Datos desde fila ${batchData.dataStartRow || 2}`);
         lines.push(`Filtro style: ${getSelectedBatchStyleFamilyLabel()} | Filtro talla: ${getSelectedBatchSizeLabel()}`);
         lines.push(`Validas en seleccion: ${getSelectedBatchRows().length} | Errores del Excel: ${invalidCount}`);

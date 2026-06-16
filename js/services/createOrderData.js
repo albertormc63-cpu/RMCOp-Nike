@@ -103,6 +103,7 @@ function readWorkbookRows(filePath) {
   });
 
   return {
+    filePath: filePath,
     sheetName: sheetName,
     rawRows: rawRows
   };
@@ -131,17 +132,34 @@ function findColumnIndex(headers, aliases, fallbackIndex) {
 }
 
 function getColumnIndexes(headerRow) {
-  // Soporta el layout viejo y el nuevo. Si cambia el orden, mandan los encabezados.
+  const isGenericRoster = isGenericRosterHeader(headerRow);
+
+  // Soporta el layout On Demand y el roster generico. Si cambia el orden, mandan los encabezados.
   return {
-    wo: findColumnIndex(headerRow, ["WO#", "WO", "Work Order"], 0),
-    shipOrder: findColumnIndex(headerRow, ["Ship Order", "SHIP O", "SHIP O."], 1),
-    style: findColumnIndex(headerRow, ["Style"], 2),
-    color: findColumnIndex(headerRow, ["Color", "Team/Color", "Team Color", "Team / Color"], 3),
-    size: findColumnIndex(headerRow, ["Size"], 4),
-    qty: findColumnIndex(headerRow, ["Qty", "Quantity", "Pzs", "Pz"], 5),
-    name: findColumnIndex(headerRow, ["Last Name", "Name"], 6),
-    number: findColumnIndex(headerRow, ["#", "Player#", "Player Number", "Number"], 7)
+    wo: findColumnIndex(headerRow, ["WO#", "WO", "Work Order"], isGenericRoster ? null : 0),
+    shipOrder: findColumnIndex(headerRow, ["Ship Order", "SHIP O", "SHIP O."], isGenericRoster ? null : 1),
+    style: findColumnIndex(headerRow, ["Style"], isGenericRoster ? 0 : 2),
+    color: findColumnIndex(headerRow, ["Color", "Team/Color", "Team Color", "Team / Color"], isGenericRoster ? 1 : 3),
+    qty: findColumnIndex(headerRow, ["Qty", "Quantity", "Pzs", "Pz"], isGenericRoster ? 2 : 5),
+    size: findColumnIndex(headerRow, ["Size"], isGenericRoster ? 3 : 4),
+    firstName: findColumnIndex(headerRow, ["First Name"], isGenericRoster ? 4 : null),
+    name: findColumnIndex(headerRow, ["Last Name", "Name"], isGenericRoster ? 5 : 6),
+    number: findColumnIndex(headerRow, ["#", "Player#", "Player Number", "Number"], isGenericRoster ? 6 : 7),
+    position: findColumnIndex(headerRow, ["Position"], isGenericRoster ? 7 : null),
+    format: isGenericRoster ? "generic-roster" : "on-demand"
   };
+}
+
+function isGenericRosterHeader(headerRow) {
+  const normalizedHeaders = headerRow.map(normalizeHeader);
+  const hasStyle = normalizedHeaders.indexOf("STYLE") !== -1;
+  const hasColor = normalizedHeaders.indexOf("COLOR") !== -1 || normalizedHeaders.indexOf("TEAMCOLOR") !== -1;
+  const hasQty = normalizedHeaders.indexOf("QTY") !== -1 || normalizedHeaders.indexOf("QUANTITY") !== -1;
+  const hasLastName = normalizedHeaders.indexOf("LASTNAME") !== -1 || normalizedHeaders.indexOf("NAME") !== -1;
+  const hasPlayer = normalizedHeaders.indexOf("PLAYER#") !== -1 || normalizedHeaders.indexOf("#") !== -1;
+  const hasWo = normalizedHeaders.indexOf("WO#") !== -1 || normalizedHeaders.indexOf("WO") !== -1;
+
+  return !hasWo && hasStyle && hasColor && hasQty && hasLastName && hasPlayer;
 }
 
 function findHeaderRowIndex(rawRows) {
@@ -150,8 +168,9 @@ function findHeaderRowIndex(rawRows) {
     const hasStyle = normalizedHeaders.indexOf("STYLE") !== -1;
     const hasSize = normalizedHeaders.indexOf("SIZE") !== -1;
     const hasWo = normalizedHeaders.indexOf("WO#") !== -1 || normalizedHeaders.indexOf("WO") !== -1;
+    const hasGenericRosterColumns = isGenericRosterHeader(rawRows[index]);
 
-    if (hasStyle && hasSize && hasWo) {
+    if (hasStyle && hasSize && (hasWo || hasGenericRosterColumns)) {
       return index;
     }
   }
@@ -159,17 +178,85 @@ function findHeaderRowIndex(rawRows) {
   return 0;
 }
 
-function normalizeRow(cells, index, columns) {
-  const style = cleanUpper(cells[columns.style]);
-  const sizeRaw = cleanUpper(cells[columns.size]);
-  const number = sanitizeNumber(cells[columns.number]);
-  const name = cleanUpper(cells[columns.name]);
-  const color = cleanCell(cells[columns.color]);
+function getCell(cells, index) {
+  return index == null || index < 0 ? "" : cells[index];
+}
+
+function extractFixedValue(rawRows, labelAliases) {
+  const aliases = labelAliases.map(normalizeHeader);
+
+  for (let rowIndex = 0; rowIndex < rawRows.length; rowIndex++) {
+    const row = rawRows[rowIndex] || [];
+
+    for (let cellIndex = 0; cellIndex < row.length; cellIndex++) {
+      if (aliases.indexOf(normalizeHeader(row[cellIndex])) === -1) {
+        continue;
+      }
+
+      for (let nextIndex = cellIndex + 1; nextIndex < row.length; nextIndex++) {
+        const value = cleanCell(row[nextIndex]);
+
+        if (value) {
+          return value;
+        }
+      }
+    }
+  }
+
+  return "";
+}
+
+function extractRosterName(rawRows, filePath) {
+  const firstCell = cleanCell(rawRows[0] && rawRows[0][0]);
+
+  if (firstCell) {
+    return firstCell;
+  }
+
+  return filePath ? cleanCell(require("path").basename(filePath, require("path").extname(filePath))) : "";
+}
+
+function extractWoFromText(value) {
+  const text = cleanCell(value);
+  const matches = [];
+  let match;
+  const pattern = /\bWO\s*#?\s*([0-9-]+)\b/gi;
+
+  while ((match = pattern.exec(text)) !== null) {
+    matches.push(match[1]);
+  }
+
+  if (matches.length) {
+    return Array.from(new Set(matches)).join("-");
+  }
+
+  const loose = text.match(/\b(1[0-9]{5})\b/);
+  return loose ? loose[1] : "";
+}
+
+function getWorkbookMetadata(workbookData) {
+  const rosterName = extractRosterName(workbookData.rawRows, workbookData.filePath);
+
+  return {
+    rosterName: rosterName,
+    sourceFormat: "",
+    defaultWo: extractWoFromText(rosterName) || extractWoFromText(workbookData.filePath),
+    defaultShipOrder: extractFixedValue(workbookData.rawRows, ["Ship Order #", "Ship Order", "SHIP O", "SHIP O."]),
+    totalPieces: Number(cleanCell(extractFixedValue(workbookData.rawRows, ["TOTAL PIECES"])) || 0)
+  };
+}
+
+function normalizeRow(cells, index, columns, metadata) {
+  const style = cleanUpper(getCell(cells, columns.style));
+  const sizeRaw = cleanUpper(getCell(cells, columns.size));
+  const number = sanitizeNumber(getCell(cells, columns.number));
+  const name = cleanUpper(getCell(cells, columns.name));
+  const color = cleanCell(getCell(cells, columns.color));
 
   return {
     sourceRow: index + 1,
-    wo: sanitizeNumber(cells[columns.wo]) || cleanCell(cells[columns.wo]),
-    shipOrder: cleanCell(cells[columns.shipOrder]),
+    wo: sanitizeNumber(getCell(cells, columns.wo)) || cleanCell(getCell(cells, columns.wo)) || metadata.defaultWo,
+    shipOrder: cleanCell(getCell(cells, columns.shipOrder)) || metadata.defaultShipOrder,
     style: style,
     color: color,
     line: inferLine(style),
@@ -179,9 +266,13 @@ function normalizeRow(cells, index, columns) {
     styleFamily: getStyleFamily(style),
     sizeRaw: sizeRaw,
     size: normalizeSize(sizeRaw),
-    qty: Number(cleanCell(cells[columns.qty]) || 1),
+    qty: Number(cleanCell(getCell(cells, columns.qty)) || 1),
     name: name,
-    number: number
+    number: number,
+    firstName: cleanUpper(getCell(cells, columns.firstName)),
+    position: cleanUpper(getCell(cells, columns.position)),
+    sourceFormat: columns.format || "on-demand",
+    rosterName: metadata.rosterName
   };
 }
 
@@ -242,9 +333,13 @@ function createOrderDataFromExcel(filePath) {
   const headerRowIndex = findHeaderRowIndex(workbookData.rawRows);
   const headerRow = workbookData.rawRows[headerRowIndex] || [];
   const columns = getColumnIndexes(headerRow);
+  const metadata = getWorkbookMetadata(workbookData);
+
+  metadata.sourceFormat = columns.format;
+
   const rows = workbookData.rawRows
     .map(function (cells, index) {
-      return normalizeRow(cells, index, columns);
+      return normalizeRow(cells, index, columns, metadata);
     })
     .filter(function (row, index) {
       if (index <= headerRowIndex) return false;
@@ -257,6 +352,11 @@ function createOrderDataFromExcel(filePath) {
   return {
     sourcePath: filePath,
     sheetName: workbookData.sheetName,
+    sourceFormat: columns.format,
+    rosterName: metadata.rosterName,
+    defaultWo: metadata.defaultWo,
+    defaultShipOrder: metadata.defaultShipOrder,
+    totalPieces: metadata.totalPieces,
     headerRow: headerRowIndex + 1,
     dataStartRow: headerRowIndex + 2,
     columns: columns,

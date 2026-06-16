@@ -86,7 +86,7 @@ No crear tablas separadas por metodo salvo que exista una necesidad real de dato
 Formato actual de `rmcop_nike_runs`:
 
 ```text
-id          -> TEXT PRIMARY KEY; lote usa AAAAMMDD-HHMMSS y manual usa manual-AAAAMMDD-HHMMSS
+id          -> TEXT PRIMARY KEY; manual y lote usan AAAAMMDD-HHMMSS
 created_at  -> solo fecha DD/MM/AAAA
 started_at  -> solo hora HH:MM:SS
 finished_at -> solo hora HH:MM:SS
@@ -107,6 +107,7 @@ clave       -> clave estable para detectar duplicados
 ```
 
 No guardar `output_path`.
+No prefijar el `id` con `manual-`; el metodo se identifica por `herramienta`.
 
 ## Validacion Incremental Pendiente
 
@@ -226,16 +227,17 @@ jsx/swatches.jsx
 
 Implementado como MVP en el panel.
 
-Entrada: Excel Nike On Demand.
+Entrada: Excel Nike On Demand o roster generico Nike con encabezados en fila 16.
 
 `js/services/createOrderData.js`:
 
 - Lee primera hoja con `xlsx`.
-- Detecta fila de encabezados por `WO`, `Style`, `Size`.
+- Detecta fila de encabezados por `WO`, `Style`, `Size`, o por layout roster generico `Style/Color/Qty/Size/Last Name/Player#`.
 - Normaliza filas.
 - Detecta equipo desde `Color`.
 - Detecta linea desde `Style`.
 - Detecta variante desde sufijo de style (`IH`, `TB`, o Standard).
+- En roster generico, infiere `WO` desde el nombre del roster/archivo y `Ship Order` desde el bloque superior.
 - Convierte tallas del Excel a tallas del panel.
 - Agrupa por talla y por familia de style.
 
@@ -264,7 +266,7 @@ El batch completo copia, abre, aplica, guarda PDF y cierra documento para cada f
 
 ## Excel Nike On Demand
 
-Columnas esperadas por encabezado:
+Columnas esperadas por encabezado para On Demand:
 
 ```text
 WO# / WO / Work Order
@@ -277,7 +279,17 @@ Last Name / Name
 # / Player# / Player Number / Number
 ```
 
-El Excel real analizado antes tenia datos desde fila 2 en un caso y otro layout con titulo en A2, encabezados en fila 3 y datos desde fila 4 para mockups. Por eso el importador del CEP detecta encabezados; la herramienta mockup-printer usa su propio layout.
+Roster generico soportado:
+
+```text
+A1  = nombre del roster; puede incluir "WO 173830 WO 173836"
+F5  = Ship Order # aproximado; se toma como ship_order fijo
+C14 = TOTAL PIECES
+Fila 16 = Style, Color, Qty, Size, First Name, Last Name, Player#, Position
+Fila 17+ = datos
+```
+
+El parser marca este formato como `generic-roster`. `Qty` se guarda como piezas en la BD, pero no duplica PDFs. `Last Name` es el texto que se aplica y `Player#` es el numero.
 
 Mapeo de tallas:
 

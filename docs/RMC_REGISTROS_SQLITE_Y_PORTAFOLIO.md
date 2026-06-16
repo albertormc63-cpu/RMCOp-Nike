@@ -95,11 +95,12 @@ Formato de `id`:
 
 ```text
 Por lote:  AAAAMMDD-HHMMSS
-Manual:    manual-AAAAMMDD-HHMMSS
+Manual:    AAAAMMDD-HHMMSS
 Fallback:  run-<timestamp> si no se manda id desde el panel
 ```
 
 `rmcop_nike_items.run_id` guarda ese mismo texto para enlazar cada PDF/pieza con su ronda.
+El metodo no se codifica en el `id`; se lee desde `herramienta`.
 
 `rmcop_nike_items` guarda los PDFs/piezas generadas y se enlaza por `run_id`:
 

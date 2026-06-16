@@ -5,50 +5,50 @@
   "minScale": 50,
   "defaults": {
     "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
-    "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 },
+    "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 },
     "A2000": { "nameMaxWidth": 8, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
-    "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 }
+    "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 }
   },
   "teams": {
     "Boston": {
       "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
-      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 },
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 },
       "A2000": { "nameMaxWidth": 8, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
-      "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 }
+      "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 }
     },
     "California": {
       "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
-      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 },
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 },
       "A2000": { "nameMaxWidth": 8, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
-      "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 }
+      "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 }
     },
     "Carolina": {
       "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
-      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 }
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 }
     },
     "Denver": {
       "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
-      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 }
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 }
     },
     "Maryland": {
       "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
-      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 },
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 },
       "A2000": { "nameMaxWidth": 8, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
-      "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 }
+      "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 }
     },
     "New York": {
       "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
-      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 },
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 },
       "A2000": { "nameMaxWidth": 8, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
-      "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 }
+      "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 }
     },
     "Philadelphia": {
       "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
-      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 }
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 }
     },
     "Utah": {
       "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
-      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 11, "smallNumberMaxWidth": 10 }
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 }
     }
   }
 }

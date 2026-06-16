@@ -60,7 +60,8 @@ La version CEP de mockups debe seguir siendo extension separada, con su propio `
   - Tablas propias: `rmcop_nike_runs`, `rmcop_nike_items`, `rmcop_nike_git_commits`.
   - `RMCOp-Nike Manual` y `RMCOp-Nike Por Lote` escriben rondas/items sin levantar server.
   - La diferencia entre metodos se guarda en el campo `herramienta`.
-  - `rmcop_nike_runs.id` es texto legible: `AAAAMMDD-HHMMSS` para lote y `manual-AAAAMMDD-HHMMSS` para manual.
+  - `rmcop_nike_runs.id` es texto legible: `AAAAMMDD-HHMMSS` para lote y manual.
+  - Manual/lote se distinguen por `herramienta`, no por prefijo en `id`.
   - `created_at` guarda fecha `DD/MM/AAAA`; `started_at`, `finished_at` y `tiempo` guardan horas/duracion `HH:MM:SS`.
   - `rmcop_nike_items` guarda `archivo` y `clave`, no `output_path`.
 - Validacion incremental implementada:
@@ -180,7 +181,7 @@ DESTINO_ELEGIDO/
     XL/
 ```
 
-Columnas soportadas por encabezado:
+Layout On Demand soportado por encabezado:
 
 ```text
 WO# / WO / Work Order
@@ -192,6 +193,23 @@ Qty / Pzs
 Last Name / Name
 # / Player# / Number
 ```
+
+Layout roster generico soportado:
+
+```text
+Fila 1: nombre del roster; si contiene "WO 173830 WO 173836", el panel usa WO 173830-173836.
+Fila 5 aprox: Ship Order #; se usa como ship_order fijo si no hay columna por fila.
+Fila 14: TOTAL PIECES; se muestra como referencia del roster.
+Fila 16: encabezados Style, Color, Qty, Size, First Name, Last Name, Player#, Position.
+Fila 17+: datos.
+```
+
+En roster generico:
+
+- `Color` detecta equipo por nickname.
+- `Qty` se guarda como piezas en la BD; no duplica PDFs.
+- `Last Name` es el texto que se aplica en Illustrator.
+- `Player#` es el numero para Standard/TB o la base del numero IH.
 
 Normalizaciones importantes:
 
