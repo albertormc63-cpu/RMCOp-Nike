@@ -51,15 +51,15 @@ rmc_mockuptool_runs
 
 No modificar tablas de otros CEP desde RMCOp-Nike.
 
-## Manual Y Por Lote
+## Manual, Personalizadas Y Genericas
 
-RMCOp-Nike tiene dos metodos de generar PDFs:
+RMCOp-Nike registra tres herramientas:
 
 - `RMCOp-Nike Manual`: flujo `1 Equipo` -> `2 Pedido` -> `3 Proceso`.
-- `RMCOp-Nike Por Lote`: flujo desde Excel para personalizadas.
+- `RMCOp-Nike Personalizadas`: flujo OD / On Demand desde Excel para personalizadas.
 - `RMCOp-Nike Genericas`: flujo desde Excel roster generico.
 
-Ambos usan las mismas tablas:
+Todas usan las mismas tablas:
 
 - `rmcop_nike_runs`: una operacion completa.
 - `rmcop_nike_items`: los PDFs/piezas generadas dentro de esa operacion.
@@ -83,7 +83,8 @@ created_at      DD/MM/AAAA
 started_at      HH:MM:SS
 finished_at     HH:MM:SS
 tiempo          HH:MM:SS
-herramienta     RMCOp-Nike Manual | RMCOp-Nike Por Lote | RMCOp-Nike Genericas
+herramienta     RMCOp-Nike Manual | RMCOp-Nike Personalizadas | RMCOp-Nike Genericas
+fecha_embarque  Fecha de embarque del Excel, cuando aplica
 pedidos
 piezas
 estilos
@@ -112,6 +113,7 @@ herramienta
 fila_excel
 wo
 ship_order
+fecha_embarque
 style
 style_family
 equipo
@@ -159,7 +161,7 @@ La meta es guardar datos en SQLite y despues exportar/resumir a Excel cuando hag
 
 ## Siguiente Paso Recomendado
 
-1. Dejar que `RMCOp-Nike Manual` y `RMCOp-Nike Por Lote` alimenten `RMC_CEP.sqlite` automaticamente.
+1. Dejar que `RMCOp-Nike Manual`, `RMCOp-Nike Personalizadas` y `RMCOp-Nike Genericas` alimenten `RMC_CEP.sqlite` automaticamente.
 2. Agregar validacion incremental desde Excel para detectar archivos ya creados y faltantes.
 3. Crear un script `Exportar metricas` que lea SQLite y actualice los Excel.
 4. Agregar un hook `post-commit` para guardar commits en `git_commits`.

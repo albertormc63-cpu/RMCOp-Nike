@@ -122,6 +122,7 @@
         const timeText = now.toTimeString().slice(0, 8);
         const batchId = `${dateText.replace(/-/g, "")}-${timeText.replace(/:/g, "")}`;
         const herramienta = getBatchToolName();
+        const fechaEmbarque = getBatchShippingDate(selectedRows);
         const finishedAt = now.toISOString();
         const startedAt = new Date(now.getTime() - elapsedMs).toISOString();
         const csvPath = services.path.join(logsFolder, "rmcop_nike_batch_log.csv");
@@ -175,6 +176,7 @@
                 hora: timeText,
                 herramienta: herramienta,
                 batchId: batchId,
+                fechaEmbarque: fechaEmbarque,
                 sourceRow: result.sourceRow,
                 wo: order.wo || "",
                 shipOrder: order.shipOrder || "",
@@ -217,6 +219,7 @@
                     finishedAt: finishedAt,
                     fecha: dateText,
                     herramienta: herramienta,
+                    fechaEmbarque: fechaEmbarque,
                     sourceExcel: state.batch.excelPath || "",
                     destinationFolder: state.batch.destinationFolder || "",
                     styleFilter: getSelectedBatchStyleFamilyLabel(),
@@ -570,6 +573,9 @@
         if (batchData.totalPieces) {
             lines.push(`Piezas roster: ${batchData.totalPieces}`);
         }
+        if (batchData.defaultShippingDate) {
+            lines.push(`Fecha embarque: ${batchData.defaultShippingDate}`);
+        }
         lines.push(`Encabezados: fila ${batchData.headerRow || 1} | Datos desde fila ${batchData.dataStartRow || 2}`);
         lines.push(`Filtro style: ${getSelectedBatchStyleFamilyLabel()} | Filtro talla: ${getSelectedBatchSizeLabel()}`);
         lines.push(`Validas en seleccion: ${getSelectedBatchRows().length} | Errores del Excel: ${invalidCount}`);
@@ -605,7 +611,7 @@
         lines.push("Primeras filas validas:");
         getSelectedBatchRows().slice(0, 14).forEach(function (row) {
             const outputInfo = state.batch.destinationFolder ? buildBatchOutputInfo(row) : { outputName: buildBatchOutputName(row) };
-            lines.push(`Fila ${row.sourceRow} | ${row.styleFamily}/${row.size} | ${row.team} | ${row.style} | ${row.name} #${row.number} | ${outputInfo.outputName}`);
+            lines.push(`Fila ${row.sourceRow} | ${row.styleFamily}/${row.size} | ${row.team} | ${row.style} | ${row.name} #${row.number} | Emb ${row.shippingDate || "-"} | ${outputInfo.outputName}`);
         });
 
         if (validation) {
@@ -723,7 +729,15 @@
     }
 
     function getBatchToolName() {
-        return state.batch.mode === "generic" ? "RMCOp-Nike Genericas" : "RMCOp-Nike Por Lote";
+        return state.batch.mode === "generic" ? "RMCOp-Nike Genericas" : "RMCOp-Nike Personalizadas";
+    }
+
+    function getBatchShippingDate(rows) {
+        const rowWithDate = (rows || []).find(function (row) {
+            return row && row.shippingDate;
+        });
+
+        return rowWithDate ? rowWithDate.shippingDate : (state.batch.data && state.batch.data.defaultShippingDate) || "";
     }
 
     function renderBatchModeButtons() {

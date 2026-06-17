@@ -69,18 +69,18 @@ rmc_mockuptool_runs
 
 `cep_registry` registra que app escribe en que tabla. No mezclar datos de RMCOp-Nike con las tablas del MockupTool.
 
-Cuando se corre `RMCOp-Nike Manual` o `RMCOp-Nike Por Lote`, `js/main.js` inserta rondas/items en SQLite via `js/services/portfolioDb.js`.
+Cuando se corre `RMCOp-Nike Manual`, `RMCOp-Nike Personalizadas` o `RMCOp-Nike Genericas`, `js/main.js` inserta rondas/items en SQLite via `js/services/portfolioDb.js`.
 El batch tambien conserva CSV/JSONL en `06_Logs` como respaldo plano.
 
-RMCOp-Nike tiene dos metodos de generacion:
+RMCOp-Nike tiene tres herramientas registradas en BD:
 
 ```text
-RMCOp-Nike Manual   -> 1 Equipo / 2 Pedido / 3 Proceso, usado tambien para Genericas.
-RMCOp-Nike Por Lote -> Excel batch, usado para Personalizadas/lotes.
+RMCOp-Nike Manual -> 1 Equipo / 2 Pedido / 3 Proceso.
+RMCOp-Nike Personalizadas -> Excel OD / On Demand, usado para personalizadas.
 RMCOp-Nike Genericas -> Excel roster generico, copia/aplica/guarda desde batch pero con salida/naming propio.
 ```
 
-Ambos deben guardarse en las mismas tablas `rmcop_nike_runs` y `rmcop_nike_items`.
+Todas deben guardarse en las mismas tablas `rmcop_nike_runs` y `rmcop_nike_items`.
 La diferencia se guarda en el campo `herramienta`.
 No crear tablas separadas por metodo salvo que exista una necesidad real de datos incompatibles.
 
@@ -92,7 +92,8 @@ created_at  -> solo fecha DD/MM/AAAA
 started_at  -> solo hora HH:MM:SS
 finished_at -> solo hora HH:MM:SS
 tiempo      -> duracion HH:MM:SS
-herramienta -> RMCOp-Nike Manual | RMCOp-Nike Por Lote | RMCOp-Nike Genericas
+herramienta -> RMCOp-Nike Manual | RMCOp-Nike Personalizadas | RMCOp-Nike Genericas
+fecha_embarque -> fecha de embarque extraida del Excel cuando aplica
 ```
 
 No usar columna `fecha`, `source_excel` ni `destination_folder`.
@@ -102,7 +103,8 @@ Formato actual de `rmcop_nike_items`:
 
 ```text
 run_id      -> enlaza con rmcop_nike_runs.id
-herramienta -> permite leer Manual/Por Lote desde el item
+herramienta -> permite leer Manual/Personalizada/Genericas desde el item
+fecha_embarque -> fecha de embarque extraida del Excel cuando aplica
 archivo     -> nombre de archivo final
 clave       -> clave estable para detectar duplicados
 ```
@@ -238,6 +240,8 @@ Entrada: Excel Nike On Demand o roster generico Nike con encabezados en fila 16.
 - Detecta equipo desde `Color`.
 - Detecta linea desde `Style`.
 - Detecta variante desde sufijo de style (`IH`, `TB`, o Standard).
+- En OD/Personalizadas, extrae fecha de embarque desde el texto superior, ejemplo `26 JUNIO`.
+- En listas resumen para MockupTool tipo `NIKE ST/IH/TB/AS`, extrae fecha de embarque desde columna `Emb`.
 - En roster generico, infiere `WO` desde el nombre del roster/archivo y `Ship Order` desde el bloque superior.
 - Convierte tallas del Excel a tallas del panel.
 - Agrupa por talla y por familia de style.
@@ -293,6 +297,7 @@ Fila 17+ = datos
 ```
 
 El parser marca este formato como `generic-roster`. `Qty` se guarda como piezas en la BD, pero no duplica PDFs. `Last Name` es el texto que se aplica y `Player#` es el numero.
+No confundir con archivos resumen tipo `NIKE ST/IH/TB/AS 17 JUL.xlsx` con `WO#`, `Estilo`, `Roster`, `Pzs`, `COLOR / EQUIPO`, `DivReq`, `Emb`: esos no traen talla/nombre/numero por pieza para Illustrator; sirven mejor para MockupTool/listas/resumen y para fecha de embarque.
 
 Mapeo de tallas:
 
@@ -471,7 +476,7 @@ Nota: en la sesion del manual, el render formal con LibreOffice fallo por librer
    - previews.
    - placeholders de texto.
 3. Probar IH con 1, 2 y 3 digitos en documentos reales.
-4. Confirmar registros SQLite desde Illustrator real para `RMCOp-Nike Manual` y `RMCOp-Nike Por Lote`.
+4. Confirmar registros SQLite desde Illustrator real para `RMCOp-Nike Manual`, `RMCOp-Nike Personalizadas` y `RMCOp-Nike Genericas`.
 5. Confirmar si `Qty/Pzs` debe aparecer en algun reporte dentro del CEP o seguir ignorado por diseno.
 6. Si se retoma dashboard LAN/admin, hacerlo separado del panel CEP.
 7. Continuar `RMC MockupTool` en su repo/carpeta separada.

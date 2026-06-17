@@ -45,6 +45,23 @@ function cleanUpper(value) {
   return cleanCell(value).toUpperCase();
 }
 
+function normalizeDateText(value) {
+  return cleanUpper(value)
+    .replace(/\bENERO\b/g, "ENE")
+    .replace(/\bFEBRERO\b/g, "FEB")
+    .replace(/\bMARZO\b/g, "MAR")
+    .replace(/\bABRIL\b/g, "ABR")
+    .replace(/\bMAYO\b/g, "MAY")
+    .replace(/\bJUNIO\b/g, "JUN")
+    .replace(/\bJULIO\b/g, "JUL")
+    .replace(/\bAGOSTO\b/g, "AGO")
+    .replace(/\bSEPTIEMBRE\b/g, "SEP")
+    .replace(/\bSETIEMBRE\b/g, "SEP")
+    .replace(/\bOCTUBRE\b/g, "OCT")
+    .replace(/\bNOVIEMBRE\b/g, "NOV")
+    .replace(/\bDICIEMBRE\b/g, "DIC");
+}
+
 function sanitizeNumber(value) {
   return cleanCell(value).replace(/[^0-9]/g, "");
 }
@@ -146,6 +163,7 @@ function getColumnIndexes(headerRow) {
     name: findColumnIndex(headerRow, ["Last Name", "Name"], isGenericRoster ? 5 : 6),
     number: findColumnIndex(headerRow, ["#", "Player#", "Player Number", "Number"], isGenericRoster ? 6 : 7),
     position: findColumnIndex(headerRow, ["Position"], isGenericRoster ? 7 : null),
+    shippingDate: findColumnIndex(headerRow, ["Emb", "Fecha Embarque", "Fecha de Embarque", "Ship Date"], null),
     format: isGenericRoster ? "generic-roster" : "on-demand"
   };
 }
@@ -234,6 +252,34 @@ function extractWoFromText(value) {
   return loose ? loose[1] : "";
 }
 
+function extractShippingDateFromText(value) {
+  const text = normalizeDateText(value);
+  const match = text.match(/\b(\d{1,2}[\s-]+[A-Z]{3})\b/);
+  return match ? match[1].replace(/\s+/g, "-") : "";
+}
+
+function extractDefaultShippingDate(rawRows) {
+  const fixedValue = extractFixedValue(rawRows, ["Emb", "Fecha Embarque", "Fecha de Embarque", "Ship Date"]);
+
+  if (fixedValue) {
+    return normalizeDateText(fixedValue);
+  }
+
+  for (let index = 0; index < Math.min(rawRows.length, 5); index++) {
+    const row = rawRows[index] || [];
+
+    for (let cellIndex = 0; cellIndex < row.length; cellIndex++) {
+      const dateText = extractShippingDateFromText(row[cellIndex]);
+
+      if (dateText) {
+        return dateText;
+      }
+    }
+  }
+
+  return "";
+}
+
 function getWorkbookMetadata(workbookData) {
   const rosterName = extractRosterName(workbookData.rawRows, workbookData.filePath);
   const rosterNumberMatch = rosterName.match(/\b[0-9]{4,}-[0-9]{2,}\b/) ||
@@ -245,6 +291,7 @@ function getWorkbookMetadata(workbookData) {
     sourceFormat: "",
     defaultWo: extractWoFromText(rosterName) || extractWoFromText(workbookData.filePath),
     defaultShipOrder: extractFixedValue(workbookData.rawRows, ["Ship Order #", "Ship Order", "SHIP O", "SHIP O."]),
+    defaultShippingDate: extractDefaultShippingDate(workbookData.rawRows),
     totalPieces: Number(cleanCell(extractFixedValue(workbookData.rawRows, ["TOTAL PIECES"])) || 0)
   };
 }
@@ -274,6 +321,7 @@ function normalizeRow(cells, index, columns, metadata) {
     number: number,
     firstName: cleanUpper(getCell(cells, columns.firstName)),
     position: cleanUpper(getCell(cells, columns.position)),
+    shippingDate: normalizeDateText(getCell(cells, columns.shippingDate)) || metadata.defaultShippingDate,
     sourceFormat: columns.format || "on-demand",
     rosterName: metadata.rosterName,
     rosterNumber: metadata.rosterNumber
@@ -361,6 +409,7 @@ function createOrderDataFromExcel(filePath) {
     rosterNumber: metadata.rosterNumber,
     defaultWo: metadata.defaultWo,
     defaultShipOrder: metadata.defaultShipOrder,
+    defaultShippingDate: metadata.defaultShippingDate,
     totalPieces: metadata.totalPieces,
     headerRow: headerRowIndex + 1,
     dataStartRow: headerRowIndex + 2,

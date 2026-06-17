@@ -167,6 +167,7 @@ CREATE TABLE IF NOT EXISTS ${RUNS_TABLE} (
   finished_at TEXT,
   tiempo TEXT,
   herramienta TEXT,
+  fecha_embarque TEXT,
   pedidos INTEGER DEFAULT 0,
   piezas INTEGER DEFAULT 0,
   estilos INTEGER DEFAULT 0,
@@ -195,6 +196,7 @@ CREATE TABLE IF NOT EXISTS ${ITEMS_TABLE} (
   estado TEXT,
   error TEXT,
   tiempo TEXT,
+  fecha_embarque TEXT,
   clave TEXT,
   FOREIGN KEY (run_id) REFERENCES ${RUNS_TABLE}(id) ON DELETE CASCADE
 );
@@ -225,8 +227,12 @@ ON CONFLICT(source_app) DO UPDATE SET
 `);
 
   ensureColumn(deps, dbPath, ITEMS_TABLE, "clave", "TEXT");
+  ensureColumn(deps, dbPath, RUNS_TABLE, "fecha_embarque", "TEXT");
+  ensureColumn(deps, dbPath, ITEMS_TABLE, "fecha_embarque", "TEXT");
   backfillMissingItemKeys(deps, dbPath);
   execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_items_clave ON ${ITEMS_TABLE}(clave);`);
+  execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_runs_fecha_embarque ON ${RUNS_TABLE}(fecha_embarque);`);
+  execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_items_fecha_embarque ON ${ITEMS_TABLE}(fecha_embarque);`);
 }
 
 function recordBatchRun(deps, dbPath, payload) {
@@ -234,7 +240,8 @@ function recordBatchRun(deps, dbPath, payload) {
   const results = payload.results || [];
   const now = new Date();
   const runId = run.id || `run-${Date.now()}`;
-  const herramienta = run.herramienta || "RMCOp-Nike Por Lote";
+  const herramienta = run.herramienta || "RMCOp-Nike Personalizadas";
+  const fechaEmbarque = run.fechaEmbarque || "";
   const elapsedSeconds = Math.max(0, Math.round(Number(run.elapsedSeconds) || 0));
   const totalPieces = results.reduce(function (total, result) {
     const order = result.order || {};
@@ -252,7 +259,7 @@ function recordBatchRun(deps, dbPath, payload) {
 
   const runSql = `
 INSERT OR REPLACE INTO ${RUNS_TABLE} (
-  id, created_at, started_at, finished_at, tiempo, herramienta,
+  id, created_at, started_at, finished_at, tiempo, herramienta, fecha_embarque,
   pedidos, piezas, estilos, ok, errores, observaciones
 ) VALUES (
   ${sqlText(runId)},
@@ -261,6 +268,7 @@ INSERT OR REPLACE INTO ${RUNS_TABLE} (
   ${sqlText(run.finishedAt ? formatTimeOnly(run.finishedAt) : formatTimeOnly(now))},
   ${sqlText(formatDuration(elapsedSeconds))},
   ${sqlText(herramienta)},
+  ${sqlText(fechaEmbarque)},
   ${sqlNumber(results.length)},
   ${sqlNumber(totalPieces)},
   ${sqlNumber(Object.keys(styles).length)},
@@ -280,7 +288,7 @@ DELETE FROM ${ITEMS_TABLE} WHERE run_id = ${sqlText(runId)};
 INSERT INTO ${ITEMS_TABLE} (
   run_id, herramienta, fila_excel, wo, ship_order, style, style_family,
   equipo, variante, version, talla, piezas, nombre, numero, archivo,
-  estado, error, tiempo, clave
+  estado, error, tiempo, fecha_embarque, clave
 ) VALUES (
   ${sqlText(runId)},
   ${sqlText(herramienta)},
@@ -300,6 +308,7 @@ INSERT INTO ${ITEMS_TABLE} (
   ${sqlText(result.ok ? "Completado" : "Error")},
   ${sqlText(result.ok ? "" : (result.message || "Error desconocido"))},
   ${sqlText(formatDuration(Math.max(1, Math.round((result.durationMs || 0) / 1000))))},
+  ${sqlText(order.shippingDate || fechaEmbarque)},
   ${sqlText(clave)}
 );
 `;

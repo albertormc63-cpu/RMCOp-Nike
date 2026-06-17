@@ -58,7 +58,7 @@ La version CEP de mockups debe seguir siendo extension separada, con su propio `
 - Registro local de produccion conectado a SQLite compartido:
   - BD: `/Users/rmlsub1/Documents/RMC - CEP/RMC_BD/RMC_CEP.sqlite`.
   - Tablas propias: `rmcop_nike_runs`, `rmcop_nike_items`, `rmcop_nike_git_commits`.
-  - `RMCOp-Nike Manual` y `RMCOp-Nike Por Lote` escriben rondas/items sin levantar server.
+  - `RMCOp-Nike Manual`, `RMCOp-Nike Personalizadas` y `RMCOp-Nike Genericas` escriben rondas/items sin levantar server.
   - La diferencia entre metodos se guarda en el campo `herramienta`.
   - `rmcop_nike_runs.id` es texto legible: `AAAAMMDD-HHMMSS` para lote y manual.
   - Manual/lote se distinguen por `herramienta`, no por prefijo en `id`.
@@ -186,6 +186,7 @@ DESTINO_ELEGIDO/
 ```
 
 En modo `Genericas`, el destino se llena automaticamente con la carpeta donde vive el Excel y los PDFs se guardan directo en esa raiz, sin subcarpetas por style/talla.
+Los registros de BD guardan `fecha_embarque` en runs/items. En OD se extrae del texto de la fila 2, por ejemplo `26 JUNIO`; en listas resumen para MockupTool tipo ST/IH/TB/AS se lee desde la columna `Emb`.
 
 Layout On Demand soportado por encabezado:
 
@@ -210,6 +211,8 @@ Fila 16: encabezados Style, Color, Qty, Size, First Name, Last Name, Player#, Po
 Fila 17+: datos.
 ```
 
+Nota de contexto: archivos resumen tipo `NIKE ST/IH/TB/AS 17 JUL.xlsx` con columnas `WO#`, `Estilo`, `Roster`, `Pzs`, `COLOR / EQUIPO`, `DivReq`, `Emb` no son el roster detallado que el CEP usa para generar plantillas en Illustrator. Esos archivos sirven mejor para MockupTool/listas/resumen y para ubicar `fecha_embarque`.
+
 En roster generico:
 
 - `Color` detecta equipo por nickname.
@@ -217,7 +220,7 @@ En roster generico:
 - `Last Name` es el texto que se aplica en Illustrator.
 - `Player#` es el numero para Standard/TB o la base del numero IH.
 - El nombre final inicia con el numero de roster, por ejemplo `79235-26 PLL-New York Atlas A1000H SM 1.pdf`.
-- La BD registra estas filas como `RMCOp-Nike Genericas`, no como `RMCOp-Nike Por Lote`.
+- La BD registra estas filas como `RMCOp-Nike Genericas`; OD/personalizadas se registran como `RMCOp-Nike Personalizadas`.
 
 Normalizaciones importantes:
 
