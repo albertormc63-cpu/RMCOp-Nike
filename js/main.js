@@ -14,6 +14,7 @@
         selectedVariant: catalog.variants[0].name,
         lastOutputPath: "",
         batch: {
+            mode: "personalized",
             excelPath: "",
             destinationFolder: "",
             data: null,
@@ -120,6 +121,7 @@
         ].join("-");
         const timeText = now.toTimeString().slice(0, 8);
         const batchId = `${dateText.replace(/-/g, "")}-${timeText.replace(/:/g, "")}`;
+        const herramienta = getBatchToolName();
         const finishedAt = now.toISOString();
         const startedAt = new Date(now.getTime() - elapsedMs).toISOString();
         const csvPath = services.path.join(logsFolder, "rmcop_nike_batch_log.csv");
@@ -151,7 +153,7 @@
             return [
                 dateText,
                 timeText,
-                "RMCOp-Nike Por Lote",
+                herramienta,
                 batchId,
                 order.wo || "",
                 order.style || "",
@@ -171,7 +173,7 @@
             return JSON.stringify({
                 fecha: dateText,
                 hora: timeText,
-                herramienta: "RMCOp-Nike Por Lote",
+                herramienta: herramienta,
                 batchId: batchId,
                 sourceRow: result.sourceRow,
                 wo: order.wo || "",
@@ -214,7 +216,7 @@
                     startedAt: startedAt,
                     finishedAt: finishedAt,
                     fecha: dateText,
-                    herramienta: "RMCOp-Nike Por Lote",
+                    herramienta: herramienta,
                     sourceExcel: state.batch.excelPath || "",
                     destinationFolder: state.batch.destinationFolder || "",
                     styleFilter: getSelectedBatchStyleFamilyLabel(),
@@ -551,12 +553,16 @@
         }
 
         const lines = [];
+        lines.push(`Modo lote: ${getBatchModeLabel()}`);
         lines.push(`Hoja: ${batchData.sheetName}`);
         if (batchData.sourceFormat) {
             lines.push(`Formato: ${batchData.sourceFormat}`);
         }
         if (batchData.rosterName) {
             lines.push(`Roster: ${batchData.rosterName}`);
+        }
+        if (batchData.rosterNumber) {
+            lines.push(`Numero roster: ${batchData.rosterNumber}`);
         }
         if (batchData.defaultWo || batchData.defaultShipOrder) {
             lines.push(`WO/Ship: ${batchData.defaultWo || "sin WO"} / ${batchData.defaultShipOrder || "sin Ship Order"}`);
@@ -568,6 +574,11 @@
         lines.push(`Filtro style: ${getSelectedBatchStyleFamilyLabel()} | Filtro talla: ${getSelectedBatchSizeLabel()}`);
         lines.push(`Validas en seleccion: ${getSelectedBatchRows().length} | Errores del Excel: ${invalidCount}`);
         lines.push("");
+
+        if (state.batch.mode === "generic" && batchData.sourceFormat !== "generic-roster") {
+            lines.push("Aviso: modo Genericas espera roster con encabezados en fila 16.");
+            lines.push("");
+        }
 
         if (!state.batch.destinationFolder) {
             lines.push("Validacion: elige destino batch para revisar existentes/faltantes.");
@@ -593,7 +604,8 @@
         lines.push("");
         lines.push("Primeras filas validas:");
         getSelectedBatchRows().slice(0, 14).forEach(function (row) {
-            lines.push(`Fila ${row.sourceRow} | ${row.styleFamily}/${row.size} | ${row.wo} | ${row.team} | ${row.style} | ${row.name} #${row.number}`);
+            const outputInfo = state.batch.destinationFolder ? buildBatchOutputInfo(row) : { outputName: buildBatchOutputName(row) };
+            lines.push(`Fila ${row.sourceRow} | ${row.styleFamily}/${row.size} | ${row.team} | ${row.style} | ${row.name} #${row.number} | ${outputInfo.outputName}`);
         });
 
         if (validation) {
@@ -706,6 +718,28 @@
         return state.batch.selectedSizes.length ? state.batch.selectedSizes.join(", ") : "todas";
     }
 
+    function getBatchModeLabel() {
+        return state.batch.mode === "generic" ? "Genericas" : "Personalizadas";
+    }
+
+    function getBatchToolName() {
+        return state.batch.mode === "generic" ? "RMCOp-Nike Genericas" : "RMCOp-Nike Por Lote";
+    }
+
+    function renderBatchModeButtons() {
+        document.querySelectorAll("[data-batch-mode]").forEach(function (button) {
+            button.classList.toggle("active", button.getAttribute("data-batch-mode") === state.batch.mode);
+        });
+    }
+
+    function setBatchMode(mode) {
+        state.batch.mode = mode === "generic" ? "generic" : "personalized";
+        clearBatchValidation();
+        renderBatchModeButtons();
+        renderBatchSummary();
+        console.log(`Modo lote: ${getBatchModeLabel()}`);
+    }
+
     function clearBatchValidation() {
         state.batch.validation = null;
     }
@@ -742,14 +776,36 @@
 
     function buildBatchOutputInfo(order) {
         const services = nodeRuntime.services;
-        const styleFamilyFolder = order.styleFamily || getStyleFamily(order.style);
-        const destinationFolder = services.path.join(state.batch.destinationFolder, styleFamilyFolder, order.size);
-        const outputName = services.buildOutputName(order);
+        const destinationFolder = getBatchDestinationFolderForOrder(order);
+        const outputName = buildBatchOutputName(order);
 
         return {
             outputName: outputName,
             outputPath: services.path.join(destinationFolder, outputName)
         };
+    }
+
+    function getBatchDestinationFolderForOrder(order) {
+        const services = nodeRuntime.services;
+
+        if (state.batch.mode === "generic") {
+            return state.batch.destinationFolder;
+        }
+
+        const styleFamilyFolder = order.styleFamily || getStyleFamily(order.style);
+        return services.path.join(state.batch.destinationFolder, styleFamilyFolder, order.size);
+    }
+
+    function buildBatchOutputName(order) {
+        const services = nodeRuntime.services;
+
+        if (state.batch.mode !== "generic") {
+            return services.buildOutputName(order);
+        }
+
+        return services.buildOutputName(Object.assign({}, order, {
+            wo: order.rosterNumber || order.rosterName || order.wo
+        }));
     }
 
     function validateBatchSelection() {
@@ -855,12 +911,12 @@
         }
 
         if (!validation) {
-            button.textContent = "Crear, aplicar y cerrar talla seleccionada";
+            button.textContent = state.batch.mode === "generic" ? "Crear genericas, aplicar y cerrar" : "Crear, aplicar y cerrar talla seleccionada";
             return;
         }
 
         const missingCount = validation.counts.FALTANTE || 0;
-        button.textContent = missingCount ? `Procesar faltantes (${missingCount})` : "Sin faltantes por procesar";
+        button.textContent = missingCount ? `Procesar faltantes ${getBatchModeLabel().toLowerCase()} (${missingCount})` : "Sin faltantes por procesar";
     }
 
     function formatElapsedTime(milliseconds) {
@@ -932,10 +988,15 @@
 
         state.batch.excelPath = excelPath;
         state.batch.data = services.createOrderDataFromExcel(excelPath);
+        state.batch.mode = state.batch.data.sourceFormat === "generic-roster" ? "generic" : "personalized";
+        if (state.batch.mode === "generic" && services.path) {
+            state.batch.destinationFolder = services.path.dirname(excelPath);
+        }
         state.batch.selectedStyleFamily = "";
         state.batch.selectedSizes = [];
         state.batch.lastResults = [];
         clearBatchValidation();
+        renderBatchModeButtons();
         renderBatchSummary();
 
         console.log(`Excel importado: ${excelPath}`);
@@ -970,7 +1031,7 @@
             style: order.style,
             size: order.size
         });
-        const outputName = services.buildOutputName(order);
+        const outputName = buildBatchOutputName(order);
 
         return {
             order: order,
@@ -982,9 +1043,7 @@
 
     async function createBatchCopyForOrder(order) {
         const services = nodeRuntime.services;
-        const styleFamilyFolder = order.styleFamily || getStyleFamily(order.style);
-        const sizeDestinationFolder = services.path.join(state.batch.destinationFolder, styleFamilyFolder, order.size);
-        const preview = buildBatchPreview(order, sizeDestinationFolder);
+        const preview = buildBatchPreview(order, getBatchDestinationFolderForOrder(order));
 
         return services.copyTemplate({
             templatePath: preview.templatePath,
@@ -1493,6 +1552,13 @@
                 showIllustratorAlert(error.message);
             });
         });
+
+        document.querySelectorAll("[data-batch-mode]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                setBatchMode(button.getAttribute("data-batch-mode"));
+            });
+        });
+        renderBatchModeButtons();
 
         document.getElementById("btnChooseBatchExcel").addEventListener("click", function () {
             try {

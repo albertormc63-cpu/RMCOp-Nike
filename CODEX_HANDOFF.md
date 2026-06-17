@@ -77,6 +77,7 @@ RMCOp-Nike tiene dos metodos de generacion:
 ```text
 RMCOp-Nike Manual   -> 1 Equipo / 2 Pedido / 3 Proceso, usado tambien para Genericas.
 RMCOp-Nike Por Lote -> Excel batch, usado para Personalizadas/lotes.
+RMCOp-Nike Genericas -> Excel roster generico, copia/aplica/guarda desde batch pero con salida/naming propio.
 ```
 
 Ambos deben guardarse en las mismas tablas `rmcop_nike_runs` y `rmcop_nike_items`.
@@ -91,7 +92,7 @@ created_at  -> solo fecha DD/MM/AAAA
 started_at  -> solo hora HH:MM:SS
 finished_at -> solo hora HH:MM:SS
 tiempo      -> duracion HH:MM:SS
-herramienta -> RMCOp-Nike Manual | RMCOp-Nike Por Lote
+herramienta -> RMCOp-Nike Manual | RMCOp-Nike Por Lote | RMCOp-Nike Genericas
 ```
 
 No usar columna `fecha`, `source_excel` ni `destination_folder`.
@@ -243,6 +244,7 @@ Entrada: Excel Nike On Demand o roster generico Nike con encabezados en fila 16.
 
 UI batch en `index.html` + `main.js`:
 
+- Seleccionar tipo de lote: `Personalizadas` o `Genericas`.
 - Seleccionar Excel.
 - Seleccionar destino batch.
 - Filtrar por familia de style.
@@ -263,6 +265,7 @@ DESTINO/
 ```
 
 El batch completo copia, abre, aplica, guarda PDF y cierra documento para cada fila. La funcion JSX usada para guardar/cerrar es `RMCNike_savePdfAndCloseActiveDocument(filePath)`.
+En modo `Genericas`, el nombre final usa el numero de roster al inicio en vez de WO, por ejemplo `79235-26 PLL-New York Atlas A1000H SM 1.pdf`, y se guarda directo en la carpeta raiz del Excel, sin subcarpetas style/talla.
 
 ## Excel Nike On Demand
 

@@ -56,7 +56,8 @@ No modificar tablas de otros CEP desde RMCOp-Nike.
 RMCOp-Nike tiene dos metodos de generar PDFs:
 
 - `RMCOp-Nike Manual`: flujo `1 Equipo` -> `2 Pedido` -> `3 Proceso`.
-- `RMCOp-Nike Por Lote`: flujo desde Excel.
+- `RMCOp-Nike Por Lote`: flujo desde Excel para personalizadas.
+- `RMCOp-Nike Genericas`: flujo desde Excel roster generico.
 
 Ambos usan las mismas tablas:
 
@@ -82,7 +83,7 @@ created_at      DD/MM/AAAA
 started_at      HH:MM:SS
 finished_at     HH:MM:SS
 tiempo          HH:MM:SS
-herramienta     RMCOp-Nike Manual | RMCOp-Nike Por Lote
+herramienta     RMCOp-Nike Manual | RMCOp-Nike Por Lote | RMCOp-Nike Genericas
 pedidos
 piezas
 estilos

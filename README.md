@@ -162,7 +162,11 @@ No hardcodear rutas nuevas en `main.js`. Las rutas activas se muestran en la pag
 
 ## Flujo Por Lote Desde Excel
 
-El panel tiene pagina batch para importar Excel Nike On Demand, revisar filas validas/invalidas y procesar por familia de style y talla.
+El panel tiene pagina batch para importar Excel, revisar filas validas/invalidas y procesar por familia de style y talla.
+Dentro de esta pagina hay dos modos:
+
+- `Personalizadas`: flujo On Demand por lote normal.
+- `Genericas`: roster generico; combina la lectura Excel de lote con la copia/aplicacion/cierre automatico de Illustrator.
 
 Validacion incremental: despues de importar el Excel y elegir destino batch, el panel compara contra archivos existentes y `RMC_CEP.sqlite`, y separa filas ya creadas, faltantes, con conflicto e invalidas. Solo los faltantes se procesan.
 
@@ -180,6 +184,8 @@ DESTINO_ELEGIDO/
     2X/
     XL/
 ```
+
+En modo `Genericas`, el destino se llena automaticamente con la carpeta donde vive el Excel y los PDFs se guardan directo en esa raiz, sin subcarpetas por style/talla.
 
 Layout On Demand soportado por encabezado:
 
@@ -210,6 +216,8 @@ En roster generico:
 - `Qty` se guarda como piezas en la BD; no duplica PDFs.
 - `Last Name` es el texto que se aplica en Illustrator.
 - `Player#` es el numero para Standard/TB o la base del numero IH.
+- El nombre final inicia con el numero de roster, por ejemplo `79235-26 PLL-New York Atlas A1000H SM 1.pdf`.
+- La BD registra estas filas como `RMCOp-Nike Genericas`, no como `RMCOp-Nike Por Lote`.
 
 Normalizaciones importantes:
 

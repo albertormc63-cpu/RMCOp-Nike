@@ -236,9 +236,12 @@ function extractWoFromText(value) {
 
 function getWorkbookMetadata(workbookData) {
   const rosterName = extractRosterName(workbookData.rawRows, workbookData.filePath);
+  const rosterNumberMatch = rosterName.match(/\b[0-9]{4,}-[0-9]{2,}\b/) ||
+    String(workbookData.filePath || "").match(/\b[0-9]{4,}-[0-9]{2,}\b/);
 
   return {
     rosterName: rosterName,
+    rosterNumber: rosterNumberMatch ? rosterNumberMatch[0] : "",
     sourceFormat: "",
     defaultWo: extractWoFromText(rosterName) || extractWoFromText(workbookData.filePath),
     defaultShipOrder: extractFixedValue(workbookData.rawRows, ["Ship Order #", "Ship Order", "SHIP O", "SHIP O."]),
@@ -272,7 +275,8 @@ function normalizeRow(cells, index, columns, metadata) {
     firstName: cleanUpper(getCell(cells, columns.firstName)),
     position: cleanUpper(getCell(cells, columns.position)),
     sourceFormat: columns.format || "on-demand",
-    rosterName: metadata.rosterName
+    rosterName: metadata.rosterName,
+    rosterNumber: metadata.rosterNumber
   };
 }
 
@@ -354,6 +358,7 @@ function createOrderDataFromExcel(filePath) {
     sheetName: workbookData.sheetName,
     sourceFormat: columns.format,
     rosterName: metadata.rosterName,
+    rosterNumber: metadata.rosterNumber,
     defaultWo: metadata.defaultWo,
     defaultShipOrder: metadata.defaultShipOrder,
     totalPieces: metadata.totalPieces,
