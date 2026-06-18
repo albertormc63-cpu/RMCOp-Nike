@@ -1,6 +1,6 @@
 # RMC CEP UI/UX Manifest
 
-Ultima actualizacion: 2026-06-12.
+Ultima actualizacion: 2026-06-17.
 
 Este archivo define la estetica, estructura, reglas de interfaz y metricas visuales para paneles CEP de RMC.
 
@@ -152,10 +152,17 @@ footer credito
 
 ### Batch / Produccion
 
-- Mostrar conteos visibles: validas, errores, tallas.
+- Separar `Personalizadas` y `Genericas` con selector de modo visible.
+- Cambiar de modo debe limpiar Excel, destino, filtros y resultados del modo anterior.
+- Mostrar conteos visibles: validas, errores, tallas y faltantes.
 - Timer con fuente monospace.
 - Detalles largos en bloque con scroll.
 - Filtros por style y talla como cards compactas.
+- Mostrar el Excel y destino efectivos antes de habilitar procesamiento.
+- Personalizadas usa destino manual y subcarpetas style/talla.
+- Genericas autocompleta la carpeta del Excel y guarda en la raiz.
+- El boton principal debe decir cuantos faltantes procesara o `Sin faltantes por procesar`.
+- La validacion nunca debe iniciar copias ni Illustrator por si sola.
 
 ### Logs
 
@@ -194,6 +201,7 @@ Evitar:
 - Las acciones destructivas o de sobreescritura deben pedir confirmacion.
 - Los flujos manual y batch deben mantenerse separados.
 - Los estados de batch deben incluir conteo de OK, errores y tiempo.
+- Los cruces de Excel deben alertarse desde Illustrator: OD en Genericas, roster generico en Personalizadas o lista resumen no procesable.
 - No hardcodear rutas nuevas en archivos de coordinacion UI como `js/main.js`; usar configuracion o helpers.
 
 ## Manual Vs Batch
@@ -202,6 +210,22 @@ El flujo manual existe para pedidos individuales y pruebas controladas.
 El flujo batch existe para produccion desde Excel.
 
 No mezclar comportamiento entre ambos sin una razon clara.
+
+Dentro de batch tampoco deben mezclarse los estados de Personalizadas y Genericas. La estructura del Excel confirma el modo; el nombre solo funciona como pista operativa.
+
+## Estados De Validacion Batch
+
+La vista de detalle debe distinguir:
+
+| Estado | Significado UX |
+| --- | --- |
+| `FALTANTE` | Listo para procesar. |
+| `YA_CREADO` | Archivo y registro ya existen. |
+| `ARCHIVO_SIN_REGISTRO` | Requiere revision; no regenerar automaticamente. |
+| `REGISTRADO_SIN_ARCHIVO` | Requiere revision; no regenerar automaticamente. |
+| `CONFLICTO` | Hay claves repetidas en la seleccion. |
+
+Solo `FALTANTE` entra al proceso. Las filas invalidas del Excel se muestran aparte con su fila y errores.
 
 ## Variantes RMCOp-Nike
 

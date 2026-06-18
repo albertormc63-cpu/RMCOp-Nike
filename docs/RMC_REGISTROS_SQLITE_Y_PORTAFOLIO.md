@@ -1,6 +1,6 @@
 # RMCOp-Nike - Registros, SQLite Y Portafolio
 
-Ultima actualizacion: 2026-06-15.
+Ultima actualizacion: 2026-06-17.
 
 ## Portafolio Interno
 
@@ -66,10 +66,7 @@ Todas usan las mismas tablas:
 
 La diferencia se identifica con el campo `herramienta`.
 
-Ejemplos:
-
-- Manual/generica: 1 registro en `rmcop_nike_runs` y 1 registro en `rmcop_nike_items`.
-- Por lote/personalizadas: 1 registro en `rmcop_nike_runs` y muchos registros en `rmcop_nike_items`.
+Cada ejecucion crea un run y uno o varios items. Genericas puede contener varias filas/tallas; `Qty` suma piezas pero no multiplica PDFs.
 
 Esto evita duplicar tablas y mantiene los reportes simples.
 
@@ -93,6 +90,8 @@ errores
 observaciones
 ```
 
+`fecha_embarque` se normaliza como `DD/MM` al leer y registrar el Excel. Por ejemplo, `17 JUNIO` y `17-Jun` se guardan como `17/06`; el ano del proceso permanece disponible en `created_at`.
+
 Formato de `id`:
 
 ```text
@@ -112,6 +111,7 @@ run_id
 herramienta
 fila_excel
 wo
+roster
 ship_order
 fecha_embarque
 style
@@ -129,6 +129,8 @@ error
 tiempo
 clave
 ```
+
+`roster` guarda el numero de roster usado para nombrar los PDFs de `RMCOp-Nike Genericas` (por ejemplo `79135-26`). En `RMCOp-Nike Personalizadas` y `RMCOp-Nike Manual` queda vacio porque esos flujos se identifican con `wo`.
 
 No se guarda `output_path`.
 No se guardan `source_excel` ni `destination_folder`.
@@ -159,21 +161,7 @@ Los Excel quedan como reportes o plantillas de lectura:
 La meta no es llenar Excel manualmente todos los dias.
 La meta es guardar datos en SQLite y despues exportar/resumir a Excel cuando haga falta.
 
-## Siguiente Paso Recomendado
-
-1. Dejar que `RMCOp-Nike Manual`, `RMCOp-Nike Personalizadas` y `RMCOp-Nike Genericas` alimenten `RMC_CEP.sqlite` automaticamente.
-2. Agregar validacion incremental desde Excel para detectar archivos ya creados y faltantes.
-3. Crear un script `Exportar metricas` que lea SQLite y actualice los Excel.
-4. Agregar un hook `post-commit` para guardar commits en `git_commits`.
-5. Crear una pagina `Control` dentro del panel CEP para ver:
-   - lotes procesados,
-   - piezas,
-   - estilos,
-   - tiempo,
-   - errores,
-   - ultimos commits.
-
-## Validacion Incremental Pendiente
+## Validacion Incremental Activa
 
 Contexto operativo actual:
 
@@ -184,11 +172,12 @@ Contexto operativo actual:
 - A veces el lunes se agregan mas filas a la misma lista por lote.
 - El mismo Excel se usa como fuente para RMCOp-Nike y RMC MockupTool.
 
-Objetivo de la validacion:
+Flujo de la validacion:
 
 - Leer el Excel cargado.
-- Usar el destino batch elegido manualmente por el usuario.
-- Comparar contra la carpeta destino y/o la BD `RMC_CEP.sqlite`.
+- En Personalizadas, usar el destino elegido manualmente.
+- En Genericas, usar automaticamente la carpeta raiz del Excel.
+- Comparar simultaneamente contra la carpeta destino y la BD `RMC_CEP.sqlite`.
 - Generar una `clave` estable por fila para consultar duplicados.
 - Separar filas en:
   - ya creadas,
@@ -207,7 +196,7 @@ Validar primero; generar despues.
 
 La validacion debe mostrar resumen antes de crear archivos o escribir registros.
 
-Dentro del destino elegido, RMCOp-Nike guarda por familia de style y talla:
+En Personalizadas se guarda por familia de style y talla:
 
 ```text
 DESTINO_ELEGIDO/
@@ -216,14 +205,16 @@ DESTINO_ELEGIDO/
     XL/
 ```
 
-Clave candidata para detectar duplicados:
+En Genericas se guarda directamente en la carpeta del Excel, sin subcarpetas por style/talla.
+
+Clave para detectar duplicados; Personalizadas usa WO y Genericas usa Roster:
 
 ```text
-WO + Ship Order + Style + Team/Color + Size + Nombre + Numero
+(WO o Roster) + Ship Order + Style + Team/Color + Size + Nombre + Numero
 ```
 
 Esta clave se guarda en `rmcop_nike_items.clave`.
-Si existen registros viejos con `clave` vacia, `js/services/portfolioDb.js` puede rellenarla desde los campos existentes.
+`js/services/portfolioDb.js` rellena claves vacias y recalcula claves de Genericas para usar `roster`. Solo escribe cuando el valor calculado cambia.
 
 Si una fila no tiene nombre ni numero, usar el mismo criterio de nombre final que el panel (`SIN_DATOS`) para comparar contra archivos existentes.
 
@@ -233,6 +224,36 @@ La validacion debe respetar que:
 - RMC MockupTool consolida por `WO# + SHIP O + Style + Team / Color`.
 - RMCOp-Nike y RMC MockupTool tienen tablas separadas, pero comparten la misma BD.
 - El boton principal de Por Lote debe procesar solo faltantes cuando exista validacion.
+
+Estados actuales:
+
+| Estado | Archivo | Registro | Se procesa |
+| --- | --- | --- | --- |
+| `FALTANTE` | No | No | Si |
+| `YA_CREADO` | Si | Si | No |
+| `ARCHIVO_SIN_REGISTRO` | Si | No | No |
+| `REGISTRADO_SIN_ARCHIVO` | No | Si | No |
+| `CONFLICTO` | Clave repetida en la seleccion | Variable | No |
+
+## Escritura De Runs E Items
+
+Al terminar Manual o batch, `recordBatchRun`:
+
+1. Ejecuta `ensureSchema` y migraciones idempotentes.
+2. Inserta/reemplaza el run.
+3. Elimina items anteriores con el mismo `run_id`.
+4. Inserta un item por resultado, incluyendo errores.
+5. Calcula `pedidos`, `piezas`, `estilos`, `ok` y `errores`.
+
+Manual usa el mismo escritor con un resultado. Los ids manuales no llevan `manual-`; el metodo se identifica con `herramienta`.
+
+Riesgo conocido: el id usa precision de segundos. Dos ejecuciones que produzcan el mismo `AAAAMMDD-HHMMSS` pueden reemplazarse; debe resolverse antes de soportar concurrencia real.
+
+## Pendientes De Reporteria
+
+- Exportar metricas desde SQLite a Excel bajo demanda.
+- Conectar `rmcop_nike_git_commits` a un hook de Git si se autoriza.
+- Crear una vista de control solo si aporta operacion real; SQLite ya es la fuente principal.
 
 ## Alertas En Illustrator
 

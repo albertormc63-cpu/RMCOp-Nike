@@ -1,5 +1,6 @@
 const XLSX = require("xlsx");
 const variantRules = require("../config/variantRules");
+const { extractShippingDate, normalizeShippingDate } = require("../utils/shippingDate");
 
 const sizeMap = {
   XSM: "XS",
@@ -43,23 +44,6 @@ function cleanCell(value) {
 
 function cleanUpper(value) {
   return cleanCell(value).toUpperCase();
-}
-
-function normalizeDateText(value) {
-  return cleanUpper(value)
-    .replace(/\bENERO\b/g, "ENE")
-    .replace(/\bFEBRERO\b/g, "FEB")
-    .replace(/\bMARZO\b/g, "MAR")
-    .replace(/\bABRIL\b/g, "ABR")
-    .replace(/\bMAYO\b/g, "MAY")
-    .replace(/\bJUNIO\b/g, "JUN")
-    .replace(/\bJULIO\b/g, "JUL")
-    .replace(/\bAGOSTO\b/g, "AGO")
-    .replace(/\bSEPTIEMBRE\b/g, "SEP")
-    .replace(/\bSETIEMBRE\b/g, "SEP")
-    .replace(/\bOCTUBRE\b/g, "OCT")
-    .replace(/\bNOVIEMBRE\b/g, "NOV")
-    .replace(/\bDICIEMBRE\b/g, "DIC");
 }
 
 function sanitizeNumber(value) {
@@ -253,16 +237,14 @@ function extractWoFromText(value) {
 }
 
 function extractShippingDateFromText(value) {
-  const text = normalizeDateText(value);
-  const match = text.match(/\b(\d{1,2}[\s-]+[A-Z]{3})\b/);
-  return match ? match[1].replace(/\s+/g, "-") : "";
+  return extractShippingDate(value);
 }
 
 function extractDefaultShippingDate(rawRows) {
   const fixedValue = extractFixedValue(rawRows, ["Emb", "Fecha Embarque", "Fecha de Embarque", "Ship Date"]);
 
   if (fixedValue) {
-    return normalizeDateText(fixedValue);
+    return normalizeShippingDate(fixedValue);
   }
 
   for (let index = 0; index < Math.min(rawRows.length, 5); index++) {
@@ -284,13 +266,14 @@ function getWorkbookMetadata(workbookData) {
   const rosterName = extractRosterName(workbookData.rawRows, workbookData.filePath);
   const rosterNumberMatch = rosterName.match(/\b[0-9]{4,}-[0-9]{2,}\b/) ||
     String(workbookData.filePath || "").match(/\b[0-9]{4,}-[0-9]{2,}\b/);
+  const defaultShipOrder = extractFixedValue(workbookData.rawRows, ["Ship Order #", "Ship Order", "SHIP O", "SHIP O."]);
 
   return {
     rosterName: rosterName,
     rosterNumber: rosterNumberMatch ? rosterNumberMatch[0] : "",
     sourceFormat: "",
     defaultWo: extractWoFromText(rosterName) || extractWoFromText(workbookData.filePath),
-    defaultShipOrder: extractFixedValue(workbookData.rawRows, ["Ship Order #", "Ship Order", "SHIP O", "SHIP O."]),
+    defaultShipOrder: defaultShipOrder === "0" ? "" : defaultShipOrder,
     defaultShippingDate: extractDefaultShippingDate(workbookData.rawRows),
     totalPieces: Number(cleanCell(extractFixedValue(workbookData.rawRows, ["TOTAL PIECES"])) || 0)
   };
@@ -306,11 +289,12 @@ function normalizeRow(cells, index, columns, metadata) {
   return {
     sourceRow: index + 1,
     wo: sanitizeNumber(getCell(cells, columns.wo)) || cleanCell(getCell(cells, columns.wo)) || metadata.defaultWo,
+    roster: columns.format === "generic-roster" ? metadata.rosterNumber : "",
     shipOrder: cleanCell(getCell(cells, columns.shipOrder)) || metadata.defaultShipOrder,
     style: style,
     color: color,
     line: inferLine(style),
-    team: inferTeam(color),
+    team: inferTeam(color) || (columns.format === "generic-roster" ? inferTeam(metadata.rosterName) : ""),
     variant: inferVariant(style),
     version: inferVersion(style),
     styleFamily: getStyleFamily(style),
@@ -321,7 +305,7 @@ function normalizeRow(cells, index, columns, metadata) {
     number: number,
     firstName: cleanUpper(getCell(cells, columns.firstName)),
     position: cleanUpper(getCell(cells, columns.position)),
-    shippingDate: normalizeDateText(getCell(cells, columns.shippingDate)) || metadata.defaultShippingDate,
+    shippingDate: normalizeShippingDate(getCell(cells, columns.shippingDate)) || metadata.defaultShippingDate,
     sourceFormat: columns.format || "on-demand",
     rosterName: metadata.rosterName,
     rosterNumber: metadata.rosterNumber
@@ -332,7 +316,7 @@ function validateOrderRow(row) {
   const errors = [];
   const warnings = [];
 
-  if (!row.wo) errors.push("Falta Work Order");
+  if (!row.wo && !(row.sourceFormat === "generic-roster" && row.roster)) errors.push("Falta Work Order o Roster");
   if (!row.style) errors.push("Falta Style");
   if (!row.line) errors.push("Style no reconocido");
   if (!row.team) errors.push("No se pudo detectar equipo desde Color");

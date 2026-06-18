@@ -1,350 +1,247 @@
-# Proceso `readExcel.js` - Extraccion de datos desde Excel
+# RMCOp-Nike - Lectura Y Validacion De Excel
 
-Este documento describe exclusivamente como `js/readExcel.js` lee el Excel del roster y que filas/columnas usa para generar `output.json`.
+Ultima actualizacion: 2026-06-17.
 
-La finalidad es poder reutilizar esta idea en otro repo sin depender del resto del CEP.
-
-## Uso en RMCOp-Nike
-
-El panel `RMCOp-Nike` ya reutiliza esta estructura desde `js/services/createOrderData.js` como formato `generic-roster`.
-
-En este repo no se genera `output.json`; el Excel se transforma directo al mismo shape de pedido que usa el batch:
+Este documento define el contrato actual de importacion de Excel del CEP. La implementacion vive en:
 
 ```text
-wo, shipOrder, style, color, line, team, variant, version, styleFamily,
-size, qty, name, number, sourceFormat, rosterName
+js/services/createOrderData.js
 ```
 
-Reglas agregadas en `RMCOp-Nike`:
+El panel no genera `output.json`. Lee la primera hoja con `xlsx`, detecta el formato, normaliza cada fila al mismo modelo de pedido usado por el flujo manual y entrega filas validas/invalidas a `js/main.js`.
 
-- Si no hay columna `WO`, se infiere desde `A1` o desde el nombre del archivo buscando textos tipo `WO 173830 WO 173836`.
-- Si hay varios WO, se guardan unidos con guion, por ejemplo `173830-173836`.
-- `Ship Order #` se toma del bloque superior del Excel y se usa como `shipOrder` fijo.
-- `TOTAL PIECES` se toma como referencia del roster.
-- `Qty` se guarda como piezas para la BD; no duplica PDFs.
-- `Last Name` es el texto que se aplica en Illustrator.
-- `Player#` es el numero que se aplica como texto en Standard/TB o como numero IH.
+## Formatos Soportados
 
-## Archivo responsable
+### Personalizadas / On Demand
+
+Se detecta cuando la fila de encabezados contiene `Style`, `Size` y `WO`.
+
+| Campo | Encabezados aceptados |
+| --- | --- |
+| WO | `WO#`, `WO`, `Work Order` |
+| Ship Order | `Ship Order`, `SHIP O`, `SHIP O.` |
+| Style | `Style` |
+| Color | `Color`, `Team/Color`, `Team Color`, `Team / Color` |
+| Qty | `Qty`, `Quantity`, `Pzs`, `Pz` |
+| Size | `Size` |
+| Nombre | `Last Name`, `Name` |
+| Numero | `#`, `Player#`, `Player Number`, `Number` |
+| Embarque | `Emb`, `Fecha Embarque`, `Fecha de Embarque`, `Ship Date` |
+
+El layout Nike OD normalmente tiene encabezados en fila 3 y datos desde fila 4, pero el parser busca la fila por encabezados y no depende de una posicion fija.
+
+### Genericas / Roster Detallado
+
+Se detecta cuando una fila contiene `Style + Color + Qty + Last Name/Name + Player#/#`, no contiene WO y tambien existe `Size`.
+
+Layout habitual:
 
 ```text
-js/readExcel.js
+Fila 1:  nombre del roster
+Fila 5:  Ship Order #, si existe
+Fila 14: TOTAL PIECES
+Fila 16: Style, Color, Qty, Size, First Name, Last Name, Player#, Position
+Fila 17+: datos
 ```
 
-## Dependencias
+La posicion es una referencia; la deteccion real se hace por encabezados.
 
-El script usa:
+## Archivos Resumen No Procesables
 
-```js
-const { execSync } = require("child_process");
-const XLSX = require("xlsx");
-const fs = require("fs");
-const path = require("path");
-```
+Archivos como `NIKE ST/IH/TB/AS 17 JUL.xlsx` con columnas `WO#`, `Estilo`, `Roster`, `Pzs`, `COLOR/EQUIPO`, `DivReq`, `Emb` son listas resumen. No contienen Size/Last Name/Player# por fila y no se procesan directamente en Illustrator. Sirven para MockupTool, reportes o contexto de embarque.
 
-Dependencias externas:
+## Validacion Del Modo Seleccionado
+
+`js/main.js` cruza modo activo, nombre y estructura antes de conservar el archivo.
+
+- Token independiente `OD`: pista de Personalizadas.
+- Token independiente `ST`, `IH`, `TB` o `AS`: pista de Genericas.
+- Un nombre sin sigla se acepta si la estructura coincide.
+- Un archivo OD no entra en Genericas.
+- Un roster detallado o archivo ST/IH/TB/AS no entra en Personalizadas.
+- Genericas exige `sourceFormat = generic-roster`.
+- Una lista resumen con sigla generica se rechaza con mensaje de encabezados faltantes.
+
+La carga es atomica: si falla, no se guardan parcialmente path, destino, filtros ni datos.
+
+Al cambiar de modo se limpian:
 
 ```text
-xlsx
+excelPath
+destinationFolder
+data
+selectedStyleFamily
+selectedSizes
+lastResults
+validation
 ```
 
-El script esta pensado para ejecutarse con Node desde el panel CEP.
+## Lectura Del Workbook
 
-## Entrada
-
-El usuario selecciona manualmente un archivo Excel mediante un selector de macOS:
+Solo se lee la primera hoja:
 
 ```js
-osascript -e 'POSIX path of (choose file with prompt "Selecciona el archivo Excel" of type {"org.openxmlformats.spreadsheetml.sheet", "com.microsoft.excel.xls"})'
-```
-
-Formatos aceptados:
-
-- `.xlsx`
-- `.xls`
-
-Si el usuario cancela, el script imprime:
-
-```text
-CANCELLED
-```
-
-y termina con `process.exit(0)`.
-
-## Salida
-
-El script genera:
-
-```text
-output.json
-```
-
-en la raiz del repo/extension.
-
-La ruta se calcula asi:
-
-```js
-const PANEL_ROOT = path.resolve(__dirname, "..");
-const jsonPath = path.join(PANEL_ROOT, "output.json");
-```
-
-Antes de procesar, si ya existe un `output.json`, lo borra:
-
-```js
-if (fs.existsSync(jsonPath)) {
-    fs.unlinkSync(jsonPath);
-}
-```
-
-## Lectura del workbook
-
-El script lee la primera hoja del archivo Excel:
-
-```js
-const workbook = XLSX.readFile(filePath);
-const sheetName = workbook.SheetNames[0];
-const sheet = workbook.Sheets[sheetName];
-```
-
-Luego convierte la hoja a matriz:
-
-```js
-const data = XLSX.utils.sheet_to_json(sheet, {
+const workbook = XLSX.readFile(filePath, { cellDates: false });
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+const rawRows = XLSX.utils.sheet_to_json(sheet, {
   header: 1,
+  raw: false,
   defval: ""
 });
 ```
 
-Con `header: 1`, `xlsx` devuelve un array de arrays:
+Los encabezados se convierten a mayusculas y se eliminan caracteres que no sean letras, numeros o `#`. El orden de columnas no es obligatorio.
 
-```js
-data[fila][columna]
-```
+## Metadatos Del Roster
 
-Importante:
+| Campo | Fuente |
+| --- | --- |
+| `rosterName` | `A1`; fallback al nombre del archivo. |
+| `rosterNumber` | Patron `99999-99` en A1 o path. |
+| `defaultWo` | Textos `WO 173830`; varios se unen con guion. |
+| `defaultShipOrder` | Valor posterior a `Ship Order #`; `0` se trata como vacio. |
+| `totalPieces` | Valor posterior a `TOTAL PIECES`. |
+| `defaultShippingDate` | Campo Emb/Ship Date o fecha detectable en las primeras cinco filas. |
 
-- En Excel las filas empiezan en `1`.
-- En JavaScript los indices empiezan en `0`.
-- Por eso `A1` se lee como `data[0][0]`.
+WO no es obligatorio en Genericas cuando existe `rosterNumber`. El Roster es el identificador principal para naming, SQLite y duplicados.
 
-## Celdas fijas usadas
+## Modelo Normalizado
 
-| Dato | Celda Excel | Indice JS | Codigo |
-| --- | --- | --- | --- |
-| Nombre del roster | `A1` | `data[0][0]` | `const rosterName = data[0] ? data[0][0] : "";` |
-| Total de piezas | `C14` | `data[13][2]` | `const totalUnits = data[13] ? data[13][2] : "";` |
-
-## Fila de encabezados
-
-Los encabezados se leen desde la fila 16 de Excel:
+Cada fila produce:
 
 ```text
-Fila Excel: 16
-Indice JS: 15
+sourceRow, wo, roster, shipOrder, style, color, line, team,
+variant, version, styleFamily, sizeRaw, size, qty, firstName,
+name, number, position, shippingDate, sourceFormat,
+rosterName, rosterNumber, valid, errors, warnings
 ```
 
-Codigo:
+## Inferencias
 
-```js
-const headers = data[15];
-if (!headers) throw new Error("No se encontraron encabezados en la fila 16");
-```
-
-## Encabezados requeridos
-
-El script busca estas columnas por nombre exacto:
-
-| Campo interno | Encabezado esperado en Excel |
-| --- | --- |
-| `style` | `Style` |
-| `firstName` | `First Name` |
-| `lastName` | `Last Name` |
-| `player` | `Player#` |
-| `size` | `Size` |
-| `position` | `Position` |
-
-Codigo:
-
-```js
-const idxStyle = headers.indexOf("Style");
-const idxFirstName = headers.indexOf("First Name");
-const idxLastName = headers.indexOf("Last Name");
-const idxPlayer = headers.indexOf("Player#");
-const idxSize = headers.indexOf("Size");
-const idxPosition = headers.indexOf("Position");
-```
-
-Nota importante: actualmente el script no detiene el proceso si alguno de estos encabezados devuelve `-1`. Si se porta a otro repo, conviene agregar validacion explicita para fallar con un mensaje claro cuando falte una columna.
-
-## Filas de datos
-
-Las filas reales de jugadores/piezas empiezan en la fila 17 de Excel:
+### Linea Y Producto
 
 ```text
-Fila Excel inicial: 17
-Indice JS inicial: 16
+A1000 / Y1000 -> masculino / PLL
+A2000 / Y2000 -> femenino / WLL
 ```
 
-Codigo:
+`A` selecciona categoria adulta; `Y` selecciona youth/girls.
 
-```js
-const rows = data.slice(16);
+### Variante
+
+```text
+Style terminado en IH -> Indigenous Heritage
+Style terminado en TB -> Throwback
+Otro style             -> Standard
 ```
 
-## Filtro de filas validas
+Standard usa `H` como Home y `A` como Away. IH/TB no usan selector Home/Away.
 
-Solo se procesan filas que tengan valor en la columna `Style`:
+### Equipo
 
-```js
-.filter(row => row[idxStyle])
-```
+Se busca nickname dentro de `Color`:
 
-Si una fila no tiene `Style`, se ignora.
-
-## Mapeo de columnas a JSON
-
-Cada fila valida se transforma asi:
-
-```js
-{
-  style: row[idxStyle],
-  variant: row[idxStyle]
-    ? obtenerVariant(row[idxStyle])
-    : "",
-  size: row[idxSize],
-  firstName: row[idxFirstName],
-  lastName: row[idxLastName],
-  player: (row[idxPlayer] !== "" && row[idxPlayer] != null)
-    ? String(row[idxPlayer]).replace(/\s+/g, "")
-    : null,
-  position: row[idxPosition]
-}
-```
-
-## Tabla completa de extraccion
-
-| JSON | Fuente en Excel | Regla |
-| --- | --- | --- |
-| `roster` | `A1` | Toma el valor directo. |
-| `totalPieces` | `C14` | Toma el valor directo. |
-| `players[].style` | Columna con header `Style` | Toma el valor directo. |
-| `players[].variant` | Columna `Style` | Toma la ultima letra del style, excepto `TPACK`. |
-| `players[].size` | Columna con header `Size` | Toma el valor directo. |
-| `players[].firstName` | Columna con header `First Name` | Toma el valor directo. |
-| `players[].lastName` | Columna con header `Last Name` | Toma el valor directo. |
-| `players[].player` | Columna con header `Player#` | Convierte a string y quita espacios. Si esta vacio, usa `null`. |
-| `players[].position` | Columna con header `Position` | Toma el valor directo. |
-
-## Logica de `variant`
-
-La variante se calcula desde el campo `Style`.
-
-Funcion:
-
-```js
-function obtenerVariant(style) {
-    style = String(style);
-    if (style == "TPACK") {
-        return "TPACK";
-    }
-
-    return style.slice(-1);
-}
-```
-
-Ejemplos:
-
-| Style | Variant |
+| Nickname | Equipo |
 | --- | --- |
-| `T5000A` | `A` |
-| `T1600Y` | `Y` |
-| `A2000H` | `H` |
-| `TPACK` | `TPACK` |
+| Archers | Utah |
+| Atlas | New York |
+| Cannons | Boston |
+| Chaos | Carolina |
+| Outlaws | Denver |
+| Whipsnakes | Maryland |
+| Waterdogs | Philadelphia |
+| Redwoods | California |
+| Guard | Boston |
+| Palms | California |
+| Charm | Maryland |
+| Charging | New York |
 
-## Limpieza del numero de jugador
+En Genericas, si `Color` solo contiene un codigo como `A002`, se intenta la deteccion sobre `rosterName`.
 
-El campo `Player#` se limpia asi:
+### Tallas
 
-```js
-String(row[idxPlayer]).replace(/\s+/g, "")
+```text
+XSM/X-SM -> XS
+SML      -> SM
+MED      -> MD
+LGE      -> LG
+XLG      -> XL
+2XL      -> 2X
+3XL      -> 3X
 ```
 
-Esto elimina espacios internos, iniciales y finales.
+Tallas permitidas: `XS`, `SM`, `MD`, `LG`, `XL`, `2X`, `3X`.
 
-Ejemplos:
+### Nombre, Numero Y Cantidad
 
-| Valor Excel | Valor JSON |
-| --- | --- |
-| `7` | `"7"` |
-| `07` | `"07"` |
-| ` 12 ` | `"12"` |
-| `1 2` | `"12"` |
-| vacio | `null` |
+- Nombre y First Name se convierten a mayusculas.
+- Numero conserva solo digitos.
+- Qty usa el valor numerico; si falta, usa `1`.
+- Qty registra piezas, pero no crea varias copias del mismo PDF.
+- Nombre y numero pueden estar vacios; producen warning, no error.
 
-## Estructura final de `output.json`
+## Condiciones De Validez
 
-```json
-{
-  "roster": "79135-26 Timber Creek T5000 Reorder WO 173714",
-  "totalPieces": "4",
-  "players": [
-    {
-      "style": "T5000A",
-      "variant": "A",
-      "size": "MED",
-      "firstName": "",
-      "lastName": "HEDGEBETH Jr",
-      "player": "1",
-      "position": ""
-    }
-  ]
-}
+Errores bloqueantes:
+
+- Falta WO en Personalizadas.
+- En Genericas faltan tanto WO como Roster.
+- Falta Style o no corresponde a familia 1000/2000.
+- No se puede inferir equipo.
+- Falta Size o no pertenece a las tallas permitidas.
+
+Warning no bloqueante:
+
+```text
+Sin nombre ni numero; se limpiaran placeholders
 ```
 
-## Contrato minimo para portar a otro repo
+Las filas invalidas se muestran con numero de fila y razones. No se copian, no se abren en Illustrator y no se registran como produccion exitosa.
 
-Para implementar esta idea en otro repo, se necesita:
+## Fecha De Embarque
 
-1. Instalar `xlsx`.
-2. Ejecutar el script con Node.
-3. Definir donde se guardara el JSON de salida.
-4. Mantener o adaptar las celdas fijas:
-   - `A1` para roster.
-   - `C14` para total de piezas.
-   - Fila 16 para encabezados.
-   - Fila 17 en adelante para datos.
-5. Mantener o adaptar los nombres exactos de encabezados:
-   - `Style`
-   - `First Name`
-   - `Last Name`
-   - `Player#`
-   - `Size`
-   - `Position`
-6. Consumir el JSON con el mismo contrato:
-   - `roster`
-   - `totalPieces`
-   - `players[]`
+`js/utils/shippingDate.js` normaliza a `DD/MM`.
 
-## Recomendacion para mejorar al portar
+- Personalizadas OD: puede extraerse de texto superior como `26 JUNIO`.
+- Genericas: puede venir en Emb, Ship Date o texto superior.
+- Si no existe, queda vacia.
+- El ano de ejecucion permanece en `created_at`.
 
-Al llevar este proceso a otro repo, conviene agregar validacion de columnas requeridas:
+## Agrupaciones Para La UI
 
-```js
-const requiredHeaders = ["Style", "First Name", "Last Name", "Player#", "Size", "Position"];
-const missing = requiredHeaders.filter(name => headers.indexOf(name) === -1);
+El resultado incluye:
 
-if (missing.length > 0) {
-  throw new Error("Faltan columnas requeridas: " + missing.join(", "));
-}
+```text
+rows
+validRows
+invalidRows
+groupsBySize
+groupsByStyleFamilyAndSize
+counts.bySize
+counts.byStyleFamily
+counts.byStyle
+counts.byTeam
+counts.byVersion
 ```
 
-Tambien conviene convertir las posiciones importantes a constantes:
+La UI filtra `validRows` por familia y talla; `invalidRows` permanece visible como diagnostico.
 
-```js
-const ROSTER_CELL = { row: 0, col: 0 };      // A1
-const TOTAL_CELL = { row: 13, col: 2 };      // C14
-const HEADER_ROW_INDEX = 15;                 // Fila 16
-const FIRST_DATA_ROW_INDEX = 16;             // Fila 17
+## Casos Reales Verificados
+
+```text
+NIKE OD 26 JUN.xlsx
+-> on-demand; Personalizadas
+
+NIKE ST 17 JUL.xlsx
+-> lista resumen; no procesable como roster detallado
+
+79235-26 Nike Atlas Shellenberger 1 WO 173830 WO 173836.xls
+-> generic-roster; equipo New York desde Atlas; WO multiple
+
+77357-26 WLL NY Charging Scane 27 Girls.xls
+-> generic-roster; Color A002; equipo New York desde roster; Roster sustituye WO
 ```
 
-Asi el extractor queda mas facil de adaptar si cambia el formato del Excel.
+## Limite De Responsabilidad
+
+`createOrderData.js` solo lee, normaliza, valida y agrupa. Destino, copias, Illustrator, PDF y SQLite pertenecen a `js/main.js`, `copyTemplate.js`, `illustratorBridge.js` y `portfolioDb.js`.

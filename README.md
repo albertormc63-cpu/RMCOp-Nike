@@ -1,6 +1,6 @@
 # RMCOp-Nike
 
-Ultima actualizacion de contexto: 2026-06-11.
+Ultima actualizacion de contexto: 2026-06-17.
 
 Palabra clave para retomar contexto: `RMCOP_NIKE_HANDOFF`.
 
@@ -47,7 +47,7 @@ La version CEP de mockups debe seguir siendo extension separada, con su propio `
 ## Estado Actual
 
 - Flujo manual individual funcionando en el panel CEP.
-- Flujo por lote desde Excel implementado como MVP dentro del panel.
+- Flujo por lote desde Excel operativo con modos `Personalizadas` y `Genericas`.
 - Lineas activas: `masculino` y `femenino`.
 - Variantes activas en codigo:
   - `Standard`: reemplazo de nombre y numero como texto.
@@ -64,11 +64,14 @@ La version CEP de mockups debe seguir siendo extension separada, con su propio `
   - Manual/lote se distinguen por `herramienta`, no por prefijo en `id`.
   - `created_at` guarda fecha `DD/MM/AAAA`; `started_at`, `finished_at` y `tiempo` guardan horas/duracion `HH:MM:SS`.
   - `rmcop_nike_items` guarda `archivo` y `clave`, no `output_path`.
+  - `rmcop_nike_items.roster` guarda el numero de roster para Genericas; queda vacio en Personalizadas y Manual.
 - Validacion incremental implementada:
   - El mismo Excel alimenta RMCOp-Nike y RMC MockupTool.
   - Las listas se preparan jueves, se procesan viernes y pueden recibir agregados lunes.
   - Despues de importar Excel y elegir destino batch, el panel detecta archivos ya creados/faltantes para generar solo faltantes.
   - La validacion ayuda a evitar duplicados en archivos y en SQLite.
+  - Estados: `FALTANTE`, `YA_CREADO`, `ARCHIVO_SIN_REGISTRO`, `REGISTRADO_SIN_ARCHIVO` y `CONFLICTO`.
+  - El boton procesa exclusivamente filas `FALTANTE`.
 - Alertas visibles al usuario:
   - Los errores del panel deben mostrarse con alerta nativa de Illustrator via ExtendScript (`RMCNike_alert`) usando `illustratorBridge.showAlert`.
   - El `alert()` del navegador queda solo como fallback si CEP/Illustrator no esta disponible.
@@ -170,13 +173,15 @@ Dentro de esta pagina hay dos modos:
 
 Validacion incremental: despues de importar el Excel y elegir destino batch, el panel compara contra archivos existentes y `RMC_CEP.sqlite`, y separa filas ya creadas, faltantes, con conflicto e invalidas. Solo los faltantes se procesan.
 
-La validacion usa `rmcop_nike_items.clave` como base para detectar duplicados. La clave se compone con:
+Cambiar de modo limpia el Excel, destino, filtros de style/talla, resultados y validacion cargados. Esto evita que una seleccion de Personalizadas sobreviva dentro de Genericas o viceversa.
+
+La validacion usa `rmcop_nike_items.clave` como base para detectar duplicados. En Personalizadas usa WO y en Genericas usa Roster como identificador:
 
 ```text
-WO + Ship Order + Style + Team/Color + Size + Nombre + Numero
+(WO o Roster) + Ship Order + Style + Team/Color + Size + Nombre + Numero
 ```
 
-El destino batch se elige manualmente. Dentro de esa carpeta, el CEP guarda por familia de style y talla:
+En `Personalizadas`, el destino se elige manualmente. Dentro de esa carpeta, el CEP guarda por familia de style y talla:
 
 ```text
 DESTINO_ELEGIDO/
@@ -186,7 +191,41 @@ DESTINO_ELEGIDO/
 ```
 
 En modo `Genericas`, el destino se llena automaticamente con la carpeta donde vive el Excel y los PDFs se guardan directo en esa raiz, sin subcarpetas por style/talla.
-Los registros de BD guardan `fecha_embarque` en runs/items. En OD se extrae del texto de la fila 2, por ejemplo `26 JUNIO`; en listas resumen para MockupTool tipo ST/IH/TB/AS se lee desde la columna `Emb`.
+Los registros de BD guardan `fecha_embarque` en runs/items con formato `DD/MM`. En OD se extrae del texto de la fila 2, por ejemplo `26 JUNIO` se guarda como `26/06`; en Genericas, `17-Jun` se guarda como `17/06`.
+
+Al seleccionar el Excel, el panel valida el modo antes de cargarlo:
+
+- `OD` identifica Personalizadas y se rechaza si esta activa la seccion Genericas.
+- `ST`, `IH`, `TB` o `AS` identifican Genericas y se rechazan si esta activa la seccion Personalizadas.
+- La estructura interna siempre confirma el tipo. Genericas exige el roster detallado; una lista resumen `NIKE ST/IH/TB/AS ...xlsx` no se acepta para generar en Illustrator.
+- Los archivos historicos sin sigla se aceptan cuando sus encabezados corresponden claramente al modo seleccionado.
+
+La seleccion se conserva solo despues de leer y validar el archivo. Si se rechaza, no quedan cargados parcialmente el path, destino ni datos del Excel.
+
+### Validacion De Filas
+
+Una fila es invalida cuando falta cualquiera de estos datos operativos:
+
+- Identificador: WO en Personalizadas; WO o Roster en Genericas.
+- Style reconocido como familia `1000` o `2000` y audiencia `A` o `Y`.
+- Equipo inferible desde `Color` o, en Genericas, desde el nombre del roster.
+- Size presente y normalizable a `XS`, `SM`, `MD`, `LG`, `XL`, `2X` o `3X`.
+
+Nombre y numero pueden estar vacios. En batch se limpian los placeholders y el nombre final usa `SIN_DATOS` cuando ambos faltan.
+
+### Estados Incrementales
+
+Cada fila valida se compara con el PDF esperado y con `rmcop_nike_items.clave`:
+
+| Estado | Archivo | SQLite | Accion |
+| --- | --- | --- | --- |
+| `FALTANTE` | No | No | Se puede procesar. |
+| `YA_CREADO` | Si | Si | Se omite. |
+| `ARCHIVO_SIN_REGISTRO` | Si | No | Se omite y se muestra para revision. |
+| `REGISTRADO_SIN_ARCHIVO` | No | Si | Se omite y se muestra para revision. |
+| `CONFLICTO` | Clave repetida en la seleccion | Variable | Se omite. |
+
+La validacion no crea PDFs. El procesamiento comienza solo al presionar el boton principal.
 
 Layout On Demand soportado por encabezado:
 
@@ -216,6 +255,8 @@ Nota de contexto: archivos resumen tipo `NIKE ST/IH/TB/AS 17 JUL.xlsx` con colum
 En roster generico:
 
 - `Color` detecta equipo por nickname.
+- Si `Color` solo contiene un codigo, el equipo se detecta desde el nombre del roster.
+- El roster sustituye al WO como identificador cuando el Excel generico no incluye WO.
 - `Qty` se guarda como piezas en la BD; no duplica PDFs.
 - `Last Name` es el texto que se aplica en Illustrator.
 - `Player#` es el numero para Standard/TB o la base del numero IH.
@@ -271,6 +312,9 @@ El batch completo hace:
 4. Guardar PDF sobre la misma ruta.
 5. Cerrar documento.
 6. Continuar con la siguiente fila.
+7. Registrar resultados, tiempos, piezas, errores y fecha de embarque en logs/SQLite.
+
+Si una fila falla, el error se registra y el lote continua con la siguiente. Al terminar se vuelve a calcular la validacion.
 
 ## Variantes
 
@@ -331,6 +375,10 @@ WO PLL-Boston Cannons A1000TB SM 7.pdf
 ```
 
 Si no hay nombre ni numero, se usa `SIN_DATOS` en el nombre final para evitar archivos ambiguos.
+
+La parte final del nombre usa primero `number`; si no existe, usa `name`; si ambos faltan, usa `SIN_DATOS`. En Genericas, el prefijo es `roster`; en Personalizadas y Manual es `wo`.
+
+Cuando una copia manual encuentra un nombre existente, `copyTemplate.js` intenta una variante con nombre, luego `DUP` y finalmente un contador `(1)`, `(2)`, etc. El flujo manual hace un `dryRun` y pide confirmacion nativa antes de reemplazar una ruta existente.
 
 ## Reemplazo En Illustrator
 
@@ -411,8 +459,8 @@ No hay suite automatica formal. Antes de entregar cambios:
 node --check js/main.js
 node --check js/illustrator/illustratorBridge.js
 node --check js/services/createOrderData.js
+node --check js/services/portfolioDb.js
 node --check js/utils/pathBuilder.js
-node --check jsx/rmcNike.jsx
 node -e "JSON.parse(require('fs').readFileSync('js/config/ihNumberRules.json','utf8')); console.log('ihNumberRules OK')"
 ```
 
@@ -424,4 +472,6 @@ node -e "JSON.parse(require('fs').readFileSync('js/config/ihNumberRules.json','u
 - Cualquier cambio de rutas, Throwback o batch debe probarse contra Illustrator real.
 - En batch, filas sin nombre/numero son validas: se limpian placeholders y se nombra con `SIN_DATOS`.
 - `Qty/Pzs` no duplica PDFs en los flujos actuales; solo se respeta como dato operativo o visual segun herramienta.
-- La proxima mejora importante es validacion incremental de Excel para evitar duplicados cuando una lista recibe agregados despues del primer procesamiento.
+- La validacion incremental ya esta activa; cualquier cambio debe conservar sus cinco estados y el procesamiento exclusivo de faltantes.
+- Riesgo pendiente: los ids de run tienen precision de segundos; dos corridas iniciadas en el mismo segundo pueden colisionar y deben revisarse antes de ampliar concurrencia.
+- La variante All Stars existe como idea/ruta de plantillas, pero no esta incorporada al catalogo activo hasta autorizacion expresa.

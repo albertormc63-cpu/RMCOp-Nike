@@ -746,9 +746,77 @@
         });
     }
 
-    function setBatchMode(mode) {
-        state.batch.mode = mode === "generic" ? "generic" : "personalized";
+    function resetBatchImportState() {
+        state.batch.excelPath = "";
+        state.batch.destinationFolder = "";
+        state.batch.data = null;
+        state.batch.selectedStyleFamily = "";
+        state.batch.selectedSizes = [];
+        state.batch.lastResults = [];
         clearBatchValidation();
+    }
+
+    function getBatchExcelNameType(excelPath) {
+        const services = nodeRuntime.services;
+        const fileName = services.path ? services.path.basename(excelPath, services.path.extname(excelPath)) : excelPath;
+        const normalizedName = String(fileName || "").toUpperCase();
+        const hasToken = function (token) {
+            return new RegExp(`(^|[^A-Z0-9])${token}([^A-Z0-9]|$)`).test(normalizedName);
+        };
+
+        if (hasToken("OD")) {
+            return "personalized";
+        }
+
+        if (["ST", "IH", "TB", "AS"].some(hasToken)) {
+            return "generic";
+        }
+
+        return "unknown";
+    }
+
+    function validateBatchExcelMode(excelPath, batchData, selectedMode) {
+        const nameType = getBatchExcelNameType(excelPath);
+        const isGenericRoster = batchData && batchData.sourceFormat === "generic-roster";
+
+        if (selectedMode === "personalized") {
+            if (nameType === "generic" || isGenericRoster) {
+                throw new Error("Este Excel parece ser de Genericas (ST/IH/TB/AS o roster detallado). Selecciona la seccion Genericas antes de cargarlo.");
+            }
+
+            if (nameType === "unknown") {
+                console.warn("El nombre del Excel no incluye OD; se acepto porque su estructura corresponde a Personalizadas.");
+            }
+
+            return;
+        }
+
+        if (nameType === "personalized") {
+            throw new Error("Este Excel contiene OD y corresponde a Personalizadas. Selecciona la seccion Personalizadas antes de cargarlo.");
+        }
+
+        if (!isGenericRoster) {
+            if (nameType === "generic") {
+                throw new Error("El nombre corresponde a Genericas, pero el archivo no es un roster detallado. Debe incluir Style, Color, Qty, Size, Last Name y Player#.");
+            }
+
+            throw new Error("El Excel no tiene la estructura de roster detallado requerida por Genericas.");
+        }
+
+        if (nameType === "unknown") {
+            console.warn("El nombre del Excel no incluye ST/IH/TB/AS; se acepto porque su estructura corresponde a Genericas.");
+        }
+    }
+
+    function setBatchMode(mode) {
+        const nextMode = mode === "generic" ? "generic" : "personalized";
+
+        if (state.batch.mode === nextMode) {
+            return;
+        }
+
+        state.batch.mode = nextMode;
+        resetBatchImportState();
         renderBatchModeButtons();
         renderBatchSummary();
         console.log(`Modo lote: ${getBatchModeLabel()}`);
@@ -818,7 +886,7 @@
         }
 
         return services.buildOutputName(Object.assign({}, order, {
-            wo: order.rosterNumber || order.rosterName || order.wo
+            wo: order.roster || order.rosterNumber || order.rosterName || order.wo
         }));
     }
 
@@ -989,20 +1057,27 @@
     function chooseBatchExcel() {
         const services = nodeRuntime.services;
         const paths = getCurrentPaths();
+        const selectedMode = state.batch.mode;
 
         if (!services.createOrderDataFromExcel) {
             throw new Error("El importador de Excel no esta cargado.");
         }
 
-        const excelPath = pickFileFromCep("Elegir Excel Nike On Demand", paths ? paths.ordersBase : "");
+        const excelPath = pickFileFromCep(
+            state.batch.mode === "generic" ? "Elegir Excel Genericas Nike" : "Elegir Excel Nike On Demand",
+            paths ? paths.ordersBase : ""
+        );
 
         if (!excelPath) {
             return;
         }
 
+        const batchData = services.createOrderDataFromExcel(excelPath);
+        validateBatchExcelMode(excelPath, batchData, selectedMode);
+
         state.batch.excelPath = excelPath;
-        state.batch.data = services.createOrderDataFromExcel(excelPath);
-        state.batch.mode = state.batch.data.sourceFormat === "generic-roster" ? "generic" : "personalized";
+        state.batch.data = batchData;
+        state.batch.mode = selectedMode;
         if (state.batch.mode === "generic" && services.path) {
             state.batch.destinationFolder = services.path.dirname(excelPath);
         }

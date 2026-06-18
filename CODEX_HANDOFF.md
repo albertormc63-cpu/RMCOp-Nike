@@ -1,6 +1,6 @@
 # RMCOp-Nike - Handoff Para Otro Codex
 
-Ultima actualizacion: 2026-06-15.
+Ultima actualizacion: 2026-06-17.
 
 Palabra clave para retomar contexto: `RMCOP_NIKE_HANDOFF`.
 
@@ -93,7 +93,7 @@ started_at  -> solo hora HH:MM:SS
 finished_at -> solo hora HH:MM:SS
 tiempo      -> duracion HH:MM:SS
 herramienta -> RMCOp-Nike Manual | RMCOp-Nike Personalizadas | RMCOp-Nike Genericas
-fecha_embarque -> fecha de embarque extraida del Excel cuando aplica
+fecha_embarque -> fecha de embarque extraida del Excel, normalizada como DD/MM
 ```
 
 No usar columna `fecha`, `source_excel` ni `destination_folder`.
@@ -103,8 +103,9 @@ Formato actual de `rmcop_nike_items`:
 
 ```text
 run_id      -> enlaza con rmcop_nike_runs.id
-herramienta -> permite leer Manual/Personalizada/Genericas desde el item
-fecha_embarque -> fecha de embarque extraida del Excel cuando aplica
+herramienta -> permite leer Manual/Personalizadas/Genericas desde el item
+roster      -> numero de roster usado por Genericas; vacio en Manual/Personalizadas
+fecha_embarque -> fecha de embarque extraida del Excel, normalizada como DD/MM
 archivo     -> nombre de archivo final
 clave       -> clave estable para detectar duplicados
 ```
@@ -112,7 +113,7 @@ clave       -> clave estable para detectar duplicados
 No guardar `output_path`.
 No prefijar el `id` con `manual-`; el metodo se identifica por `herramienta`.
 
-## Validacion Incremental Pendiente
+## Validacion Incremental Activa
 
 Contexto operativo:
 
@@ -122,22 +123,22 @@ Contexto operativo:
 - Los impresores inician lunes.
 - A veces el lunes se agregan mas filas a la misma lista por lote.
 
-Necesidad:
+Comportamiento implementado:
 
 - Al cargar un Excel, validar contra archivos ya creados y contra `RMC_CEP.sqlite`.
-- Identificar filas ya creadas, faltantes, con conflicto e invalidas.
+- Identificar `FALTANTE`, `YA_CREADO`, `ARCHIVO_SIN_REGISTRO`, `REGISTRADO_SIN_ARCHIVO`, `CONFLICTO` e invalidas.
 - Permitir generar solo faltantes.
 - Evitar duplicar PDFs y evitar duplicar registros SQLite.
 - No romper flujo manual ni batch actual.
 
-Clave candidata para duplicados en RMCOp-Nike:
+Clave candidata para duplicados en RMCOp-Nike; Personalizadas usa WO y Genericas usa Roster:
 
 ```text
-WO + Ship Order + Style + Team/Color + Size + Nombre + Numero
+(WO o Roster) + Ship Order + Style + Team/Color + Size + Nombre + Numero
 ```
 
 La clave se guarda en `rmcop_nike_items.clave`.
-`js/services/portfolioDb.js` hace backfill de claves vacias desde los campos existentes al inicializar schema.
+`js/services/portfolioDb.js` hace backfill de claves vacias y recalcula claves de Genericas con Roster. La migracion es idempotente.
 
 Para filas sin nombre/numero, usar el mismo criterio del panel (`SIN_DATOS`) para comparar nombres finales.
 
@@ -150,7 +151,7 @@ Validar primero; generar despues.
 La validacion debe ser visible antes de copiar/abrir/aplicar en Illustrator.
 El boton principal de Por Lote debe procesar solo faltantes cuando exista validacion.
 
-El destino batch se elige manualmente. Dentro de esa carpeta, RMCOp-Nike guarda por familia de style y talla:
+En Personalizadas, el destino se elige manualmente y se guarda por familia de style/talla:
 
 ```text
 DESTINO_ELEGIDO/
@@ -158,6 +159,8 @@ DESTINO_ELEGIDO/
     2X/
     XL/
 ```
+
+En Genericas, el destino se asigna automaticamente a la carpeta del Excel y se guarda en la raiz.
 
 ## Alertas Nativas
 
@@ -181,7 +184,7 @@ No se pudo leer el cuerpo completo de todos los chats desde la herramienta de th
 |---|---|---|
 | `NIKE Standard` | Arreglos del panel inicial, rutas Node/CEP, dropdown de carpetas On Demand, comentarios de flujo | Incorporado en el panel actual. |
 | `NIKE IH` | Indigenous Heritage, numeros de 3 digitos, gap obligatorio de `0.25in`, evitar back gigante | Incorporado en `ihNumbers.jsx` y `ihNumberRules.json`; probar siempre en Illustrator real. |
-| `Analiza flujo Excel por tallas` | Lectura de Excel Nike On Demand, normalizacion, batch por tallas/familia de style | MVP implementado en `createOrderData.js`, `main.js`, UI batch y guardado PDF/cierre. |
+| `Analiza flujo Excel por tallas` | Lectura de Excel Nike On Demand, normalizacion, batch por tallas/familia de style | Flujo operativo en `createOrderData.js`, `main.js`, UI batch, validacion incremental y guardado PDF/cierre. |
 | `Crear dashboard NIKE OP` | Idea de dashboard LAN/admin para ver trabajo, detalles, estados | No mezclar con CEP todavia; si se retoma, hacerlo como modulo separado o app propia. |
 | `Crear manual de operacion` | Manual DOCX del panel | Se genero `docs/RMC_NIKE_PANEL_MANUAL_OPERACION_v1.0.docx` y su script. |
 
@@ -228,9 +231,11 @@ jsx/swatches.jsx
 
 ## Flujo Batch Actual
 
-Implementado como MVP en el panel.
+Implementado como flujo operativo con validacion incremental.
 
 Entrada: Excel Nike On Demand o roster generico Nike con encabezados en fila 16.
+
+Antes de conservar la seleccion, `js/main.js` cruza el modo activo con el nombre y la estructura del Excel. `OD` corresponde a Personalizadas; `ST/IH/TB/AS` corresponde a Genericas. Las siglas evitan cruces evidentes, pero la estructura es la autoridad final: Genericas solo acepta roster detallado, y archivos historicos sin sigla siguen siendo validos si tienen los encabezados correctos.
 
 `js/services/createOrderData.js`:
 
@@ -241,20 +246,23 @@ Entrada: Excel Nike On Demand o roster generico Nike con encabezados en fila 16.
 - Detecta linea desde `Style`.
 - Detecta variante desde sufijo de style (`IH`, `TB`, o Standard).
 - En OD/Personalizadas, extrae fecha de embarque desde el texto superior, ejemplo `26 JUNIO`.
-- En listas resumen para MockupTool tipo `NIKE ST/IH/TB/AS`, extrae fecha de embarque desde columna `Emb`.
+- Las listas resumen `NIKE ST/IH/TB/AS` pueden aportar fecha de embarque a otros flujos, pero el CEP las rechaza como fuente directa porque no son roster detallado.
 - En roster generico, infiere `WO` desde el nombre del roster/archivo y `Ship Order` desde el bloque superior.
+- Si el roster generico no trae WO, el numero de roster basta como identificador. Si `Color` es solo un codigo, el equipo se infiere desde el nombre del roster.
 - Convierte tallas del Excel a tallas del panel.
 - Agrupa por talla y por familia de style.
 
 UI batch en `index.html` + `main.js`:
 
 - Seleccionar tipo de lote: `Personalizadas` o `Genericas`.
+- Cambiar de tipo limpia Excel, destino, filtros, resultados y validacion anteriores.
 - Seleccionar Excel.
-- Seleccionar destino batch.
+- En Personalizadas, seleccionar destino batch; en Genericas se usa la carpeta del Excel.
 - Filtrar por familia de style.
 - Filtrar por una o varias tallas.
 - Ver resumen de filas validas/invalidas.
 - Ejecutar batch completo.
+- Procesar exclusivamente filas `FALTANTE`.
 
 Salida batch:
 
@@ -297,6 +305,7 @@ Fila 17+ = datos
 ```
 
 El parser marca este formato como `generic-roster`. `Qty` se guarda como piezas en la BD, pero no duplica PDFs. `Last Name` es el texto que se aplica y `Player#` es el numero.
+Si `Color` solo contiene un codigo, se detecta el equipo desde el nombre del roster. Si no existe WO, Roster es suficiente y se usa para naming/clave.
 No confundir con archivos resumen tipo `NIKE ST/IH/TB/AS 17 JUL.xlsx` con `WO#`, `Estilo`, `Roster`, `Pzs`, `COLOR / EQUIPO`, `DivReq`, `Emb`: esos no traen talla/nombre/numero por pieza para Illustrator; sirven mejor para MockupTool/listas/resumen y para fecha de embarque.
 
 Mapeo de tallas:
@@ -485,6 +494,8 @@ Nota: en la sesion del manual, el render formal con LibreOffice fallo por librer
    - `pathBuilder.js`.
    - `variantRules.js`.
    - `portfolioDb.js`.
+9. Resolver la posible colision de `run_id` cuando dos ejecuciones comienzan en el mismo segundo.
+10. All Stars permanece fuera del catalogo activo hasta que el usuario autorice su integracion.
 
 ## Reglas Para Siguiente Codex
 

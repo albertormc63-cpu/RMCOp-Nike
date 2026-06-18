@@ -3,6 +3,7 @@ const SOURCE_APP = "RMCOp-Nike";
 const RUNS_TABLE = "rmcop_nike_runs";
 const ITEMS_TABLE = "rmcop_nike_items";
 const COMMITS_TABLE = "rmcop_nike_git_commits";
+const { normalizeShippingDate } = require("../utils/shippingDate");
 
 function sqlText(value) {
   if (value == null) return "NULL";
@@ -53,9 +54,15 @@ function buildOrderKey(order) {
   const hasName = normalizeKeyPart(order && order.name) !== "";
   const hasNumber = normalizeKeyPart(order && order.number) !== "";
   const keyName = hasName || hasNumber ? order && order.name : "SIN_DATOS";
+  const isGeneric = order && (
+    order.sourceFormat === "generic-roster" ||
+    normalizeKeyPart(order.roster) !== "" ||
+    order.herramienta === "RMCOp-Nike Genericas"
+  );
+  const orderIdentifier = isGeneric ? (order.roster || order.rosterNumber || order.wo) : order && order.wo;
 
   return [
-    order && order.wo,
+    orderIdentifier,
     order && order.shipOrder,
     order && order.style,
     order && order.team,
@@ -112,9 +119,9 @@ function backfillMissingItemKeys(deps, dbPath) {
     input: `
 .mode tabs
 .headers off
-SELECT id, wo, ship_order, style, equipo, talla, nombre, numero
+SELECT id, herramienta, wo, roster, ship_order, style, equipo, talla, nombre, numero, clave
 FROM ${ITEMS_TABLE}
-WHERE clave IS NULL OR clave = '';
+WHERE clave IS NULL OR clave = '' OR herramienta = 'RMCOp-Nike Genericas';
 `,
     encoding: "utf8"
   });
@@ -127,25 +134,89 @@ WHERE clave IS NULL OR clave = '';
   const updates = rows.map(function (row) {
     const id = row[0];
     const clave = buildOrderKey({
-      wo: row[1],
-      shipOrder: row[2],
-      style: row[3],
-      team: row[4],
-      size: row[5],
-      name: row[6],
-      number: row[7]
+      herramienta: row[1],
+      wo: row[2],
+      roster: row[3],
+      shipOrder: row[4],
+      style: row[5],
+      team: row[6],
+      size: row[7],
+      name: row[8],
+      number: row[9]
     });
 
+    if (clave === row[10]) {
+      return "";
+    }
+
     return `UPDATE ${ITEMS_TABLE} SET clave = ${sqlText(clave)} WHERE id = ${sqlNumber(id)};`;
-  }).join("\n");
+  }).filter(Boolean);
+
+  if (!updates.length) {
+    return 0;
+  }
 
   execSql(deps, dbPath, `
 BEGIN TRANSACTION;
-${updates}
+${updates.join("\n")}
 COMMIT;
 `);
 
-  return rows.length;
+  return updates.length;
+}
+
+function normalizeExistingShippingDates(deps, dbPath) {
+  const targets = [
+    { table: RUNS_TABLE, idColumn: "id", numericId: false },
+    { table: ITEMS_TABLE, idColumn: "id", numericId: true }
+  ];
+  const updates = [];
+
+  targets.forEach(function (target) {
+    const output = deps.childProcess.execFileSync(SQLITE_BIN, [dbPath], {
+      input: `
+.mode tabs
+.headers off
+SELECT ${target.idColumn}, fecha_embarque
+FROM ${target.table}
+WHERE TRIM(COALESCE(fecha_embarque, '')) <> '';
+`,
+      encoding: "utf8"
+    });
+
+    parseTabRows(output).forEach(function (row) {
+      const currentValue = row[1];
+      const normalizedValue = normalizeShippingDate(currentValue);
+
+      if (normalizedValue && normalizedValue !== currentValue) {
+        const sqlId = target.numericId ? sqlNumber(row[0]) : sqlText(row[0]);
+        updates.push(`UPDATE ${target.table} SET fecha_embarque = ${sqlText(normalizedValue)} WHERE ${target.idColumn} = ${sqlId};`);
+      }
+    });
+  });
+
+  if (updates.length) {
+    execSql(deps, dbPath, `BEGIN TRANSACTION;\n${updates.join("\n")}\nCOMMIT;`);
+  }
+
+  execSql(deps, dbPath, `
+UPDATE ${ITEMS_TABLE}
+SET fecha_embarque = (
+  SELECT ${RUNS_TABLE}.fecha_embarque
+  FROM ${RUNS_TABLE}
+  WHERE ${RUNS_TABLE}.id = ${ITEMS_TABLE}.run_id
+)
+WHERE TRIM(COALESCE(${ITEMS_TABLE}.fecha_embarque, '')) = ''
+  AND ${ITEMS_TABLE}.herramienta IN ('RMCOp-Nike Personalizadas', 'RMCOp-Nike Genericas')
+  AND EXISTS (
+    SELECT 1
+    FROM ${RUNS_TABLE}
+    WHERE ${RUNS_TABLE}.id = ${ITEMS_TABLE}.run_id
+      AND TRIM(COALESCE(${RUNS_TABLE}.fecha_embarque, '')) <> ''
+  );
+`);
+
+  return updates.length;
 }
 
 function ensureSchema(deps, dbPath) {
@@ -182,6 +253,7 @@ CREATE TABLE IF NOT EXISTS ${ITEMS_TABLE} (
   herramienta TEXT,
   fila_excel INTEGER,
   wo TEXT,
+  roster TEXT,
   ship_order TEXT,
   style TEXT,
   style_family TEXT,
@@ -227,10 +299,13 @@ ON CONFLICT(source_app) DO UPDATE SET
 `);
 
   ensureColumn(deps, dbPath, ITEMS_TABLE, "clave", "TEXT");
+  ensureColumn(deps, dbPath, ITEMS_TABLE, "roster", "TEXT");
   ensureColumn(deps, dbPath, RUNS_TABLE, "fecha_embarque", "TEXT");
   ensureColumn(deps, dbPath, ITEMS_TABLE, "fecha_embarque", "TEXT");
   backfillMissingItemKeys(deps, dbPath);
+  normalizeExistingShippingDates(deps, dbPath);
   execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_items_clave ON ${ITEMS_TABLE}(clave);`);
+  execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_items_roster ON ${ITEMS_TABLE}(roster);`);
   execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_runs_fecha_embarque ON ${RUNS_TABLE}(fecha_embarque);`);
   execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_items_fecha_embarque ON ${ITEMS_TABLE}(fecha_embarque);`);
 }
@@ -241,7 +316,7 @@ function recordBatchRun(deps, dbPath, payload) {
   const now = new Date();
   const runId = run.id || `run-${Date.now()}`;
   const herramienta = run.herramienta || "RMCOp-Nike Personalizadas";
-  const fechaEmbarque = run.fechaEmbarque || "";
+  const fechaEmbarque = normalizeShippingDate(run.fechaEmbarque || "");
   const elapsedSeconds = Math.max(0, Math.round(Number(run.elapsedSeconds) || 0));
   const totalPieces = results.reduce(function (total, result) {
     const order = result.order || {};
@@ -286,7 +361,7 @@ DELETE FROM ${ITEMS_TABLE} WHERE run_id = ${sqlText(runId)};
 
     return `
 INSERT INTO ${ITEMS_TABLE} (
-  run_id, herramienta, fila_excel, wo, ship_order, style, style_family,
+  run_id, herramienta, fila_excel, wo, roster, ship_order, style, style_family,
   equipo, variante, version, talla, piezas, nombre, numero, archivo,
   estado, error, tiempo, fecha_embarque, clave
 ) VALUES (
@@ -294,6 +369,7 @@ INSERT INTO ${ITEMS_TABLE} (
   ${sqlText(herramienta)},
   ${sqlNumber(result.sourceRow || order.sourceRow || 0)},
   ${sqlText(order.wo || "")},
+  ${sqlText(order.sourceFormat === "generic-roster" ? (order.roster || order.rosterNumber || "") : "")},
   ${sqlText(order.shipOrder || "")},
   ${sqlText(order.style || "")},
   ${sqlText(order.styleFamily || "")},
@@ -308,7 +384,7 @@ INSERT INTO ${ITEMS_TABLE} (
   ${sqlText(result.ok ? "Completado" : "Error")},
   ${sqlText(result.ok ? "" : (result.message || "Error desconocido"))},
   ${sqlText(formatDuration(Math.max(1, Math.round((result.durationMs || 0) / 1000))))},
-  ${sqlText(order.shippingDate || fechaEmbarque)},
+  ${sqlText(normalizeShippingDate(order.shippingDate || fechaEmbarque))},
   ${sqlText(clave)}
 );
 `;
@@ -369,5 +445,6 @@ module.exports = {
   buildOrderKey,
   ensureSchema,
   listExistingItemKeys,
+  normalizeExistingShippingDates,
   recordBatchRun
 };
