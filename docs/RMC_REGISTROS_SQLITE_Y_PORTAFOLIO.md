@@ -215,6 +215,7 @@ Clave para detectar duplicados; Personalizadas usa WO y Genericas usa Roster:
 
 Esta clave se guarda en `rmcop_nike_items.clave`.
 `js/services/portfolioDb.js` rellena claves vacias y recalcula claves de Genericas para usar `roster`. Solo escribe cuando el valor calculado cambia.
+Una restriccion unica parcial protege claves con `estado = Completado`. Los items con error no bloquean un reintento.
 
 Si una fila no tiene nombre ni numero, usar el mismo criterio de nombre final que el panel (`SIN_DATOS`) para comparar contra archivos existentes.
 
@@ -234,6 +235,8 @@ Estados actuales:
 | `ARCHIVO_SIN_REGISTRO` | Si | No | No |
 | `REGISTRADO_SIN_ARCHIVO` | No | Si | No |
 | `CONFLICTO` | Clave repetida en la seleccion | Variable | No |
+
+Tambien es conflicto cuando dos filas producen la misma ruta esperada. Antes de procesar se ejecuta una validacion fresca; la copia batch rechaza archivos existentes y no genera nombres alternos.
 
 ## Escritura De Runs E Items
 

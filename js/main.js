@@ -744,6 +744,12 @@
         document.querySelectorAll("[data-batch-mode]").forEach(function (button) {
             button.classList.toggle("active", button.getAttribute("data-batch-mode") === state.batch.mode);
         });
+
+        const importButton = document.getElementById("btnChooseBatchExcel");
+
+        if (importButton) {
+            importButton.textContent = state.batch.mode === "generic" ? "Importar Roster Excel" : "Importar Excel";
+        }
     }
 
     function resetBatchImportState() {
@@ -918,6 +924,10 @@
             counts[row.clave] = (counts[row.clave] || 0) + 1;
             return counts;
         }, {});
+        const pathCounts = keyedRows.reduce(function (counts, row) {
+            counts[row.outputPath] = (counts[row.outputPath] || 0) + 1;
+            return counts;
+        }, {});
         const dbLookup = services.portfolioDb.listExistingItemKeys(getPortfolioDbDeps(), getPortfolioDbPath(), keyedRows.map(function (row) {
             return row.clave;
         }));
@@ -926,7 +936,7 @@
             const registered = Boolean(dbLookup[row.clave]);
             let status = "FALTANTE";
 
-            if (keyCounts[row.clave] > 1) {
+            if (keyCounts[row.clave] > 1 || pathCounts[row.outputPath] > 1) {
                 status = "CONFLICTO";
             } else if (fileExists && registered) {
                 status = "YA_CREADO";
@@ -1064,8 +1074,8 @@
         }
 
         const excelPath = pickFileFromCep(
-            state.batch.mode === "generic" ? "Elegir Excel Genericas Nike" : "Elegir Excel Nike On Demand",
-            paths ? paths.ordersBase : ""
+            state.batch.mode === "generic" ? "Elegir Roster Excel Nike" : "Elegir Excel Nike On Demand",
+            paths && paths.ordersBase ? paths.ordersBase : ""
         );
 
         if (!excelPath) {
@@ -1139,7 +1149,8 @@
             destinationFolder: preview.destinationFolder,
             outputName: preview.outputName,
             number: preview.order.number,
-            name: preview.order.name
+            name: preview.order.name,
+            strictOutputName: true
         });
     }
 
@@ -1223,9 +1234,16 @@
         let selectedRows = [];
 
         try {
-            const validation = getBatchValidationForSelectedRows();
+            const validation = validateBatchSelection();
             const blockedCount = validation ? validation.selectedCount - (validation.counts.FALTANTE || 0) : 0;
-            selectedRows = getBatchRowsForProcessing();
+            selectedRows = validation ? validation.rows.filter(function (row) {
+                return row.status === "FALTANTE";
+            }).map(function (row) {
+                return Object.assign({}, row.order, {
+                    validationKey: row.clave,
+                    expectedOutputName: row.outputName
+                });
+            }) : [];
 
             if (!selectedRows.length) {
                 throw new Error("No hay faltantes por procesar en la seleccion actual.");

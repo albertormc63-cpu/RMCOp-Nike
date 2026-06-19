@@ -171,6 +171,8 @@ Dentro de esta pagina hay dos modos:
 - `Personalizadas`: flujo On Demand por lote normal.
 - `Genericas`: roster generico; combina la lectura Excel de lote con la copia/aplicacion/cierre automatico de Illustrator.
 
+En Genericas, el boton dice `Importar Roster Excel` y el selector abre inicialmente en `ordersBase`; en produccion corresponde a `/Volumes/Fullsize/TO PRINT/NIKE ORDERS`.
+
 Validacion incremental: despues de importar el Excel y elegir destino batch, el panel compara contra archivos existentes y `RMC_CEP.sqlite`, y separa filas ya creadas, faltantes, con conflicto e invalidas. Solo los faltantes se procesan.
 
 Cambiar de modo limpia el Excel, destino, filtros de style/talla, resultados y validacion cargados. Esto evita que una seleccion de Personalizadas sobreviva dentro de Genericas o viceversa.
@@ -217,6 +219,8 @@ Nombre y numero pueden estar vacios. En batch se limpian los placeholders y el n
 
 Cada fila valida se compara con el PDF esperado y con `rmcop_nike_items.clave`:
 
+Solo un item SQLite con `estado = Completado` funciona como candado. Los intentos con error permanecen en el historial, pero pueden reintentarse.
+
 | Estado | Archivo | SQLite | Accion |
 | --- | --- | --- | --- |
 | `FALTANTE` | No | No | Se puede procesar. |
@@ -225,7 +229,10 @@ Cada fila valida se compara con el PDF esperado y con `rmcop_nike_items.clave`:
 | `REGISTRADO_SIN_ARCHIVO` | No | Si | Se omite y se muestra para revision. |
 | `CONFLICTO` | Clave repetida en la seleccion | Variable | Se omite. |
 
+`CONFLICTO` tambien se usa cuando dos filas resuelven la misma ruta de salida, aunque sus claves sean distintas.
+
 La validacion no crea PDFs. El procesamiento comienza solo al presionar el boton principal.
+Al presionarlo, el CEP vuelve a consultar archivos y SQLite; no reutiliza una validacion visual anterior. Batch usa nombres estrictos y nunca crea variantes `DUP` o `(1)` si la ruta aparece despues de validar.
 
 Layout On Demand soportado por encabezado:
 

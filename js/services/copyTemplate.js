@@ -2,7 +2,7 @@ const path = require("path");
 // Copia una plantilla PDF al destino final. Puede hacer dryRun para detectar reemplazos.
 const fs = require("fs-extra");
 
-async function copyTemplate({ templatePath, ordersBase, demandFolder, destinationFolder, outputName, number, name, dryRun }) {
+async function copyTemplate({ templatePath, ordersBase, demandFolder, destinationFolder, outputName, number, name, dryRun, strictOutputName }) {
 
   // Ruta final de la copia que abrira Illustrator.
   const finalDestinationFolder = normalizeFileUrlPath(destinationFolder) || path.join(ordersBase, demandFolder);
@@ -13,7 +13,15 @@ async function copyTemplate({ templatePath, ordersBase, demandFolder, destinatio
     throw new Error(`No existe la plantilla:\n${templatePath}`);
   }
 
-  const destination = await resolveOutputDestination(finalDestinationFolder, outputName, { number, name });
+  const destination = strictOutputName ? {
+    outputPath: path.join(finalDestinationFolder, outputName),
+    outputName,
+    replaced: false
+  } : await resolveOutputDestination(finalDestinationFolder, outputName, { number, name });
+
+  if (strictOutputName && await fs.pathExists(destination.outputPath)) {
+    throw new Error(`El archivo ya existe y batch no creara un duplicado:\n${destination.outputPath}`);
+  }
 
   if (dryRun) {
     return {
@@ -25,7 +33,9 @@ async function copyTemplate({ templatePath, ordersBase, demandFolder, destinatio
 
   // Normalmente copiamos a un nombre unico; overwrite queda como defensa si el usuario confirmo reemplazo.
   await fs.ensureDir(finalDestinationFolder);
-  await fs.copy(templatePath, destination.outputPath, { overwrite: true });
+  await fs.copy(templatePath, destination.outputPath, strictOutputName
+    ? { overwrite: false, errorOnExist: true }
+    : { overwrite: true });
 
   return {
     outputPath: destination.outputPath,

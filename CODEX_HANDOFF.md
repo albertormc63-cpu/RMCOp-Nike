@@ -139,6 +139,7 @@ Clave candidata para duplicados en RMCOp-Nike; Personalizadas usa WO y Genericas
 
 La clave se guarda en `rmcop_nike_items.clave`.
 `js/services/portfolioDb.js` hace backfill de claves vacias y recalcula claves de Genericas con Roster. La migracion es idempotente.
+Solo items `Completado` bloquean por clave; errores pueden reintentarse. SQLite usa indice unico parcial para claves completadas.
 
 Para filas sin nombre/numero, usar el mismo criterio del panel (`SIN_DATOS`) para comparar nombres finales.
 
@@ -150,6 +151,7 @@ Validar primero; generar despues.
 
 La validacion debe ser visible antes de copiar/abrir/aplicar en Illustrator.
 El boton principal de Por Lote debe procesar solo faltantes cuando exista validacion.
+Al presionar procesar se recalcula la validacion. Claves o rutas repetidas son `CONFLICTO`, y batch no crea sufijos `DUP/(1)`.
 
 En Personalizadas, el destino se elige manualmente y se guarda por familia de style/talla:
 
@@ -256,7 +258,7 @@ UI batch en `index.html` + `main.js`:
 
 - Seleccionar tipo de lote: `Personalizadas` o `Genericas`.
 - Cambiar de tipo limpia Excel, destino, filtros, resultados y validacion anteriores.
-- Seleccionar Excel.
+- Seleccionar Excel. En Genericas, el boton dice `Importar Roster Excel` y abre inicialmente en `ordersBase` (`/Volumes/Fullsize/TO PRINT/NIKE ORDERS` en produccion).
 - En Personalizadas, seleccionar destino batch; en Genericas se usa la carpeta del Excel.
 - Filtrar por familia de style.
 - Filtrar por una o varias tallas.

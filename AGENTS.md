@@ -50,6 +50,9 @@ No inventes contexto de chats. Usa `CODEX_HANDOFF.md` como memoria principal.
 - En Genericas, Roster sustituye a WO como identificador cuando no existe WO.
 - La columna `rmcop_nike_items.clave` es la base de deteccion de duplicados; no quitarla ni cambiar su composicion sin actualizar validacion y docs.
 - La clave es `(WO o Roster) + Ship Order + Style + Team + Size + Nombre + Numero`.
+- Solo items `Completado` bloquean una clave; errores deben poder reintentarse.
+- Al procesar batch, recalcular siempre la validacion contra archivos y SQLite.
+- Claves o rutas repetidas son `CONFLICTO`; batch no debe crear nombres alternos `DUP` o `(1)`.
 - RMCOp-Nike registra produccion en la BD compartida `/Users/rmlsub1/Documents/RMC - CEP/RMC_BD/RMC_CEP.sqlite`.
 - Las tablas propias de este CEP son `rmcop_nike_runs`, `rmcop_nike_items` y `rmcop_nike_git_commits`; no tocar tablas de otros CEP.
 - `rmcop_nike_runs.created_at` guarda solo fecha `DD/MM/AAAA`; `started_at`, `finished_at` y `tiempo` guardan `HH:MM:SS`.

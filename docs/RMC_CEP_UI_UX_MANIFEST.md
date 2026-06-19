@@ -227,6 +227,8 @@ La vista de detalle debe distinguir:
 
 Solo `FALTANTE` entra al proceso. Las filas invalidas del Excel se muestran aparte con su fila y errores.
 
+Al presionar procesar se debe ejecutar una validacion fresca. Una clave o ruta de salida repetida es `CONFLICTO`; el batch no ofrece nombres alternos para evadirlo. Los items SQLite con error se muestran como historial, pero no cuentan como archivo ya generado.
+
 ## Variantes RMCOp-Nike
 
 Reglas importantes que otros chats deben respetar:

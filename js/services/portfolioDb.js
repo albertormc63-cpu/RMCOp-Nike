@@ -43,6 +43,11 @@ function formatDuration(secondsValue) {
   return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}`;
 }
 
+function resolveStoredPath(deps, value) {
+  const pathValue = String(value || "").trim();
+  return pathValue ? deps.path.resolve(pathValue) : null;
+}
+
 function normalizeKeyPart(value) {
   return String(value || "")
     .trim()
@@ -239,6 +244,8 @@ CREATE TABLE IF NOT EXISTS ${RUNS_TABLE} (
   tiempo TEXT,
   herramienta TEXT,
   fecha_embarque TEXT,
+  excel_path TEXT,
+  output_root TEXT,
   pedidos INTEGER DEFAULT 0,
   piezas INTEGER DEFAULT 0,
   estilos INTEGER DEFAULT 0,
@@ -265,6 +272,7 @@ CREATE TABLE IF NOT EXISTS ${ITEMS_TABLE} (
   nombre TEXT,
   numero TEXT,
   archivo TEXT,
+  path TEXT,
   estado TEXT,
   error TEXT,
   tiempo TEXT,
@@ -301,10 +309,19 @@ ON CONFLICT(source_app) DO UPDATE SET
   ensureColumn(deps, dbPath, ITEMS_TABLE, "clave", "TEXT");
   ensureColumn(deps, dbPath, ITEMS_TABLE, "roster", "TEXT");
   ensureColumn(deps, dbPath, RUNS_TABLE, "fecha_embarque", "TEXT");
+  ensureColumn(deps, dbPath, RUNS_TABLE, "excel_path", "TEXT");
+  ensureColumn(deps, dbPath, RUNS_TABLE, "output_root", "TEXT");
   ensureColumn(deps, dbPath, ITEMS_TABLE, "fecha_embarque", "TEXT");
+  ensureColumn(deps, dbPath, ITEMS_TABLE, "path", "TEXT");
   backfillMissingItemKeys(deps, dbPath);
   normalizeExistingShippingDates(deps, dbPath);
   execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_items_clave ON ${ITEMS_TABLE}(clave);`);
+  execSql(deps, dbPath, `CREATE UNIQUE INDEX IF NOT EXISTS idx_rmcop_nike_items_clave_completada
+    ON ${ITEMS_TABLE}(clave)
+    WHERE TRIM(COALESCE(clave, '')) <> '' AND estado = 'Completado';`);
+  execSql(deps, dbPath, `CREATE UNIQUE INDEX IF NOT EXISTS idx_rmcop_nike_items_path_completado
+    ON ${ITEMS_TABLE}(path)
+    WHERE TRIM(COALESCE(path, '')) <> '' AND estado = 'Completado';`);
   execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_items_roster ON ${ITEMS_TABLE}(roster);`);
   execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_runs_fecha_embarque ON ${RUNS_TABLE}(fecha_embarque);`);
   execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_items_fecha_embarque ON ${ITEMS_TABLE}(fecha_embarque);`);
@@ -317,6 +334,8 @@ function recordBatchRun(deps, dbPath, payload) {
   const runId = run.id || `run-${Date.now()}`;
   const herramienta = run.herramienta || "RMCOp-Nike Personalizadas";
   const fechaEmbarque = normalizeShippingDate(run.fechaEmbarque || "");
+  const excelPath = resolveStoredPath(deps, run.sourceExcel);
+  const outputRoot = resolveStoredPath(deps, run.destinationFolder);
   const elapsedSeconds = Math.max(0, Math.round(Number(run.elapsedSeconds) || 0));
   const totalPieces = results.reduce(function (total, result) {
     const order = result.order || {};
@@ -334,7 +353,7 @@ function recordBatchRun(deps, dbPath, payload) {
 
   const runSql = `
 INSERT OR REPLACE INTO ${RUNS_TABLE} (
-  id, created_at, started_at, finished_at, tiempo, herramienta, fecha_embarque,
+  id, created_at, started_at, finished_at, tiempo, herramienta, fecha_embarque, excel_path, output_root,
   pedidos, piezas, estilos, ok, errores, observaciones
 ) VALUES (
   ${sqlText(runId)},
@@ -344,6 +363,8 @@ INSERT OR REPLACE INTO ${RUNS_TABLE} (
   ${sqlText(formatDuration(elapsedSeconds))},
   ${sqlText(herramienta)},
   ${sqlText(fechaEmbarque)},
+  ${sqlText(excelPath)},
+  ${sqlText(outputRoot)},
   ${sqlNumber(results.length)},
   ${sqlNumber(totalPieces)},
   ${sqlNumber(Object.keys(styles).length)},
@@ -358,11 +379,12 @@ DELETE FROM ${ITEMS_TABLE} WHERE run_id = ${sqlText(runId)};
   const itemSql = results.map(function (result) {
     const order = result.order || {};
     const clave = result.clave || buildOrderKey(order);
+    const outputPath = result.ok ? resolveStoredPath(deps, result.outputPath) : null;
 
     return `
-INSERT INTO ${ITEMS_TABLE} (
+INSERT OR IGNORE INTO ${ITEMS_TABLE} (
   run_id, herramienta, fila_excel, wo, roster, ship_order, style, style_family,
-  equipo, variante, version, talla, piezas, nombre, numero, archivo,
+  equipo, variante, version, talla, piezas, nombre, numero, archivo, path,
   estado, error, tiempo, fecha_embarque, clave
 ) VALUES (
   ${sqlText(runId)},
@@ -381,6 +403,7 @@ INSERT INTO ${ITEMS_TABLE} (
   ${sqlText(order.name || "")},
   ${sqlText(order.number || "")},
   ${sqlText(result.outputName || "")},
+  ${sqlText(outputPath)},
   ${sqlText(result.ok ? "Completado" : "Error")},
   ${sqlText(result.ok ? "" : (result.message || "Error desconocido"))},
   ${sqlText(formatDuration(Math.max(1, Math.round((result.durationMs || 0) / 1000))))},
@@ -423,6 +446,7 @@ function listExistingItemKeys(deps, dbPath, keys) {
 SELECT clave, COUNT(*)
 FROM ${ITEMS_TABLE}
 WHERE clave IN (${uniqueKeys.map(sqlText).join(",")})
+  AND estado = 'Completado'
 GROUP BY clave;
 `;
   const output = deps.childProcess.execFileSync(SQLITE_BIN, [dbPath], {
