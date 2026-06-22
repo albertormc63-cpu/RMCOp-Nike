@@ -20,6 +20,7 @@
             data: null,
             selectedStyleFamily: "",
             selectedSizes: [],
+            shippingDateInput: "",
             lastResults: [],
             validation: null
         }
@@ -261,6 +262,7 @@
                 finishedAt: now.toISOString(),
                 fecha: dateText,
                 herramienta: "RMCOp-Nike Manual",
+                fechaEmbarque: order.shippingDate || "",
                 destinationFolder: outputPath ? services.path.dirname(outputPath) : "",
                 styleFilter: order.style || "",
                 sizeFilter: order.size || "",
@@ -430,7 +432,8 @@
             style: order.style,
             size: order.size
         });
-        const outputName = services.buildOutputName(order);
+        const fileIdentifier = order.namingSource === "roster" ? order.roster : order.wo;
+        const outputName = services.buildOutputName(Object.assign({}, order, { wo: fileIdentifier }));
         const destinationFolder = order.customDestinationFolder || services.path.join(paths.ordersBase, order.demandFolder);
 
         document.getElementById("templatePathPreview").textContent = templatePath;
@@ -576,6 +579,9 @@
         if (batchData.defaultShippingDate) {
             lines.push(`Fecha embarque: ${batchData.defaultShippingDate}`);
         }
+        if (state.batch.mode === "generic") {
+            lines.push(`Fecha embarque seleccionada: ${getBatchShippingDate([]) || "pendiente"}`);
+        }
         lines.push(`Encabezados: fila ${batchData.headerRow || 1} | Datos desde fila ${batchData.dataStartRow || 2}`);
         lines.push(`Filtro style: ${getSelectedBatchStyleFamilyLabel()} | Filtro talla: ${getSelectedBatchSizeLabel()}`);
         lines.push(`Validas en seleccion: ${getSelectedBatchRows().length} | Errores del Excel: ${invalidCount}`);
@@ -611,7 +617,8 @@
         lines.push("Primeras filas validas:");
         getSelectedBatchRows().slice(0, 14).forEach(function (row) {
             const outputInfo = state.batch.destinationFolder ? buildBatchOutputInfo(row) : { outputName: buildBatchOutputName(row) };
-            lines.push(`Fila ${row.sourceRow} | ${row.styleFamily}/${row.size} | ${row.team} | ${row.style} | ${row.name} #${row.number} | Emb ${row.shippingDate || "-"} | ${outputInfo.outputName}`);
+            const shippingDate = state.batch.mode === "generic" ? getBatchShippingDate([]) : row.shippingDate;
+            lines.push(`Fila ${row.sourceRow} | ${row.styleFamily}/${row.size} | ${row.team} | ${row.style} | ${row.name} #${row.number} | Emb ${shippingDate || "-"} | ${outputInfo.outputName}`);
         });
 
         if (validation) {
@@ -733,11 +740,20 @@
     }
 
     function getBatchShippingDate(rows) {
+        if (state.batch.mode === "generic") {
+            return formatDateInputAsShippingDate(state.batch.shippingDateInput);
+        }
+
         const rowWithDate = (rows || []).find(function (row) {
             return row && row.shippingDate;
         });
 
         return rowWithDate ? rowWithDate.shippingDate : (state.batch.data && state.batch.data.defaultShippingDate) || "";
+    }
+
+    function formatDateInputAsShippingDate(value) {
+        const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        return match ? `${match[3]}/${match[2]}` : "";
     }
 
     function renderBatchModeButtons() {
@@ -746,9 +762,14 @@
         });
 
         const importButton = document.getElementById("btnChooseBatchExcel");
+        const shippingDateField = document.getElementById("batchGenericShippingDateField");
 
         if (importButton) {
             importButton.textContent = state.batch.mode === "generic" ? "Importar Roster Excel" : "Importar Excel";
+        }
+
+        if (shippingDateField) {
+            shippingDateField.classList.toggle("hidden", state.batch.mode !== "generic");
         }
     }
 
@@ -758,7 +779,13 @@
         state.batch.data = null;
         state.batch.selectedStyleFamily = "";
         state.batch.selectedSizes = [];
+        state.batch.shippingDateInput = "";
         state.batch.lastResults = [];
+        const shippingDateInput = document.getElementById("batchGenericShippingDate");
+
+        if (shippingDateInput) {
+            shippingDateInput.value = "";
+        }
         clearBatchValidation();
     }
 
@@ -1093,6 +1120,8 @@
         }
         state.batch.selectedStyleFamily = "";
         state.batch.selectedSizes = [];
+        state.batch.shippingDateInput = "";
+        document.getElementById("batchGenericShippingDate").value = "";
         state.batch.lastResults = [];
         clearBatchValidation();
         renderBatchModeButtons();
@@ -1166,6 +1195,12 @@
             throw new Error("Primero elige un destino batch.");
         }
 
+        const selectedShippingDate = getBatchShippingDate([]);
+
+        if (state.batch.mode === "generic" && !selectedShippingDate) {
+            throw new Error("Selecciona la fecha de embarque para Genericas.");
+        }
+
         if (!services.copyTemplate || !services.buildTemplatePath || !services.buildOutputName || !services.path) {
             throw new Error("Servicios Node incompletos para batch.");
         }
@@ -1223,6 +1258,12 @@
             throw new Error("Primero elige un destino batch.");
         }
 
+        const selectedShippingDate = getBatchShippingDate([]);
+
+        if (state.batch.mode === "generic" && !selectedShippingDate) {
+            throw new Error("Selecciona la fecha de embarque para Genericas.");
+        }
+
         if (batchData.invalidRows.length) {
             console.warn(`Se saltaran ${batchData.invalidRows.length} filas invalidas.`);
         }
@@ -1241,7 +1282,8 @@
             }).map(function (row) {
                 return Object.assign({}, row.order, {
                     validationKey: row.clave,
-                    expectedOutputName: row.outputName
+                    expectedOutputName: row.outputName,
+                    shippingDate: state.batch.mode === "generic" ? selectedShippingDate : row.order.shippingDate
                 });
             }) : [];
 
@@ -1595,7 +1637,7 @@
             changeProductLine(event.target.value);
         });
 
-        ["wo", "styleCode", "size", "playerNumber", "playerName", "demandFolder"].forEach(function (id) {
+        ["wo", "manualRoster", "manualNamingSource", "manualShippingDate", "styleCode", "size", "playerNumber", "playerName", "demandFolder"].forEach(function (id) {
             const element = document.getElementById(id);
 
             if (!element) return;
@@ -1675,6 +1717,11 @@
                 console.error(error.message);
                 showIllustratorAlert(error.message);
             }
+        });
+
+        document.getElementById("batchGenericShippingDate").addEventListener("change", function (event) {
+            state.batch.shippingDateInput = event.target.value || "";
+            renderBatchSummary();
         });
 
         document.getElementById("btnChooseBatchDestination").addEventListener("click", function () {

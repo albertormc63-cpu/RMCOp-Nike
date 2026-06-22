@@ -119,8 +119,14 @@
 
     function collectOrder(state) {
         // Punto unico donde convertimos el formulario HTML en un objeto de pedido.
+        const namingSource = document.getElementById("manualNamingSource").value === "roster" ? "roster" : "wo";
+
         return {
             wo: sanitizeWorkOrder(document.getElementById("wo").value),
+            roster: sanitizeRoster(document.getElementById("manualRoster").value),
+            namingSource: namingSource,
+            sourceFormat: namingSource === "roster" ? "manual-roster" : "manual",
+            shippingDate: formatDateInput(document.getElementById("manualShippingDate").value),
             line: getProductLine(state.selectedLine),
             team: state.selectedTeam,
             variant: getVariant(state.selectedVariant),
@@ -144,13 +150,29 @@
         return String(value || "").replace(/[^0-9]/g, "").trim();
     }
 
+    function sanitizeRoster(value) {
+        return String(value || "").replace(/[^0-9-]/g, "").trim();
+    }
+
+    function formatDateInput(value) {
+        const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        return match ? `${match[3]}/${match[2]}` : "";
+    }
+
     function bindInputFilters() {
         const woInput = document.getElementById("wo");
+        const rosterInput = document.getElementById("manualRoster");
         const numberInput = document.getElementById("playerNumber");
 
         if (woInput) {
             woInput.addEventListener("input", function () {
                 woInput.value = sanitizeWorkOrder(woInput.value);
+            });
+        }
+
+        if (rosterInput) {
+            rosterInput.addEventListener("input", function () {
+                rosterInput.value = sanitizeRoster(rosterInput.value);
             });
         }
 
@@ -164,7 +186,9 @@
     function validateOrder(order) {
         const missing = [];
 
-        if (!order.wo) missing.push("Work Order");
+        if (order.namingSource === "roster" && !order.roster) missing.push("Roster");
+        if (order.namingSource !== "roster" && !order.wo) missing.push("Work Order");
+        if (!order.shippingDate) missing.push("Fecha de embarque");
         if (!order.style) missing.push("Style");
         if (!order.demandFolder && !order.customDestinationFolder) missing.push("Destino");
 
@@ -179,6 +203,9 @@
         const sizeSelect = document.getElementById("size");
 
         document.getElementById("wo").value = "";
+        document.getElementById("manualRoster").value = "";
+        document.getElementById("manualNamingSource").value = "wo";
+        document.getElementById("manualShippingDate").value = "";
         document.getElementById("playerNumber").value = "";
         document.getElementById("playerName").value = "";
         clearCustomDestinationFolder();

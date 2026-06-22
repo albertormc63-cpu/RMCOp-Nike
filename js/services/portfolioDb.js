@@ -61,7 +61,7 @@ function buildOrderKey(order) {
   const keyName = hasName || hasNumber ? order && order.name : "SIN_DATOS";
   const isGeneric = order && (
     order.sourceFormat === "generic-roster" ||
-    normalizeKeyPart(order.roster) !== "" ||
+    order.namingSource === "roster" ||
     order.herramienta === "RMCOp-Nike Genericas"
   );
   const orderIdentifier = isGeneric ? (order.roster || order.rosterNumber || order.wo) : order && order.wo;
@@ -391,7 +391,7 @@ INSERT OR IGNORE INTO ${ITEMS_TABLE} (
   ${sqlText(herramienta)},
   ${sqlNumber(result.sourceRow || order.sourceRow || 0)},
   ${sqlText(order.wo || "")},
-  ${sqlText(order.sourceFormat === "generic-roster" ? (order.roster || order.rosterNumber || "") : "")},
+  ${sqlText(order.roster || order.rosterNumber || "")},
   ${sqlText(order.shipOrder || "")},
   ${sqlText(order.style || "")},
   ${sqlText(order.styleFamily || "")},

@@ -135,6 +135,24 @@
                 </label>
 
                 <label>
+                    Roster
+                    <input type="text" id="manualRoster" inputmode="numeric" pattern="[0-9-]*" placeholder="Ej. 79235-26">
+                </label>
+
+                <label>
+                    Nombrar archivo por
+                    <select id="manualNamingSource">
+                        <option value="wo" selected>Work Order</option>
+                        <option value="roster">Roster</option>
+                    </select>
+                </label>
+
+                <label>
+                    Fecha de embarque
+                    <input type="date" id="manualShippingDate">
+                </label>
+
+                <label>
                     Style
                     <select id="styleCode"></select>
                 </label>
@@ -220,6 +238,11 @@
 
                 <button id="btnChooseBatchExcel" class="primary-button">Importar Excel</button>
                 <p id="batchExcelPreview" class="path-preview">Sin Excel seleccionado</p>
+
+                <label id="batchGenericShippingDateField" class="batch-date-field hidden">
+                    Fecha de embarque para Genericas
+                    <input type="date" id="batchGenericShippingDate">
+                </label>
 
                 <button id="btnChooseBatchDestination" class="secondary-button batch-action">Elegir destino por lote</button>
                 <p id="batchDestinationPreview" class="path-preview">Sin destino seleccionado</p>

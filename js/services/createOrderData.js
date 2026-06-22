@@ -219,21 +219,36 @@ function extractRosterName(rawRows, filePath) {
 }
 
 function extractWoFromText(value) {
+  const matches = extractWorkOrdersFromText(value);
+
+  if (matches.length) {
+    return matches.join("-");
+  }
+
+  const text = cleanCell(value);
+  const loose = text.match(/\b(1[0-9]{5})\b/);
+  return loose ? loose[1] : "";
+}
+
+function extractWorkOrdersFromText(value) {
   const text = cleanCell(value);
   const matches = [];
   let match;
-  const pattern = /\bWO\s*#?\s*([0-9-]+)\b/gi;
+  const pattern = /\bWO\s*#?\s*([0-9]{4,})\b/gi;
 
   while ((match = pattern.exec(text)) !== null) {
     matches.push(match[1]);
   }
 
-  if (matches.length) {
-    return Array.from(new Set(matches)).join("-");
-  }
+  return Array.from(new Set(matches));
+}
 
-  const loose = text.match(/\b(1[0-9]{5})\b/);
-  return loose ? loose[1] : "";
+function resolveWorkOrderForStyle(style, workOrders) {
+  const values = workOrders || [];
+
+  if (!values.length) return "";
+  if (values.length === 1) return values[0];
+  return /^Y/i.test(style) ? values[1] : values[0];
 }
 
 function extractShippingDateFromText(value) {
@@ -267,12 +282,14 @@ function getWorkbookMetadata(workbookData) {
   const rosterNumberMatch = rosterName.match(/\b[0-9]{4,}-[0-9]{2,}\b/) ||
     String(workbookData.filePath || "").match(/\b[0-9]{4,}-[0-9]{2,}\b/);
   const defaultShipOrder = extractFixedValue(workbookData.rawRows, ["Ship Order #", "Ship Order", "SHIP O", "SHIP O."]);
+  const workOrders = extractWorkOrdersFromText(rosterName);
 
   return {
     rosterName: rosterName,
     rosterNumber: rosterNumberMatch ? rosterNumberMatch[0] : "",
     sourceFormat: "",
-    defaultWo: extractWoFromText(rosterName) || extractWoFromText(workbookData.filePath),
+    workOrders: workOrders,
+    defaultWo: workOrders.length ? workOrders.join(" / ") : extractWoFromText(workbookData.filePath),
     defaultShipOrder: defaultShipOrder === "0" ? "" : defaultShipOrder,
     defaultShippingDate: extractDefaultShippingDate(workbookData.rawRows),
     totalPieces: Number(cleanCell(extractFixedValue(workbookData.rawRows, ["TOTAL PIECES"])) || 0)
@@ -288,7 +305,7 @@ function normalizeRow(cells, index, columns, metadata) {
 
   return {
     sourceRow: index + 1,
-    wo: sanitizeNumber(getCell(cells, columns.wo)) || cleanCell(getCell(cells, columns.wo)) || metadata.defaultWo,
+    wo: sanitizeNumber(getCell(cells, columns.wo)) || cleanCell(getCell(cells, columns.wo)) || resolveWorkOrderForStyle(style, metadata.workOrders) || metadata.defaultWo,
     roster: columns.format === "generic-roster" ? metadata.rosterNumber : "",
     shipOrder: cleanCell(getCell(cells, columns.shipOrder)) || metadata.defaultShipOrder,
     style: style,
@@ -373,6 +390,15 @@ function createOrderDataFromExcel(filePath) {
 
   metadata.sourceFormat = columns.format;
 
+  if (columns.format === "generic-roster") {
+    if (metadata.workOrders.length > 2) {
+      throw new Error(`El roster contiene ${metadata.workOrders.length} Work Orders en A1. Maximo permitido: 2.`);
+    }
+
+    // La fecha operativa de Genericas se captura en el panel, no desde el roster.
+    metadata.defaultShippingDate = "";
+  }
+
   const rows = workbookData.rawRows
     .map(function (cells, index) {
       return normalizeRow(cells, index, columns, metadata);
@@ -391,6 +417,7 @@ function createOrderDataFromExcel(filePath) {
     sourceFormat: columns.format,
     rosterName: metadata.rosterName,
     rosterNumber: metadata.rosterNumber,
+    workOrders: metadata.workOrders,
     defaultWo: metadata.defaultWo,
     defaultShipOrder: metadata.defaultShipOrder,
     defaultShippingDate: metadata.defaultShippingDate,
@@ -415,9 +442,11 @@ function createOrderDataFromExcel(filePath) {
 
 module.exports = {
   createOrderDataFromExcel,
+  extractWorkOrdersFromText,
   getColumnIndexes,
   findHeaderRowIndex,
   getStyleFamily,
   normalizeSize,
+  resolveWorkOrderForStyle,
   inferTeam
 };

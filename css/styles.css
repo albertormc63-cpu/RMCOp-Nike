@@ -545,6 +545,10 @@ select {
     border-top: 1px solid #3b3f46;
 }
 
+.batch-date-field {
+    margin-top: 6px;
+}
+
 .batch-choice-card {
     width: 100%;
     min-height: 31px;
