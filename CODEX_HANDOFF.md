@@ -1,6 +1,6 @@
 # RMCOp-Nike - Handoff Para Otro Codex
 
-Ultima actualizacion: 2026-06-17.
+Ultima actualizacion: 2026-06-22.
 
 Palabra clave para retomar contexto: `RMCOP_NIKE_HANDOFF`.
 
@@ -94,9 +94,11 @@ finished_at -> solo hora HH:MM:SS
 tiempo      -> duracion HH:MM:SS
 herramienta -> RMCOp-Nike Manual | RMCOp-Nike Personalizadas | RMCOp-Nike Genericas
 fecha_embarque -> fecha de embarque extraida del Excel, normalizada como DD/MM
+excel_path  -> ruta absoluta del Excel fuente; NULL en Manual
+output_root -> carpeta base elegida o resuelta para la ejecucion
 ```
 
-No usar columna `fecha`, `source_excel` ni `destination_folder`.
+No usar columnas ambiguas como `source_excel` o `destination_folder`; los nombres vigentes son `excel_path` y `output_root`.
 No convertir `id` a autoincremental sin revisar `rmcop_nike_items.run_id`, porque los items enlazan contra ese texto.
 
 Formato actual de `rmcop_nike_items`:
@@ -107,11 +109,14 @@ herramienta -> permite leer Manual/Personalizadas/Genericas desde el item
 roster      -> numero de roster usado por Genericas; vacio en Manual/Personalizadas
 fecha_embarque -> fecha de embarque extraida del Excel, normalizada como DD/MM
 archivo     -> nombre de archivo final
+path        -> ruta absoluta del PDF completado; NULL si no se creo archivo
 clave       -> clave estable para detectar duplicados
 ```
 
-No guardar `output_path`.
+No reintroducir `output_path`; la columna canonica para el PDF final es `path`.
 No prefijar el `id` con `manual-`; el metodo se identifica por `herramienta`.
+
+Los registros historicos con evidencia suficiente fueron conciliados contra JSONL y archivos fisicos. RMC Control Center puede usar `excel_path`, `output_root` y `path` para mostrar el origen y destino sin reconstruir rutas desde nombres.
 
 ## Validacion Incremental Activa
 
@@ -498,6 +503,14 @@ Nota: en la sesion del manual, el render formal con LibreOffice fallo por librer
    - `portfolioDb.js`.
 9. Resolver la posible colision de `run_id` cuando dos ejecuciones comienzan en el mismo segundo.
 10. All Stars permanece fuera del catalogo activo hasta que el usuario autorice su integracion.
+11. Revisar con el usuario la reestructura gradual del registro antes de cambiar codigo:
+   - separar migraciones, consultas y comandos de escritura;
+   - abrir el run al inicio, persistir items durante la produccion y finalizar agregados al cierre;
+   - eliminar la dependencia de `DELETE + reinsercion` por run;
+   - usar IDs sin colision;
+   - preparar una API central con cola local para ejecuciones desde otras computadoras.
+
+La reestructura anterior es propuesta, no comportamiento vigente. No implementarla de golpe ni cambiar el esquema sin aprobacion.
 
 ## Reglas Para Siguiente Codex
 

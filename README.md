@@ -1,6 +1,6 @@
 # RMCOp-Nike
 
-Ultima actualizacion de contexto: 2026-06-17.
+Ultima actualizacion de contexto: 2026-06-22.
 
 Palabra clave para retomar contexto: `RMCOP_NIKE_HANDOFF`.
 
@@ -63,8 +63,11 @@ La version CEP de mockups debe seguir siendo extension separada, con su propio `
   - `rmcop_nike_runs.id` es texto legible: `AAAAMMDD-HHMMSS` para lote y manual.
   - Manual/lote se distinguen por `herramienta`, no por prefijo en `id`.
   - `created_at` guarda fecha `DD/MM/AAAA`; `started_at`, `finished_at` y `tiempo` guardan horas/duracion `HH:MM:SS`.
-  - `rmcop_nike_items` guarda `archivo` y `clave`, no `output_path`.
+  - `rmcop_nike_runs.excel_path` vincula el Excel fuente cuando aplica; Manual lo deja `NULL`.
+  - `rmcop_nike_runs.output_root` guarda la raiz de salida de la ejecucion.
+  - `rmcop_nike_items.archivo` guarda el nombre y `rmcop_nike_items.path` la ruta absoluta del PDF completado.
   - `rmcop_nike_items.roster` guarda el numero de roster para Genericas; queda vacio en Personalizadas y Manual.
+  - Los registros historicos disponibles fueron conciliados con logs y archivos fisicos para rellenar sus rutas.
 - Validacion incremental implementada:
   - El mismo Excel alimenta RMCOp-Nike y RMC MockupTool.
   - Las listas se preparan jueves, se procesan viernes y pueden recibir agregados lunes.
@@ -194,6 +197,13 @@ DESTINO_ELEGIDO/
 
 En modo `Genericas`, el destino se llena automaticamente con la carpeta donde vive el Excel y los PDFs se guardan directo en esa raiz, sin subcarpetas por style/talla.
 Los registros de BD guardan `fecha_embarque` en runs/items con formato `DD/MM`. En OD se extrae del texto de la fila 2, por ejemplo `26 JUNIO` se guarda como `26/06`; en Genericas, `17-Jun` se guarda como `17/06`.
+
+Vinculacion para RMC Control Center:
+
+- Batch guarda la ruta absoluta del Excel en `rmcop_nike_runs.excel_path`.
+- Manual guarda `excel_path = NULL`.
+- Los tres modos guardan la carpeta base de la ejecucion en `rmcop_nike_runs.output_root`.
+- Cada resultado completado guarda la ruta absoluta final en `rmcop_nike_items.path`; un error no afirma una ruta creada.
 
 Al seleccionar el Excel, el panel valida el modo antes de cargarlo:
 
@@ -457,6 +467,21 @@ Decision actual:
 - No agregar dependencias de MockupTool al `package.json` raiz del CEP Nike.
 - Hacer cambios nuevos de mockups en `RMC MockupTool`.
 - No reintroducir el flujo de MockupTool en el CEP principal de RMCOp-Nike.
+
+## Reestructura De Registros Propuesta
+
+Esta propuesta esta documentada para revision; no esta implementada:
+
+1. Separar validacion, produccion y persistencia en servicios con responsabilidades pequenas.
+2. Crear el run al iniciar el proceso con estado `En progreso`.
+3. Registrar cada item inmediatamente despues de guardar el PDF o detectar el error.
+4. Finalizar el run calculando totales desde sus items, sin borrar y reconstruir toda la ejecucion.
+5. Ejecutar migraciones SQLite al arrancar el CEP, no dentro de cada consulta de validacion.
+6. Cambiar el ID con precision de segundos por un identificador sin colisiones antes de permitir concurrencia.
+7. Mantener `clave` como identidad operativa y `path` como ubicacion; mover un archivo no debe cambiar su identidad.
+8. Para varios equipos, enviar registros a una API central de RMC Control Center y conservar una cola local de reintentos, en lugar de escribir una SQLite compartida por red.
+
+La validacion doble actual debe conservarse: preflight visible antes de producir y consulta fresca inmediatamente antes de generar.
 
 ## Checks Utiles
 

@@ -1,6 +1,6 @@
 # RMCOp-Nike - Registros, SQLite Y Portafolio
 
-Ultima actualizacion: 2026-06-17.
+Ultima actualizacion: 2026-06-22.
 
 ## Portafolio Interno
 
@@ -82,6 +82,8 @@ finished_at     HH:MM:SS
 tiempo          HH:MM:SS
 herramienta     RMCOp-Nike Manual | RMCOp-Nike Personalizadas | RMCOp-Nike Genericas
 fecha_embarque  Fecha de embarque del Excel, cuando aplica
+excel_path      Ruta absoluta del Excel fuente; NULL en Manual
+output_root     Carpeta base elegida o resuelta para la ejecucion
 pedidos
 piezas
 estilos
@@ -124,6 +126,7 @@ piezas
 nombre
 numero
 archivo
+path
 estado
 error
 tiempo
@@ -132,8 +135,11 @@ clave
 
 `roster` guarda el numero de roster usado para nombrar los PDFs de `RMCOp-Nike Genericas` (por ejemplo `79135-26`). En `RMCOp-Nike Personalizadas` y `RMCOp-Nike Manual` queda vacio porque esos flujos se identifican con `wo`.
 
-No se guarda `output_path`.
-No se guardan `source_excel` ni `destination_folder`.
+`archivo` guarda solo el nombre del PDF. `path` guarda la ruta absoluta exacta cuando el resultado esta `Completado`; si el PDF no se creo, queda `NULL`.
+
+`excel_path` y `output_root` viven en el run porque describen toda la ejecucion. No reintroducir los nombres anteriores `source_excel`, `destination_folder` ni `output_path`.
+
+Los registros historicos con fuentes verificables fueron conciliados usando JSONL y existencia fisica. Las rutas nuevas se registran directamente desde `state.batch.excelPath`, `destinationFolder` y `result.outputPath`.
 
 ## Logs
 
@@ -247,10 +253,93 @@ Al terminar Manual o batch, `recordBatchRun`:
 3. Elimina items anteriores con el mismo `run_id`.
 4. Inserta un item por resultado, incluyendo errores.
 5. Calcula `pedidos`, `piezas`, `estilos`, `ok` y `errores`.
+6. Guarda `excel_path`, `output_root` y el `path` final de cada PDF completado.
 
 Manual usa el mismo escritor con un resultado. Los ids manuales no llevan `manual-`; el metodo se identifica con `herramienta`.
 
 Riesgo conocido: el id usa precision de segundos. Dos ejecuciones que produzcan el mismo `AAAAMMDD-HHMMSS` pueden reemplazarse; debe resolverse antes de soportar concurrencia real.
+
+## Analisis Del Flujo Actual
+
+El recorrido operativo tiene una base correcta:
+
+```text
+Importar Excel -> normalizar filas -> validar archivos + clave -> producir faltantes
+-> guardar/cerrar PDF -> escribir logs -> registrar run e items
+```
+
+Fortalezas actuales:
+
+- La validacion es visible y no genera mientras analiza.
+- Se consulta nuevamente antes de producir.
+- `clave` evita duplicados logicos y `path` evita duplicar una salida fisica completada.
+- Errores no bloquean reintentos porque el indice unico parcial protege solo `Completado`.
+- Run e items separan correctamente el resumen de la ejecucion y el detalle por PDF.
+
+Puntos que hacen pesado el sistema:
+
+- `js/main.js` coordina UI, produccion, logs y armado de persistencia.
+- `portfolioDb.js` mezcla schema, migraciones, backfills, consultas y comandos.
+- El run y todos sus items se escriben al terminar; un cierre inesperado puede dejar PDFs sin registro.
+- `recordBatchRun` reemplaza el run y elimina/reinserta items con el mismo ID.
+- `ensureSchema` se ejecuta tambien desde consultas de validacion.
+- El ID con precision de segundos no esta preparado para varias estaciones concurrentes.
+- Escribir directamente una SQLite ubicada en otra computadora no es una arquitectura segura para varios operadores.
+
+## Reestructura Propuesta, No Implementada
+
+La recomendacion es gradual y conserva el flujo visible actual.
+
+### 1. Separar Responsabilidades
+
+```text
+Importacion      createOrderData: leer y normalizar Excel
+Validacion       servicio puro: clave, ruta esperada y estado incremental
+Produccion       orquestador: copiar, abrir, aplicar, guardar y cerrar
+Persistencia     repositorio: runs, items y consultas por clave/path
+Migraciones      bootstrap ejecutado una vez al iniciar
+Sincronizacion   adaptador local ahora; API + cola local en una fase posterior
+```
+
+### 2. Registrar Por Ciclo De Vida
+
+```text
+Inicio       crear run con estado En progreso
+Cada fila    guardar item Completado o Error inmediatamente
+Cierre       recalcular totales y marcar run Completado/Parcial/Error
+Recuperacion detectar runs interrumpidos sin borrar evidencia
+```
+
+Esto reduce la ventana en la que existe un PDF sin registro y evita reconstruir toda la corrida al final.
+
+### 3. Mantener Identidades Claras
+
+- `clave`: identidad estable del trabajo; no depende de la carpeta.
+- `path`: ubicacion actual del PDF.
+- `run_id`: identificador unico de ejecucion, con milisegundos o UUID.
+- No usar `path` como sustituto de `clave`.
+- No borrar items de una ejecucion ya registrada para volver a insertarlos.
+
+### 4. Preparar Varios Equipos
+
+Cuando otros operadores ejecuten los CEP desde sus computadoras, no deben escribir directamente el archivo SQLite por red. La fase recomendada es:
+
+```text
+CEP -> API de RMC Control Center -> SQLite local al servidor
+  \-> cola local si no hay red -> reintento idempotente por clave/run_id
+```
+
+RMC Control Center seria el unico escritor de la BD central. Esta fase requiere un contrato de API y no debe mezclarse con la primera limpieza interna.
+
+### Orden Sugerido
+
+1. Extraer un repositorio SQLite sin cambiar tablas ni UI.
+2. Separar migraciones del camino de validacion.
+3. Introducir estados de run y persistencia item por item.
+4. Cambiar `run_id` con una migracion compatible.
+5. Agregar cola local y API central.
+
+No implementar estas fases juntas. Cada paso debe conservar validacion incremental, flujo Manual e integridad de `clave`.
 
 ## Pendientes De Reporteria
 
