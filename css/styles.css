@@ -682,3 +682,11 @@ select {
     font-family: var(--rmc-font-ui);
     font-size: 10px;
 }
+
+
+#manualShippingDate::-webkit-calendar-picker-indicator {
+  filter: invert(100%);
+}
+#batchGenericShippingDate::-webkit-calendar-picker-indicator {
+  filter: invert(100%);
+}

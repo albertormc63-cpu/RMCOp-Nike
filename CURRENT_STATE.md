@@ -1,0 +1,32 @@
+# Estado Actual
+
+Ultima actualizacion: 2026-06-22.
+
+`RMCOp-Nike` es el panel CEP principal de Illustrator para Nike Lacrosse On Demand. El flujo manual individual funciona y el batch desde Excel opera en modos `Personalizadas` y `Genericas` con validacion incremental.
+
+## Operativo
+
+- Lineas activas: masculino y femenino.
+- `Standard`: nombre y numero como texto.
+- `Indigenous Heritage`: nombre como texto y numero desde arte; gap obligatorio de `0.25in`.
+- `Throwback`: variante de texto `TB`; no pertenece al flujo IH.
+- Batch valida archivos y SQLite antes de producir, y vuelve a validar al procesar.
+- Solo `FALTANTE` se genera; inconsistencias y duplicados quedan fuera.
+- Personalizadas usa destino manual con subcarpetas style/talla.
+- Genericas usa la carpeta del roster y guarda PDFs en la raiz.
+- Manual, Personalizadas y Genericas registran runs/items en la SQLite compartida.
+- Alertas operativas se muestran desde Illustrator/ExtendScript.
+
+## Separado
+
+`RMC MockupTool` es otro CEP y otro repo. Su desarrollo no pertenece a este arbol.
+
+## Pendientes Principales
+
+1. Probar el batch completo y los registros SQLite desde Illustrator real.
+2. Validar Throwback con plantillas reales y confirmar placeholders.
+3. Probar IH con numeros de 1, 2 y 3 digitos.
+4. Resolver la posible colision de `run_id` entre ejecuciones del mismo segundo antes de soportar concurrencia.
+5. Mantener All Stars fuera del catalogo activo hasta autorizacion expresa.
+
+Las propuestas de reestructura de persistencia no estan implementadas. El contexto historico completo esta en `docs/archive/CODEX_HANDOFF_2026-06-22.md`.

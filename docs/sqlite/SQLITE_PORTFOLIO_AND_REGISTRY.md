@@ -1,4 +1,4 @@
-# RMCOp-Nike - Registros, SQLite Y Portafolio
+# SQLite, Portafolio Y Registro
 
 Ultima actualizacion: 2026-06-22.
 

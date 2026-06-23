@@ -1,6 +1,6 @@
-# RMCOp-Nike - Lectura Y Validacion De Excel
+# Importacion Y Validacion De Excel
 
-Ultima actualizacion: 2026-06-17.
+Ultima actualizacion: 2026-06-22.
 
 Este documento define el contrato actual de importacion de Excel del CEP. La implementacion vive en:
 
