@@ -4,6 +4,7 @@ const RUNS_TABLE = "rmcop_nike_runs";
 const ITEMS_TABLE = "rmcop_nike_items";
 const COMMITS_TABLE = "rmcop_nike_git_commits";
 const { normalizeShippingDate } = require("../utils/shippingDate");
+const ensuredSchemaByPath = {};
 
 function sqlText(value) {
   if (value == null) return "NULL";
@@ -225,6 +226,12 @@ WHERE TRIM(COALESCE(${ITEMS_TABLE}.fecha_embarque, '')) = ''
 }
 
 function ensureSchema(deps, dbPath) {
+  const cacheKey = deps && deps.path ? deps.path.resolve(dbPath) : String(dbPath || "");
+
+  if (ensuredSchemaByPath[cacheKey]) {
+    return;
+  }
+
   execSql(deps, dbPath, `
 PRAGMA foreign_keys = ON;
 
@@ -325,6 +332,8 @@ ON CONFLICT(source_app) DO UPDATE SET
   execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_items_roster ON ${ITEMS_TABLE}(roster);`);
   execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_runs_fecha_embarque ON ${RUNS_TABLE}(fecha_embarque);`);
   execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_items_fecha_embarque ON ${ITEMS_TABLE}(fecha_embarque);`);
+
+  ensuredSchemaByPath[cacheKey] = true;
 }
 
 function recordBatchRun(deps, dbPath, payload) {

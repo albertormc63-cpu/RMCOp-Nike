@@ -6,6 +6,7 @@
     const teamsView = window.RMC.ui.teamsView;
     const textRules = window.RMC.illustrator.textRules;
     const illustratorBridge = window.RMC.illustrator.bridge;
+    const DEBUG_BATCH_PERF = false;
 
     // Estado vivo del panel. Se actualiza cuando el usuario cambia linea/equipo/variante.
     const state = {
@@ -507,6 +508,7 @@
     }
 
     function renderBatchSummary() {
+        const renderStartedAt = DEBUG_BATCH_PERF && window.performance ? window.performance.now() : 0;
         const batchData = state.batch.data;
         const selectedStyleFamily = state.batch.selectedStyleFamily;
         const filteredRows = batchData ? getRowsByStyleFamily(batchData.validRows, selectedStyleFamily) : [];
@@ -523,6 +525,7 @@
         state.batch.selectedSizes = state.batch.selectedSizes.filter(function (size) {
             return sizes.indexOf(size) !== -1;
         });
+        const selectedRows = batchData ? getSelectedBatchRows() : [];
 
         document.getElementById("batchExcelPreview").textContent = state.batch.excelPath || "Sin Excel seleccionado";
         document.getElementById("batchDestinationPreview").textContent = state.batch.destinationFolder || "Sin destino seleccionado";
@@ -552,7 +555,11 @@
         let validationError = "";
 
         try {
-            validation = validateBatchSelection();
+            const validationStartedAt = DEBUG_BATCH_PERF && window.performance ? window.performance.now() : 0;
+            validation = validateBatchSelection(selectedRows);
+            if (DEBUG_BATCH_PERF && window.performance) {
+                console.log(`[BatchPerf] validateBatchSelection: ${(window.performance.now() - validationStartedAt).toFixed(1)}ms`);
+            }
         } catch (error) {
             clearBatchValidation();
             validationError = error.message;
@@ -584,7 +591,7 @@
         }
         lines.push(`Encabezados: fila ${batchData.headerRow || 1} | Datos desde fila ${batchData.dataStartRow || 2}`);
         lines.push(`Filtro style: ${getSelectedBatchStyleFamilyLabel()} | Filtro talla: ${getSelectedBatchSizeLabel()}`);
-        lines.push(`Validas en seleccion: ${getSelectedBatchRows().length} | Errores del Excel: ${invalidCount}`);
+        lines.push(`Validas en seleccion: ${selectedRows.length} | Errores del Excel: ${invalidCount}`);
         lines.push("");
 
         if (state.batch.mode === "generic" && batchData.sourceFormat !== "generic-roster") {
@@ -615,7 +622,7 @@
 
         lines.push("");
         lines.push("Primeras filas validas:");
-        getSelectedBatchRows().slice(0, 14).forEach(function (row) {
+        selectedRows.slice(0, 14).forEach(function (row) {
             const outputInfo = state.batch.destinationFolder ? buildBatchOutputInfo(row) : { outputName: buildBatchOutputName(row) };
             const shippingDate = state.batch.mode === "generic" ? getBatchShippingDate([]) : row.shippingDate;
             lines.push(`Fila ${row.sourceRow} | ${row.styleFamily}/${row.size} | ${row.team} | ${row.style} | ${row.name} #${row.number} | Emb ${shippingDate || "-"} | ${outputInfo.outputName}`);
@@ -637,6 +644,9 @@
 
         rowsPreview.textContent = lines.join("\n");
         updateBatchProcessButton();
+        if (DEBUG_BATCH_PERF && window.performance) {
+            console.log(`[BatchPerf] renderBatchSummary: ${(window.performance.now() - renderStartedAt).toFixed(1)}ms`);
+        }
     }
 
     function renderStyleFamilyCard(container, value, label, count) {
@@ -923,9 +933,9 @@
         }));
     }
 
-    function validateBatchSelection() {
+    function validateBatchSelection(selectedRowsOverride) {
         const services = nodeRuntime.services;
-        const selectedRows = getSelectedBatchRows();
+        const selectedRows = selectedRowsOverride || getSelectedBatchRows();
 
         if (!state.batch.data || !state.batch.destinationFolder) {
             clearBatchValidation();

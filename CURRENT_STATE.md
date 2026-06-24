@@ -30,3 +30,18 @@ Ultima actualizacion: 2026-06-22.
 5. Mantener All Stars fuera del catalogo activo hasta autorizacion expresa.
 
 Las propuestas de reestructura de persistencia no estan implementadas. El contexto historico completo esta en `docs/archive/CODEX_HANDOFF_2026-06-22.md`.
+
+## Pendiente UX / Performance
+
+La seccion `Por lote` se siente lenta/pesada al interactuar con el panel. No optimizar dentro de tareas documentales ni cambiar comportamiento batch sin retomar el tema de forma explicita.
+
+Cuando se retome, revisar primero sin romper el flujo actual:
+
+- Renderizado de listas/resumenes de filas del Excel.
+- Re-render al cambiar filtros de style/talla.
+- Validacion incremental contra archivos y SQLite.
+- Eventos que puedan recalcular demasiado en cada interaccion.
+- Operaciones sincronas de filesystem/SQLite que bloqueen la UI CEP.
+- Separar lectura, validacion y procesamiento para que la UI no se congele.
+
+Reglas para cualquier mejora futura: validar primero y generar despues; mantener separados `Personalizadas` y `Genericas`; hacer cambios pequenos; probar en Illustrator real.
