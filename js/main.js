@@ -880,6 +880,40 @@
         };
     }
 
+    function enrichOrderWithVariantCatalog(order) {
+        const services = nodeRuntime.services;
+
+        if (!order || !services.portfolioDb || !services.portfolioDb.getStyleVariantCatalogEntry) {
+            return order;
+        }
+
+        try {
+            const entry = services.portfolioDb.getStyleVariantCatalogEntry(getPortfolioDbDeps(), getPortfolioDbPath(), order);
+
+            if (!entry) {
+                return order;
+            }
+
+            return Object.assign({}, order, {
+                catalogVariantId: entry.id,
+                catalogVariantCode: entry.variantCode,
+                catalogVariantName: entry.variantName,
+                catalogLiga: entry.liga,
+                catalogDesignCode: entry.designCode,
+                catalogDesignName: entry.designName,
+                templateNamePlaceholder: entry.templateNamePlaceholder,
+                templateNumberPlaceholder: entry.templateNumberPlaceholder,
+                catalogPlaceholderMissing: ["AS", "SS", "JR"].indexOf(entry.variantCode) !== -1 &&
+                    Boolean(order.name || order.number) &&
+                    !entry.templateNamePlaceholder &&
+                    !entry.templateNumberPlaceholder
+            });
+        } catch (error) {
+            console.warn(`No se pudo leer rmc_nike_style_variants; se usaran reglas locales: ${error.message}`);
+            return order;
+        }
+    }
+
     function buildBatchValidationKey(order) {
         const services = nodeRuntime.services;
 
@@ -898,6 +932,18 @@
         ].map(function (value) {
             return String(value || "").trim().toUpperCase().replace(/\s+/g, " ");
         }).join("|");
+    }
+
+    function assertCatalogTextRuleReady(order) {
+        if (!order || (!order.name && !order.number)) {
+            return;
+        }
+
+        const rule = textRules.getTextRule(order);
+
+        if (rule.mode === "blocked") {
+            throw new Error(rule.message);
+        }
     }
 
     function buildBatchOutputInfo(order) {
@@ -1309,10 +1355,11 @@
             logFlow(`Procesando faltantes batch (${getSelectedBatchStyleFamilyLabel()} / ${getSelectedBatchSizeLabel()}): ${selectedRows.length} filas.`);
 
             for (let index = 0; index < selectedRows.length; index++) {
-                const order = selectedRows[index];
+                const order = enrichOrderWithVariantCatalog(selectedRows[index]);
                 const rowStartedAt = Date.now();
 
                 try {
+                    assertCatalogTextRuleReady(order);
                     const copyResult = await createBatchCopyForOrder(order);
 
                     console.log(`Abriendo fila ${order.sourceRow}: ${copyResult.outputPath}`);
@@ -1448,7 +1495,7 @@
     }
 
     async function applyOrderDataToIllustrator(orderOverride) {
-        const order = orderOverride || orderView.collectOrder(state);
+        const order = enrichOrderWithVariantCatalog(orderOverride || orderView.collectOrder(state));
         const isBatchOrder = Boolean(orderOverride);
         const hasName = order.name !== "";
         const hasNumber = order.number !== "";
@@ -1470,6 +1517,10 @@
 
         const rule = textRules.getTextRule(order);
 
+        if (rule.mode === "blocked") {
+            throw new Error(rule.message);
+        }
+
         if (!hasName && !hasNumber && isBatchOrder) {
             console.warn(`Fila ${order.sourceRow || "batch"} sin nombre/numero: se limpiaran placeholders con espacios.`);
         }
@@ -1479,6 +1530,9 @@
         }
 
         if (rule.mode === "text-only") {
+            console.warn(rule.message);
+        }
+        if (rule.mode === "text" && rule.message) {
             console.warn(rule.message);
         }
         if (rule.mode === "raster-number") {
@@ -1511,7 +1565,7 @@
     // Flujo del boton final: abre el PDF copiado y aplica datos si existen.
     async function openAndApplyOrderData() {
         const startedAt = Date.now();
-        const order = orderView.collectOrder(state);
+        const order = enrichOrderWithVariantCatalog(orderView.collectOrder(state));
 
         await openCurrentFileInIllustrator();
         await applyOrderDataToIllustrator(order);
@@ -1696,9 +1750,13 @@
         document.getElementById("btnReviewOrder").addEventListener("click", function () {
             try {
                 const preview = buildOrderPreview();
-                const rule = textRules.getTextRule(preview.order);
+                const rule = textRules.getTextRule(enrichOrderWithVariantCatalog(preview.order));
 
-                if (rule.mode === "text-only" || rule.mode === "raster-number") {
+                if (rule.mode === "blocked") {
+                    throw new Error(rule.message);
+                }
+
+                if ((rule.mode === "text" || rule.mode === "text-only" || rule.mode === "raster-number") && rule.message) {
                     console.warn(rule.message);
                 }
 

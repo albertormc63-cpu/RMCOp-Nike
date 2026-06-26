@@ -6,6 +6,9 @@ const config = require("../js/config/config");
 
 const fixtures = {
   standard: "/Volumes/Fullsize/TO PRINT/NIKE ORDERS/79229-26 PLL-Maryland-Whipsnakes-Home-Spallina-22/79229-26 Nike Whipsnakes Spallina 22 WO 173833 WO 173840.xls",
+  standardOd: "/Volumes/Fullsize/TO PRINT/NIKE ORDERS/LISTAS ON DEMAND/NIKE OD 3 JUL.xlsx",
+  allStarsOd: "/Volumes/Fullsize/TO PRINT/NIKE ORDERS/LISTAS ON DEMAND/Copia de NIKE OD 3 JUL.xlsx",
+  wllCharging: "/Volumes/Fullsize/TO PRINT/NIKE ORDERS/NIKE JUNIO/78326-26 WLL-New-York-Charging-Home-Scane-27/78326-26 WLL NY Scane 27.xls",
   starsStripes: "/Volumes/Fullsize/New Art/79405-26 PLL-GBF/79405-26 Nike Stars and Stripes Green Beret WO 174212 WO 17.xls",
   jrJersey: "/Volumes/Fullsize/New Art/79426-26 PLL-Maryland-Whipsnakes-Jr.Champ/79426-26 JR Championship Whipsnakes Jersey WO 174316.xls",
   jrShorts: "/Volumes/Fullsize/New Art/79438-26 PLL-Carolina-Chaos-Jr.Champ-Shorts/79438-26 Jr Championship Chaos Shorts WO 174296 WO 174304.xls"
@@ -43,6 +46,13 @@ function validateStandard() {
   assert(data.validRows[0].variant === "Standard", "Standard debe conservar variante Standard.");
   assert(data.validRows[0].styleFamily === "A1000", "A1000H debe agruparse como A1000.");
   assert(buildGenericOutputName(data.validRows[0]) === "79229-26 PLL-Maryland Whipsnakes A1000H SM 22.pdf", "Naming Standard cambio inesperadamente.");
+
+  const odData = createOrderDataFromExcel(fixtures.standardOd);
+  assert(odData.sourceFormat === "on-demand", "Standard OD debe detectarse como on-demand.");
+  assert(odData.validRows.length === 145, "Standard OD debe conservar 145 filas validas.");
+  assert(odData.invalidRows.length === 0, "Standard OD no debe producir filas invalidas.");
+  assert(odData.validRows[0].wo === "174137", "Standard OD debe conservar WO en la columna esperada.");
+  assert(odData.validRows[0].shipOrder === "5500155", "Standard OD debe conservar Ship Order en la columna esperada.");
 }
 
 function validateStarsStripes() {
@@ -68,7 +78,37 @@ function validateStarsStripes() {
   });
 }
 
+function validateWllCharging() {
+  const data = createOrderDataFromExcel(fixtures.wllCharging);
+  assert(data.sourceFormat === "generic-roster", "WLL Charging debe detectarse como generic-roster.");
+  assert(data.validRows.length === 9, "WLL Charging debe conservar 9 filas validas.");
+  assert(data.invalidRows.length === 0, "WLL Charging no debe fallar cuando Color trae solo A002.");
+  assert(data.validRows[0].team === "New York", "WLL Charging debe resolver equipo desde la ruta del roster.");
+  assert(data.counts.byStyleFamily.A2000 === 6, "WLL Charging debe reconocer 6 filas A2000.");
+  assert(data.counts.byStyleFamily.Y2000 === 3, "WLL Charging debe reconocer 3 filas Y2000.");
+}
+
 function validateAllStars() {
+  const data = createOrderDataFromExcel(fixtures.allStarsOd);
+  const designCounts = data.validRows.reduce(function (counts, row) {
+    counts[row.designCode] = (counts[row.designCode] || 0) + 1;
+    return counts;
+  }, {});
+  const versionCounts = data.validRows.reduce(function (counts, row) {
+    counts[row.version] = (counts[row.version] || 0) + 1;
+    return counts;
+  }, {});
+
+  assert(data.sourceFormat === "on-demand", "AS OD debe detectarse como on-demand.");
+  assert(data.validRows.length === 37, "AS OD debe conservar 37 filas validas.");
+  assert(data.invalidRows.length === 0, "AS OD no debe producir filas invalidas.");
+  assert(data.validRows[0].wo === "174254", "AS OD debe corregir WO cuando viene invertido con Ship Order.");
+  assert(data.validRows[0].shipOrder === "5506198", "AS OD debe corregir Ship Order cuando viene invertido con WO.");
+  assert(designCounts["AS-M-TA"] === 26, "AS OD TeamA debe mapear 26 filas a AS-M-TA.");
+  assert(designCounts["AS-M-TB"] === 11, "AS OD TeamB debe mapear 11 filas a AS-M-TB.");
+  assert(versionCounts.Home === 26, "AS OD TeamA debe quedar como Home.");
+  assert(versionCounts.Away === 11, "AS OD TeamB debe quedar como Away.");
+
   const homeOrder = {
     team: "",
     variant: "All Stars",
@@ -119,6 +159,7 @@ function validateJrChampionship() {
 
 validateStandard();
 validateStarsStripes();
+validateWllCharging();
 validateAllStars();
 validateJrChampionship();
 

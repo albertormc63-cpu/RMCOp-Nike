@@ -38,6 +38,36 @@ const colorTeamMap = [
 ];
 
 const specialDesigns = {
+  AS: [
+    {
+      code: "AS-M-TA",
+      name: "Home / Team A",
+      line: "masculino",
+      version: "Home",
+      aliases: ["TEAM A", "TEAMA", "HAS1", "HOME"]
+    },
+    {
+      code: "AS-M-TB",
+      name: "Away / Team B",
+      line: "masculino",
+      version: "Away",
+      aliases: ["TEAM B", "TEAMB", "AAS1", "AWAY"]
+    },
+    {
+      code: "AS-F-TA",
+      name: "Home / Team A",
+      line: "femenino",
+      version: "Home",
+      aliases: ["TEAM A", "TEAMA", "HAS1", "HOME"]
+    },
+    {
+      code: "AS-F-TB",
+      name: "Away / Team B",
+      line: "femenino",
+      version: "Away",
+      aliases: ["TEAM B", "TEAMB", "AAS1", "AWAY"]
+    }
+  ],
   SS: [
     {
       code: "GNB1",
@@ -94,7 +124,7 @@ function inferVersion(style) {
   return "Home";
 }
 
-function inferSpecialDesign(variantCode, color, rosterName) {
+function inferSpecialDesign(variantCode, color, rosterName, line) {
   const normalizedValues = [
     cleanUpper(color),
     cleanUpper(rosterName)
@@ -104,6 +134,10 @@ function inferSpecialDesign(variantCode, color, rosterName) {
   for (let designIndex = 0; designIndex < designs.length; designIndex++) {
     const design = designs[designIndex];
     const aliases = design.aliases || [];
+
+    if (design.line && design.line !== line) {
+      continue;
+    }
 
     for (let aliasIndex = 0; aliasIndex < aliases.length; aliasIndex++) {
       const alias = cleanUpper(aliases[aliasIndex]);
@@ -320,6 +354,7 @@ function extractDefaultShippingDate(rawRows) {
 
 function getWorkbookMetadata(workbookData) {
   const rosterName = extractRosterName(workbookData.rawRows, workbookData.filePath);
+  const teamSearchText = [rosterName, workbookData.filePath].filter(Boolean).join(" ");
   const rosterNumberMatch = rosterName.match(/\b[0-9]{4,}-[0-9]{2,}\b/) ||
     String(workbookData.filePath || "").match(/\b[0-9]{4,}-[0-9]{2,}\b/);
   const defaultShipOrder = extractFixedValue(workbookData.rawRows, ["Ship Order #", "Ship Order", "SHIP O", "SHIP O."]);
@@ -327,6 +362,7 @@ function getWorkbookMetadata(workbookData) {
 
   return {
     rosterName: rosterName,
+    teamSearchText: teamSearchText,
     rosterNumber: rosterNumberMatch ? rosterNumberMatch[0] : "",
     sourceFormat: "",
     workOrders: workOrders,
@@ -337,6 +373,31 @@ function getWorkbookMetadata(workbookData) {
   };
 }
 
+function looksLikeWorkOrder(value) {
+  return /^1[0-9]{5}$/.test(sanitizeNumber(value));
+}
+
+function looksLikeShipOrder(value) {
+  return /^5[0-9]{6}$/.test(sanitizeNumber(value));
+}
+
+function normalizeOrderIdentifiers(wo, shipOrder, sourceFormat) {
+  const cleanWo = sanitizeNumber(wo) || cleanCell(wo);
+  const cleanShipOrder = cleanCell(shipOrder);
+
+  if (sourceFormat === "on-demand" && looksLikeShipOrder(cleanWo) && looksLikeWorkOrder(cleanShipOrder)) {
+    return {
+      wo: sanitizeNumber(cleanShipOrder) || cleanShipOrder,
+      shipOrder: cleanWo
+    };
+  }
+
+  return {
+    wo: cleanWo,
+    shipOrder: cleanShipOrder
+  };
+}
+
 function normalizeRow(cells, index, columns, metadata) {
   const style = cleanUpper(getCell(cells, columns.style));
   const sizeRaw = cleanUpper(getCell(cells, columns.size));
@@ -344,22 +405,28 @@ function normalizeRow(cells, index, columns, metadata) {
   const name = cleanUpper(getCell(cells, columns.name));
   const color = cleanCell(getCell(cells, columns.color));
   const variant = variantRules.inferVariantFromStyle(style);
-  const specialDesign = inferSpecialDesign(variant.code, color, metadata.rosterName);
+  const line = inferLine(style);
+  const identifiers = normalizeOrderIdentifiers(
+    sanitizeNumber(getCell(cells, columns.wo)) || cleanCell(getCell(cells, columns.wo)) || resolveWorkOrderForStyle(style, metadata.workOrders) || metadata.defaultWo,
+    cleanCell(getCell(cells, columns.shipOrder)) || metadata.defaultShipOrder,
+    columns.format || "on-demand"
+  );
+  const specialDesign = inferSpecialDesign(variant.code, color, metadata.rosterName, line);
 
   return {
     sourceRow: index + 1,
-    wo: sanitizeNumber(getCell(cells, columns.wo)) || cleanCell(getCell(cells, columns.wo)) || resolveWorkOrderForStyle(style, metadata.workOrders) || metadata.defaultWo,
+    wo: identifiers.wo,
     roster: columns.format === "generic-roster" ? metadata.rosterNumber : "",
-    shipOrder: cleanCell(getCell(cells, columns.shipOrder)) || metadata.defaultShipOrder,
+    shipOrder: identifiers.shipOrder,
     style: style,
     color: color,
-    line: inferLine(style),
-    team: inferTeam(color) || (columns.format === "generic-roster" ? inferTeam(metadata.rosterName) : ""),
+    line: line,
+    team: inferTeam(color) || (columns.format === "generic-roster" ? inferTeam(metadata.teamSearchText) : ""),
     variant: variant.name,
     variantCode: variant.code,
     designCode: specialDesign ? specialDesign.code : "",
     designName: specialDesign ? specialDesign.name : "",
-    version: inferVersion(style),
+    version: specialDesign && specialDesign.version ? specialDesign.version : inferVersion(style),
     styleFamily: getStyleFamily(style),
     sizeRaw: sizeRaw,
     size: normalizeSize(sizeRaw),
@@ -384,6 +451,7 @@ function validateOrderRow(row) {
   if (!row.style) errors.push("Falta Style");
   if (!row.line) errors.push("Style no reconocido");
   if (requiresTeam && !row.team) errors.push("No se pudo detectar equipo desde Color");
+  if (row.variantCode === "AS" && !row.designCode) errors.push("All Stars requiere TeamA/TeamB reconocido en Color");
   if (row.variantCode === "SS" && !row.designCode) errors.push("Stars & Stripes requiere design_code reconocido en Color o nombre del roster");
   if (!row.size) errors.push("Falta Size");
   if (row.size && validSizes.indexOf(row.size) === -1) errors.push(`Size no reconocido: ${row.sizeRaw}`);

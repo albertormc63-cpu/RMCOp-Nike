@@ -121,6 +121,108 @@ function parseTabRows(output) {
     .map(function (line) { return line.split("\t"); });
 }
 
+function normalizeLookupValue(value) {
+  return String(value || "").trim();
+}
+
+function normalizeLiga(value) {
+  const normalized = normalizeLookupValue(value).toUpperCase();
+  if (normalized === "PLL" || normalized === "WLL") return normalized;
+  return "";
+}
+
+function inferLigaFromOrder(order) {
+  const explicitLiga = normalizeLiga(order && order.liga);
+  if (explicitLiga) return explicitLiga;
+
+  const line = normalizeLookupValue(order && order.line).toLowerCase();
+  if (line === "femenino") return "WLL";
+  if (line === "masculino") return "PLL";
+
+  const style = normalizeLookupValue(order && order.style).toUpperCase();
+  if (/^[AY]2[0-9]{3}/.test(style)) return "WLL";
+  if (/^[AY]1[0-9]{3}/.test(style)) return "PLL";
+  return "";
+}
+
+function getCatalogVariantCode(order) {
+  const variantCode = normalizeLookupValue(order && order.variantCode).toUpperCase();
+  if (variantCode && variantCode !== "STD") return variantCode;
+
+  const variantName = normalizeLookupValue(order && order.variant).toLowerCase();
+  if (variantName === "all stars") return "AS";
+  if (variantName === "stars & stripes") return "SS";
+  if (variantName === "jr championship") return "JR";
+  if (variantName === "indigenous heritage") return "IH";
+  if (variantName === "throwback") return "TB";
+
+  const version = normalizeLookupValue(order && order.version).toLowerCase();
+  return version === "away" ? "A" : "H";
+}
+
+function parseVariantCatalogRow(row) {
+  if (!row || !row.length) return null;
+
+  return {
+    id: row[0] || "",
+    variantCode: row[1] || "",
+    variantName: row[2] || "",
+    liga: row[3] || "",
+    teamGender: row[4] || "",
+    teamMarket: row[5] || "",
+    teamMascot: row[6] || "",
+    designCode: row[7] || "",
+    designName: row[8] || "",
+    templateNamePlaceholder: row[9] || "",
+    templateNumberPlaceholder: row[10] || ""
+  };
+}
+
+function getStyleVariantCatalogEntry(deps, dbPath, order) {
+  if (!deps.childProcess || !deps.fs || !dbPath || !deps.fs.existsSync(dbPath)) {
+    return null;
+  }
+
+  const variantCode = getCatalogVariantCode(order);
+  const liga = inferLigaFromOrder(order);
+  const team = normalizeLookupValue(order && order.team);
+  const designCode = normalizeLookupValue(order && order.designCode);
+  const conditions = [`variant_code = ${sqlText(variantCode)}`];
+
+  if (liga) {
+    conditions.push(`(liga = ${sqlText(liga)} OR liga IS NULL OR TRIM(liga) = '')`);
+  }
+
+  if (variantCode === "H" || variantCode === "A") {
+    if (team) {
+      conditions.push(`team_market = ${sqlText(team)}`);
+    }
+  } else if (designCode) {
+    conditions.push(`design_code = ${sqlText(designCode)}`);
+  }
+
+  const output = deps.childProcess.execFileSync(SQLITE_BIN, [dbPath], {
+    input: `
+.mode tabs
+.headers off
+SELECT id, variant_code, variant_name, liga, team_gender, team_market, team_mascot,
+       design_code, design_name, template_name_placeholder, template_number_placeholder
+FROM rmc_nike_style_variants
+WHERE ${conditions.join(" AND ")}
+ORDER BY
+  CASE WHEN liga = ${sqlText(liga)} THEN 0 ELSE 1 END,
+  CASE WHEN team_market = ${sqlText(team)} THEN 0 ELSE 1 END,
+  CASE WHEN design_code = ${sqlText(designCode)} THEN 0 ELSE 1 END,
+  id
+LIMIT 1;
+`,
+    encoding: "utf8"
+  });
+
+  const rows = parseTabRows(output);
+  return parseVariantCatalogRow(rows[0]);
+}
+
 function backfillMissingItemKeys(deps, dbPath) {
   const output = deps.childProcess.execFileSync(SQLITE_BIN, [dbPath], {
     input: `
@@ -457,9 +559,7 @@ COMMIT;
 function listExistingItemKeys(deps, dbPath, keys) {
   const uniqueKeys = Array.from(new Set((keys || []).filter(Boolean)));
 
-  ensureSchema(deps, dbPath);
-
-  if (!uniqueKeys.length) {
+  if (!uniqueKeys.length || !deps.fs || !deps.fs.existsSync(dbPath)) {
     return {};
   }
 
@@ -472,10 +572,19 @@ WHERE clave IN (${uniqueKeys.map(sqlText).join(",")})
   AND estado = 'Completado'
 GROUP BY clave;
 `;
-  const output = deps.childProcess.execFileSync(SQLITE_BIN, [dbPath], {
-    input: sql,
-    encoding: "utf8"
-  });
+  let output = "";
+
+  try {
+    output = deps.childProcess.execFileSync(SQLITE_BIN, [dbPath], {
+      input: sql,
+      encoding: "utf8"
+    });
+  } catch (error) {
+    if (/no such table/i.test(String(error.stderr || error.message || ""))) {
+      return {};
+    }
+    throw error;
+  }
   const lookup = {};
 
   output.split(/\r?\n/).forEach(function (line) {
@@ -491,6 +600,7 @@ module.exports = {
   backfillMissingItemKeys,
   buildOrderKey,
   ensureSchema,
+  getStyleVariantCatalogEntry,
   listExistingItemKeys,
   normalizeExistingShippingDates,
   recordBatchRun

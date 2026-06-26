@@ -31,10 +31,33 @@
         return variantName === "JR Championship";
     }
 
+    function hasCatalogPlaceholders(order) {
+        return Boolean(order.templateNamePlaceholder || order.templateNumberPlaceholder);
+    }
+
     // Standard y Throwback reemplazan texto. IH reemplaza nombre y arma/apaga numero con arte.
     function getTextRule(order) {
         const lineRules = textRulesByLine[order.line] || {};
         const placeholders = lineRules[order.team] || null;
+
+        if (order.catalogPlaceholderMissing) {
+            return {
+                mode: "blocked",
+                placeholders: null,
+                message: `${order.variant || "La variante"} ya existe en rmc_nike_style_variants, pero aun no tiene placeholders de nombre/numero configurados.`
+            };
+        }
+
+        if (hasCatalogPlaceholders(order)) {
+            return {
+                mode: "text",
+                placeholders: {
+                    numberPlaceholder: order.templateNumberPlaceholder || "",
+                    namePlaceholder: order.templateNamePlaceholder || ""
+                },
+                message: `Usando placeholders de rmc_nike_style_variants (${order.catalogVariantCode || order.variantCode || order.variant}).`
+            };
+        }
 
         if (isJrVariant(order.variant)) {
             return {
