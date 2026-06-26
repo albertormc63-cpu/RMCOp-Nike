@@ -28,6 +28,34 @@ const variants = [
     replacementMode: "text",
     usesVersion: false,
     templateFamily: "throwback"
+  },
+  {
+    name: "JR Championship",
+    slug: "jr-championship",
+    code: "JR",
+    styleSuffix: "JR",
+    replacementMode: "text",
+    usesVersion: false,
+    templateFamily: "jr-championship"
+  },
+  {
+    name: "All Stars",
+    slug: "all-stars",
+    code: "AS",
+    styleSuffix: "AS",
+    replacementMode: "text",
+    usesVersion: true,
+    templateFamily: "all-stars"
+  },
+  {
+    name: "Stars & Stripes",
+    slug: "stars-stripes",
+    code: "SS",
+    styleSuffix: "SS",
+    replacementMode: "text",
+    usesVersion: false,
+    requiresDesignCode: true,
+    templateFamily: "stars-stripes"
   }
 ];
 

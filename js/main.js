@@ -431,7 +431,8 @@
             variant: order.variant,
             version: order.version,
             style: order.style,
-            size: order.size
+            size: order.size,
+            designCode: order.designCode
         });
         const fileIdentifier = order.namingSource === "roster" ? order.roster : order.wo;
         const outputName = services.buildOutputName(Object.assign({}, order, { wo: fileIdentifier }));
@@ -1449,7 +1450,6 @@
     async function applyOrderDataToIllustrator(orderOverride) {
         const order = orderOverride || orderView.collectOrder(state);
         const isBatchOrder = Boolean(orderOverride);
-        const rule = textRules.getTextRule(order);
         const hasName = order.name !== "";
         const hasNumber = order.number !== "";
 
@@ -1457,6 +1457,18 @@
             console.warn("Sin nombre ni numero: se deja la plantilla tal como viene.");
             return;
         }
+
+        if (!hasName && !hasNumber && isBatchOrder && (order.variantCode === "SS" || order.variant === "Stars & Stripes")) {
+            console.warn(`Fila ${order.sourceRow || "batch"} Stars & Stripes sin nombre/numero: se deja la plantilla sin reemplazo de texto.`);
+            return;
+        }
+
+        if (!hasName && !hasNumber && isBatchOrder && (order.variantCode === "JR" || order.variant === "JR Championship")) {
+            console.warn(`Fila ${order.sourceRow || "batch"} JR Championship sin nombre/numero: se deja la plantilla sin reemplazo de texto.`);
+            return;
+        }
+
+        const rule = textRules.getTextRule(order);
 
         if (!hasName && !hasNumber && isBatchOrder) {
             console.warn(`Fila ${order.sourceRow || "batch"} sin nombre/numero: se limpiaran placeholders con espacios.`);

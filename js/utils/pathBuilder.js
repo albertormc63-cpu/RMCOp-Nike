@@ -6,7 +6,15 @@ const variantRules = require("../config/variantRules");
 // Codigo corto que se agrega al nombre final cuando la variante no es Standard.
 const variantCodes = {
   "Indigenous Heritage": "IH",
-  Throwback: "TB"
+  Throwback: "TB",
+  "JR Championship": "JR",
+  "All Stars": "AS",
+  "Stars & Stripes": "SS"
+};
+
+const starsStripesDesigns = {
+  GNB1: { templateCode: "GBF", folderName: "GREEN BERET FUNDATION" },
+  NYS1: { templateCode: "NSF", folderName: "NAVY SEALS FUNDATION" }
 };
 
 const teamNicknames = {
@@ -64,10 +72,10 @@ function getStyleSearchFamily(style) {
 }
 
 function getNikeCode(style) {
-  // 1000 = PLL, 2000 = WLL segun los styles de Nike Lacrosse.
+  // 1000/1500 = PLL, 2000 = WLL segun los styles de Nike Lacrosse.
   const normalizedStyle = normalizeStyle(style);
 
-  if (normalizedStyle.includes("1000")) return "PLL";
+  if (normalizedStyle.includes("1000") || normalizedStyle.includes("1500")) return "PLL";
   if (normalizedStyle.includes("2000")) return "WLL";
   throw new Error(`No se pudo detectar PLL/WLL desde el style: ${style}`);
 }
@@ -100,6 +108,9 @@ function getProductConfig(style) {
 function getVariantRootFolder(variant) {
   if (variant === "Indigenous Heritage") return "INDIGENOUS HERITAGE";
   if (variant === "Throwback") return "THROWBACK";
+  if (variant === "JR Championship") return "JR CHAMPIONSHIP";
+  if (variant === "All Stars") return "ALL STARS";
+  if (variant === "Stars & Stripes") return "STARS STRIPES";
   return "STANDARD";
 }
 
@@ -115,6 +126,24 @@ function getVariantProductConfig(style, variant) {
   if (variant === "Throwback") {
     return Object.assign({}, productConfig, {
       groupFolder: productConfig.nikeCode === "PLL" ? "NIKE TB Mens and Youth" : "NIKE TB Girls and Ladies"
+    });
+  }
+
+  if (variant === "JR Championship") {
+    return Object.assign({}, productConfig, {
+      groupFolder: productConfig.nikeCode === "PLL" ? "NIKE JR Mens and Youth" : "NIKE JR Girls and Ladies"
+    });
+  }
+
+  if (variant === "All Stars") {
+    return Object.assign({}, productConfig, {
+      groupFolder: productConfig.nikeCode === "PLL" ? "NIKE AS Mens and Youth" : "NIKE AS Girls and Ladies"
+    });
+  }
+
+  if (variant === "Stars & Stripes") {
+    return Object.assign({}, productConfig, {
+      groupFolder: productConfig.nikeCode === "PLL" ? "NIKE SS Mens and Youth" : "NIKE SS Girls and Ladies"
     });
   }
 
@@ -351,12 +380,89 @@ function buildIhTemplatePath({ basePath, team, style, size }) {
   return path.join(targetFolder, `${productConfig.nikeCode}-${team.toUpperCase()} IH ${getStyleSearchFamily(style)} ${size}.pdf`);
 }
 
-function buildTemplatePath({ basePath, team, variant, version, style, size }) {
-  // Devuelve la plantilla exacta que se copiara para el pedido actual.
-  const teamCode = teams[team];
+function buildAllStarsTemplatePath({ basePath, version, style, size }) {
+  const productConfig = getVariantProductConfig(style, "All Stars");
+  const versionFolder = String(version || "Home").toUpperCase();
+  const targetFolder = resolvePathSegments(basePath, [
+    "ALL STARS",
+    productConfig.groupFolder,
+    productConfig.productFolder,
+    versionFolder
+  ]);
 
-  if (!teamCode) {
-    throw new Error(`Equipo no registrado: ${team}`);
+  return path.join(targetFolder, `${productConfig.nikeCode} ALL STAR ${versionFolder} AS ${getStyleSearchFamily(style)} ${size}.pdf`);
+}
+
+function findTemplateByExactStyleAndSize(folderPath, style, size) {
+  if (!fs.existsSync(folderPath)) return null;
+
+  const normalizedStyle = normalizeStyle(style);
+  const sizeAliases = getSizeAliases(size);
+  const files = fs.readdirSync(folderPath);
+  const match = files.find(function (fileName) {
+    const normalizedFileName = fileName.toUpperCase();
+    const hasSize = sizeAliases.some(function (sizeAlias) {
+      return normalizedFileName.indexOf(` ${sizeAlias}.PDF`) !== -1 ||
+        normalizedFileName.indexOf(` ${sizeAlias} `) !== -1;
+    });
+
+    return normalizedFileName.endsWith(".PDF") &&
+      normalizedFileName.indexOf(normalizedStyle) !== -1 &&
+      hasSize;
+  });
+
+  return match ? path.join(folderPath, match) : null;
+}
+
+function buildJrTemplatePath({ basePath, team, style, size }) {
+  const productConfig = getVariantProductConfig(style, "JR Championship");
+  const targetFolder = resolvePathSegments(basePath, [
+    "JR CHAMPIONSHIP",
+    productConfig.groupFolder,
+    productConfig.productFolder,
+    `${team} Home`
+  ]);
+  const canonicalName = `${productConfig.nikeCode} ${team} ${normalizeStyle(style)} ${size}.pdf`;
+  const canonicalPath = path.join(targetFolder, canonicalName);
+
+  if (fs.existsSync(canonicalPath)) {
+    return canonicalPath;
+  }
+
+  return findTemplateByExactStyleAndSize(targetFolder, style, size) || canonicalPath;
+}
+
+function buildStarsStripesTemplatePath({ basePath, designCode, style, size }) {
+  const normalizedDesignCode = String(designCode || "").trim().toUpperCase();
+  const design = starsStripesDesigns[normalizedDesignCode];
+
+  if (!design) {
+    throw new Error(`Stars & Stripes requiere design_code valido: ${designCode || "(vacio)"}`);
+  }
+
+  const productConfig = getVariantProductConfig(style, "Stars & Stripes");
+  const targetFolder = resolvePathSegments(basePath, [
+    "STARS STRIPES",
+    productConfig.groupFolder,
+    productConfig.productFolder,
+    design.folderName
+  ]);
+
+  return path.join(targetFolder, `${productConfig.nikeCode} ${design.templateCode} SS ${getStyleSearchFamily(style)} ${size}.pdf`);
+}
+
+function buildTemplatePath({ basePath, team, variant, version, style, size, designCode }) {
+  // Devuelve la plantilla exacta que se copiara para el pedido actual.
+  if (variant === "JR Championship") {
+    return buildJrTemplatePath({ basePath, team, style, size });
+  }
+
+  if (variant === "All Stars") {
+    return buildAllStarsTemplatePath({ basePath, version, style, size });
+  }
+
+  if (variant === "Stars & Stripes") {
+    return buildStarsStripesTemplatePath({ basePath, designCode, style, size });
   }
 
   if (variant === "Indigenous Heritage") {
@@ -367,11 +473,47 @@ function buildTemplatePath({ basePath, team, variant, version, style, size }) {
     return buildThrowbackTemplatePath({ basePath, team, style, size });
   }
 
+  const teamCode = teams[team];
+
+  if (!teamCode) {
+    throw new Error(`Equipo no registrado: ${team}`);
+  }
+
   return buildTextTemplatePath({ basePath, team, variant, version, style, size, teamCode });
 }
 
-function buildOutputName({ wo, team, variant, style, size, number, name }) {
+function buildStarsStripesOutputName({ wo, designCode, style, size, number, name }) {
+  const orderIdentifier = sanitizeOutputPart(number || name || "SIN_DATOS");
+  const identifierPart = orderIdentifier ? ` ${orderIdentifier}` : "";
+  const normalizedDesignCode = sanitizeOutputPart(String(designCode || "").trim().toUpperCase());
+
+  if (!normalizedDesignCode) {
+    throw new Error("Stars & Stripes requiere design_code para nombrar el PDF.");
+  }
+
+  return `${wo} ${normalizedDesignCode} ${normalizeStyle(style)} ${size}${identifierPart}.pdf`;
+}
+
+function buildAllStarsOutputName({ wo, variant, version, style, size, number, name }) {
+  const productConfig = getProductConfig(style);
+  const variantCode = variantCodes[variant] || "AS";
+  const orderIdentifier = sanitizeOutputPart(number || name || "SIN_DATOS");
+  const identifierPart = orderIdentifier ? ` ${orderIdentifier}` : "";
+  const versionPart = sanitizeOutputPart(version || "Home").toUpperCase();
+
+  return `${wo} ${productConfig.nikeCode}-All Stars ${versionPart} ${normalizeStyle(style)}${variantCode && normalizeStyle(style).indexOf(variantCode) === -1 ? variantCode : ""} ${size}${identifierPart}.pdf`;
+}
+
+function buildOutputName({ wo, team, variant, version, style, size, number, name, designCode }) {
   // Nombre de la copia de trabajo dentro de la carpeta On Demand.
+  if (variant === "Stars & Stripes") {
+    return buildStarsStripesOutputName({ wo, designCode, style, size, number, name });
+  }
+
+  if (variant === "All Stars") {
+    return buildAllStarsOutputName({ wo, variant, version, style, size, number, name });
+  }
+
   const productConfig = getProductConfig(style);
   const lineNicknames = teamNicknames[productConfig.lineName] || {};
   const lineDefaultNumbers = defaultTemplateNumbers[productConfig.lineName] || {};

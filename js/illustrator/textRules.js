@@ -27,10 +27,22 @@
         return variantName === "Indigenous Heritage";
     }
 
+    function isJrVariant(variantName) {
+        return variantName === "JR Championship";
+    }
+
     // Standard y Throwback reemplazan texto. IH reemplaza nombre y arma/apaga numero con arte.
     function getTextRule(order) {
         const lineRules = textRulesByLine[order.line] || {};
         const placeholders = lineRules[order.team] || null;
+
+        if (isJrVariant(order.variant)) {
+            return {
+                mode: "text",
+                placeholders: { numberPlaceholder: "00", namePlaceholder: "" },
+                message: "JR Championship reemplaza numero de jugador usando placeholder 00."
+            };
+        }
 
         if (isIhVariant(order.variant)) {
             return {

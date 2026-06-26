@@ -66,12 +66,13 @@ function buildOrderKey(order) {
     order.herramienta === "RMCOp-Nike Genericas"
   );
   const orderIdentifier = isGeneric ? (order.roster || order.rosterNumber || order.wo) : order && order.wo;
+  const teamOrDesign = order && (order.team || order.designCode);
 
   return [
     orderIdentifier,
     order && order.shipOrder,
     order && order.style,
-    order && order.team,
+    teamOrDesign,
     order && order.size,
     keyName,
     order && order.number
@@ -125,7 +126,7 @@ function backfillMissingItemKeys(deps, dbPath) {
     input: `
 .mode tabs
 .headers off
-SELECT id, herramienta, wo, roster, ship_order, style, equipo, talla, nombre, numero, clave
+SELECT id, herramienta, wo, roster, ship_order, style, equipo, talla, nombre, numero, clave, design_code
 FROM ${ITEMS_TABLE}
 WHERE clave IS NULL OR clave = '' OR herramienta = 'RMCOp-Nike Genericas';
 `,
@@ -148,7 +149,8 @@ WHERE clave IS NULL OR clave = '' OR herramienta = 'RMCOp-Nike Genericas';
       team: row[6],
       size: row[7],
       name: row[8],
-      number: row[9]
+      number: row[9],
+      designCode: row[11]
     });
 
     if (clave === row[10]) {
@@ -284,6 +286,10 @@ CREATE TABLE IF NOT EXISTS ${ITEMS_TABLE} (
   error TEXT,
   tiempo TEXT,
   fecha_embarque TEXT,
+  variant_code TEXT,
+  design_code TEXT,
+  design_name TEXT,
+  catalog_variant_id TEXT,
   clave TEXT,
   FOREIGN KEY (run_id) REFERENCES ${RUNS_TABLE}(id) ON DELETE CASCADE
 );
@@ -320,6 +326,10 @@ ON CONFLICT(source_app) DO UPDATE SET
   ensureColumn(deps, dbPath, RUNS_TABLE, "output_root", "TEXT");
   ensureColumn(deps, dbPath, ITEMS_TABLE, "fecha_embarque", "TEXT");
   ensureColumn(deps, dbPath, ITEMS_TABLE, "path", "TEXT");
+  ensureColumn(deps, dbPath, ITEMS_TABLE, "variant_code", "TEXT");
+  ensureColumn(deps, dbPath, ITEMS_TABLE, "design_code", "TEXT");
+  ensureColumn(deps, dbPath, ITEMS_TABLE, "design_name", "TEXT");
+  ensureColumn(deps, dbPath, ITEMS_TABLE, "catalog_variant_id", "TEXT");
   backfillMissingItemKeys(deps, dbPath);
   normalizeExistingShippingDates(deps, dbPath);
   execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_items_clave ON ${ITEMS_TABLE}(clave);`);
@@ -394,7 +404,7 @@ DELETE FROM ${ITEMS_TABLE} WHERE run_id = ${sqlText(runId)};
 INSERT OR IGNORE INTO ${ITEMS_TABLE} (
   run_id, herramienta, fila_excel, wo, roster, ship_order, style, style_family,
   equipo, variante, version, talla, piezas, nombre, numero, archivo, path,
-  estado, error, tiempo, fecha_embarque, clave
+  estado, error, tiempo, fecha_embarque, variant_code, design_code, design_name, catalog_variant_id, clave
 ) VALUES (
   ${sqlText(runId)},
   ${sqlText(herramienta)},
@@ -417,6 +427,10 @@ INSERT OR IGNORE INTO ${ITEMS_TABLE} (
   ${sqlText(result.ok ? "" : (result.message || "Error desconocido"))},
   ${sqlText(formatDuration(Math.max(1, Math.round((result.durationMs || 0) / 1000))))},
   ${sqlText(normalizeShippingDate(order.shippingDate || fechaEmbarque))},
+  ${sqlText(order.variantCode || "")},
+  ${sqlText(order.designCode || "")},
+  ${sqlText(order.designName || "")},
+  ${sqlText(order.catalogVariantId || "")},
   ${sqlText(clave)}
 );
 `;

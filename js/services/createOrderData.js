@@ -37,6 +37,21 @@ const colorTeamMap = [
   { token: "CHARGING", team: "New York" }
 ];
 
+const specialDesigns = {
+  SS: [
+    {
+      code: "GNB1",
+      name: "Green Beret Foundation",
+      aliases: ["GNB1", "GREEN BERET", "GREEN BERET FOUNDATION", "GREEN BERET FUNDATION"]
+    },
+    {
+      code: "NYS1",
+      name: "Navy Seals Foundation",
+      aliases: ["NYS1", "NAVY SEAL", "NAVY SEALS", "NAVY SEAL FOUNDATION", "NAVY SEALS FOUNDATION", "NAVY SEALS FUNDATION"]
+    }
+  ]
+};
+
 function cleanCell(value) {
   if (value == null) return "";
   return String(value).trim().replace(/\s+/g, " ");
@@ -62,7 +77,7 @@ function inferTeam(color) {
 function inferLine(style) {
   const normalizedStyle = cleanUpper(style);
 
-  if (/^[AY]1000/.test(normalizedStyle)) return "masculino";
+  if (/^[AY](1000|1500)/.test(normalizedStyle)) return "masculino";
   if (/^[AY]2000/.test(normalizedStyle)) return "femenino";
   return "";
 }
@@ -77,6 +92,32 @@ function inferVersion(style) {
   if (/A$/.test(normalizedStyle)) return "Away";
   if (/H$/.test(normalizedStyle)) return "Home";
   return "Home";
+}
+
+function inferSpecialDesign(variantCode, color, rosterName) {
+  const normalizedValues = [
+    cleanUpper(color),
+    cleanUpper(rosterName)
+  ].filter(Boolean);
+  const designs = specialDesigns[variantCode] || [];
+
+  for (let designIndex = 0; designIndex < designs.length; designIndex++) {
+    const design = designs[designIndex];
+    const aliases = design.aliases || [];
+
+    for (let aliasIndex = 0; aliasIndex < aliases.length; aliasIndex++) {
+      const alias = cleanUpper(aliases[aliasIndex]);
+      const matchesAlias = normalizedValues.some(function (value) {
+        return value.indexOf(alias) !== -1;
+      });
+
+      if (matchesAlias) {
+        return design;
+      }
+    }
+  }
+
+  return null;
 }
 
 function getStyleFamily(style) {
@@ -302,6 +343,8 @@ function normalizeRow(cells, index, columns, metadata) {
   const number = sanitizeNumber(getCell(cells, columns.number));
   const name = cleanUpper(getCell(cells, columns.name));
   const color = cleanCell(getCell(cells, columns.color));
+  const variant = variantRules.inferVariantFromStyle(style);
+  const specialDesign = inferSpecialDesign(variant.code, color, metadata.rosterName);
 
   return {
     sourceRow: index + 1,
@@ -312,7 +355,10 @@ function normalizeRow(cells, index, columns, metadata) {
     color: color,
     line: inferLine(style),
     team: inferTeam(color) || (columns.format === "generic-roster" ? inferTeam(metadata.rosterName) : ""),
-    variant: inferVariant(style),
+    variant: variant.name,
+    variantCode: variant.code,
+    designCode: specialDesign ? specialDesign.code : "",
+    designName: specialDesign ? specialDesign.name : "",
     version: inferVersion(style),
     styleFamily: getStyleFamily(style),
     sizeRaw: sizeRaw,
@@ -332,11 +378,13 @@ function normalizeRow(cells, index, columns, metadata) {
 function validateOrderRow(row) {
   const errors = [];
   const warnings = [];
+  const requiresTeam = row.variantCode !== "SS" && row.variantCode !== "AS";
 
   if (!row.wo && !(row.sourceFormat === "generic-roster" && row.roster)) errors.push("Falta Work Order o Roster");
   if (!row.style) errors.push("Falta Style");
   if (!row.line) errors.push("Style no reconocido");
-  if (!row.team) errors.push("No se pudo detectar equipo desde Color");
+  if (requiresTeam && !row.team) errors.push("No se pudo detectar equipo desde Color");
+  if (row.variantCode === "SS" && !row.designCode) errors.push("Stars & Stripes requiere design_code reconocido en Color o nombre del roster");
   if (!row.size) errors.push("Falta Size");
   if (row.size && validSizes.indexOf(row.size) === -1) errors.push(`Size no reconocido: ${row.sizeRaw}`);
   if (!row.name && !row.number) warnings.push("Sin nombre ni numero; se limpiaran placeholders");
