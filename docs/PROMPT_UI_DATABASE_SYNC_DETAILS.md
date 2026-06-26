@@ -139,6 +139,12 @@ Probar con:
 - No actualices `README.md` salvo cambio crítico.
 - No actualices docs no relacionados.
 
+## Pendiente posterior
+
+- Evaluar polling automatico para refrescar datos sincronizados sin recargar la vista.
+- No implementarlo dentro de tareas de UI puntual si no se pide explicitamente.
+- Antes de activarlo, definir intervalo, costo SQLite, cancelacion al cambiar de vista y senal visual de ultima actualizacion.
+
 ## Respuesta final esperada
 
 Incluye:
