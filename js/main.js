@@ -232,7 +232,7 @@
                 results: results
             });
 
-            console.log(`BD produccion actualizada: ${dbResult.dbPath}`);
+            console.log(`BD produccion actualizada: ${dbResult.dbPath} (${dbResult.storedItems || 0} items).`);
         }
     }
 
@@ -317,12 +317,18 @@
         }
     }
 
-    function pickFileFromCep(title, initialPath) {
+    const excelFileTypes = ["xls", "xlsx", "xlsm", "xlsb"];
+
+    function isExcelFilePath(filePath) {
+        return /\.(xls|xlsx|xlsm|xlsb)$/i.test(String(filePath || "").trim());
+    }
+
+    function pickFileFromCep(title, initialPath, fileTypes) {
         if (!window.cep || !window.cep.fs || !window.cep.fs.showOpenDialog) {
             throw new Error("El selector CEP no esta disponible. Abre el panel desde Illustrator.");
         }
 
-        const result = window.cep.fs.showOpenDialog(false, false, title, initialPath || "", null);
+        const result = window.cep.fs.showOpenDialog(false, false, title, initialPath || "", fileTypes || null);
 
         if (!result || result.err) {
             return "";
@@ -1159,11 +1165,16 @@
 
         const excelPath = pickFileFromCep(
             state.batch.mode === "generic" ? "Elegir Roster Excel Nike" : "Elegir Excel Nike On Demand",
-            paths && paths.ordersBase ? paths.ordersBase : ""
+            paths && paths.ordersBase ? paths.ordersBase : "",
+            excelFileTypes
         );
 
         if (!excelPath) {
             return;
+        }
+
+        if (!isExcelFilePath(excelPath)) {
+            throw new Error("Selecciona un archivo de Excel valido (.xls, .xlsx, .xlsm o .xlsb).");
         }
 
         const batchData = services.createOrderDataFromExcel(excelPath);
@@ -1214,7 +1225,8 @@
             variant: order.variant,
             version: order.version,
             style: order.style,
-            size: order.size
+            size: order.size,
+            designCode: order.designCode
         });
         const outputName = buildBatchOutputName(order);
 

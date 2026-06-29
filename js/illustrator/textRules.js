@@ -35,6 +35,17 @@
         return Boolean(order.templateNamePlaceholder || order.templateNumberPlaceholder);
     }
 
+    function getCatalogOrLocalPlaceholders(order, localPlaceholders) {
+        if (!hasCatalogPlaceholders(order)) {
+            return localPlaceholders;
+        }
+
+        return {
+            numberPlaceholder: order.templateNumberPlaceholder || (localPlaceholders && localPlaceholders.numberPlaceholder) || "",
+            namePlaceholder: order.templateNamePlaceholder || (localPlaceholders && localPlaceholders.namePlaceholder) || ""
+        };
+    }
+
     // Standard y Throwback reemplazan texto. IH reemplaza nombre y arma/apaga numero con arte.
     function getTextRule(order) {
         const lineRules = textRulesByLine[order.line] || {};
@@ -45,6 +56,16 @@
                 mode: "blocked",
                 placeholders: null,
                 message: `${order.variant || "La variante"} ya existe en rmc_nike_style_variants, pero aun no tiene placeholders de nombre/numero configurados.`
+            };
+        }
+
+        if (isIhVariant(order.variant)) {
+            return {
+                mode: "raster-number",
+                placeholders: getCatalogOrLocalPlaceholders(order, placeholders),
+                message: hasCatalogPlaceholders(order)
+                    ? `Usando placeholder de nombre de rmc_nike_style_variants (${order.catalogVariantCode || order.variantCode || order.variant}); el numero IH se armara duplicando grupos de Illustrator.`
+                    : "Esta variante usa numeros rasterizados; el numero se armara duplicando grupos de Illustrator."
             };
         }
 
@@ -64,14 +85,6 @@
                 mode: "text",
                 placeholders: { numberPlaceholder: "00", namePlaceholder: "" },
                 message: "JR Championship reemplaza numero de jugador usando placeholder 00."
-            };
-        }
-
-        if (isIhVariant(order.variant)) {
-            return {
-                mode: "raster-number",
-                placeholders: placeholders,
-                message: "Esta variante usa numeros rasterizados; el numero se armara duplicando grupos de Illustrator."
             };
         }
 

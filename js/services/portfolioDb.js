@@ -546,11 +546,26 @@ ${itemSql}
 COMMIT;
 `);
 
+  const storedItemsOutput = deps.childProcess.execFileSync(SQLITE_BIN, [dbPath], {
+    input: `
+.headers off
+.mode list
+SELECT COUNT(*) FROM ${ITEMS_TABLE} WHERE run_id = ${sqlText(runId)};
+`,
+    encoding: "utf8"
+  });
+  const storedItems = Number(String(storedItemsOutput || "").trim()) || 0;
+
+  if (storedItems !== results.length) {
+    throw new Error(`SQLite registro ${storedItems} items de ${results.length} para el run ${runId}. Revisa duplicados por clave/path o indices unicos.`);
+  }
+
   return {
     dbPath: dbPath,
     runId: runId,
     okCount: okCount,
     errorCount: errorCount,
+    storedItems: storedItems,
     totalPieces: totalPieces,
     totalStyles: Object.keys(styles).length
   };
