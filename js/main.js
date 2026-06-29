@@ -458,8 +458,8 @@
     }
 
     function getStyleFamily(styleCode) {
-        // Convierte A1000H/A1000A/A1000IH/A1000TB -> A1000.
-        return String(styleCode || "").replace(/IH$/i, "").replace(/TB$/i, "").replace(/[HA]$/i, "");
+        // Convierte A1000H/A1000A/A1000IH/A1000TB/A1000JR/A1000AS -> A1000.
+        return String(styleCode || "").replace(/IH$/i, "").replace(/TB$/i, "").replace(/JR$/i, "").replace(/AS$/i, "").replace(/SS$/i, "").replace(/[HA]$/i, "");
     }
 
     function getTextFitRule(order) {
@@ -963,6 +963,49 @@
         };
     }
 
+    function sanitizeBatchOutputPart(value) {
+        return String(value || "")
+            .trim()
+            .replace(/[\/\\:*?"<>|]/g, "")
+            .replace(/\s+/g, " ");
+    }
+
+    function buildNameNumberOutputName(outputName, order) {
+        const numberPart = sanitizeBatchOutputPart(order.number);
+        const namePart = sanitizeBatchOutputPart(order.name);
+
+        if (!numberPart || !namePart) {
+            return outputName;
+        }
+
+        return String(outputName || "").replace(new RegExp(` ${numberPart}\\.pdf$`, "i"), ` ${numberPart} ${namePart}.pdf`);
+    }
+
+    function resolveBatchOutputNameCollisions(rows) {
+        const services = nodeRuntime.services;
+        const pathCounts = rows.reduce(function (counts, row) {
+            counts[row.outputPath] = (counts[row.outputPath] || 0) + 1;
+            return counts;
+        }, {});
+
+        return rows.map(function (row) {
+            if (pathCounts[row.outputPath] <= 1) {
+                return row;
+            }
+
+            const outputName = buildNameNumberOutputName(row.outputName, row.order);
+
+            if (outputName === row.outputName) {
+                return row;
+            }
+
+            return Object.assign({}, row, {
+                outputName: outputName,
+                outputPath: services.path.join(getBatchDestinationFolderForOrder(row.order), outputName)
+            });
+        });
+    }
+
     function getBatchDestinationFolderForOrder(order) {
         const services = nodeRuntime.services;
 
@@ -975,6 +1018,10 @@
     }
 
     function buildBatchOutputName(order) {
+        if (order.expectedOutputName) {
+            return order.expectedOutputName;
+        }
+
         const services = nodeRuntime.services;
 
         if (state.batch.mode !== "generic") {
@@ -1000,7 +1047,7 @@
             return null;
         }
 
-        const keyedRows = selectedRows.map(function (order) {
+        const keyedRows = resolveBatchOutputNameCollisions(selectedRows.map(function (order) {
             const outputInfo = buildBatchOutputInfo(order);
 
             return {
@@ -1009,7 +1056,7 @@
                 outputName: outputInfo.outputName,
                 outputPath: outputInfo.outputPath
             };
-        });
+        }));
         const keyCounts = keyedRows.reduce(function (counts, row) {
             counts[row.clave] = (counts[row.clave] || 0) + 1;
             return counts;

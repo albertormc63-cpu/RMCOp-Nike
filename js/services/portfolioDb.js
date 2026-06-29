@@ -329,6 +329,20 @@ WHERE TRIM(COALESCE(${ITEMS_TABLE}.fecha_embarque, '')) = ''
   return updates.length;
 }
 
+function removeSupersededErroredItems(deps, dbPath) {
+  execSql(deps, dbPath, `
+DELETE FROM ${ITEMS_TABLE}
+WHERE TRIM(COALESCE(clave, '')) <> ''
+  AND estado <> 'Completado'
+  AND EXISTS (
+    SELECT 1
+    FROM ${ITEMS_TABLE} completed
+    WHERE completed.clave = ${ITEMS_TABLE}.clave
+      AND completed.estado = 'Completado'
+  );
+`);
+}
+
 function ensureSchema(deps, dbPath) {
   const cacheKey = deps && deps.path ? deps.path.resolve(dbPath) : String(dbPath || "");
 
@@ -434,6 +448,7 @@ ON CONFLICT(source_app) DO UPDATE SET
   ensureColumn(deps, dbPath, ITEMS_TABLE, "catalog_variant_id", "TEXT");
   backfillMissingItemKeys(deps, dbPath);
   normalizeExistingShippingDates(deps, dbPath);
+  removeSupersededErroredItems(deps, dbPath);
   execSql(deps, dbPath, `CREATE INDEX IF NOT EXISTS idx_rmcop_nike_items_clave ON ${ITEMS_TABLE}(clave);`);
   execSql(deps, dbPath, `CREATE UNIQUE INDEX IF NOT EXISTS idx_rmcop_nike_items_clave_completada
     ON ${ITEMS_TABLE}(clave)
@@ -501,8 +516,13 @@ DELETE FROM ${ITEMS_TABLE} WHERE run_id = ${sqlText(runId)};
     const order = result.order || {};
     const clave = result.clave || buildOrderKey(order);
     const outputPath = result.ok ? resolveStoredPath(deps, result.outputPath) : null;
+    const clearPreviousErrorSql = clave ? `
+DELETE FROM ${ITEMS_TABLE}
+WHERE clave = ${sqlText(clave)}
+  AND estado <> 'Completado';
+` : "";
 
-    return `
+    return `${clearPreviousErrorSql}
 INSERT OR IGNORE INTO ${ITEMS_TABLE} (
   run_id, herramienta, fila_excel, wo, roster, ship_order, style, style_family,
   equipo, variante, version, talla, piezas, nombre, numero, archivo, path,
