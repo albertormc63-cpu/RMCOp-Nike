@@ -8,6 +8,8 @@ const variantCodes = {
   "Indigenous Heritage": "IH",
   Throwback: "TB",
   "JR Championship": "JR",
+  "JR Champ": "JR",
+  "JR Champ Shorts": "JR",
   "All Stars": "AS",
   "Stars & Stripes": "SS"
 };
@@ -108,7 +110,7 @@ function getProductConfig(style) {
 function getVariantRootFolder(variant) {
   if (variant === "Indigenous Heritage") return "INDIGENOUS HERITAGE";
   if (variant === "Throwback") return "THROWBACK";
-  if (variant === "JR Championship") return "JR CHAMPIONSHIP";
+  if (variantRules.isJrVariantName(variant)) return "JR CHAMPIONSHIP";
   if (variant === "All Stars") return "ALL STARS";
   if (variant === "Stars & Stripes") return "STARS STRIPES";
   return "STANDARD";
@@ -129,7 +131,7 @@ function getVariantProductConfig(style, variant) {
     });
   }
 
-  if (variant === "JR Championship") {
+  if (variantRules.isJrVariantName(variant)) {
     return Object.assign({}, productConfig, {
       groupFolder: productConfig.nikeCode === "PLL" ? "NIKE JR Mens and Youth" : "NIKE JR Girls and Ladies"
     });
@@ -414,14 +416,53 @@ function findTemplateByExactStyleAndSize(folderPath, style, size) {
   return match ? path.join(folderPath, match) : null;
 }
 
-function buildJrTemplatePath({ basePath, team, style, size }) {
-  const productConfig = getVariantProductConfig(style, "JR Championship");
-  const targetFolder = resolvePathSegments(basePath, [
+function getJrTeamFolderCandidates(basePath, productConfig, team) {
+  const jrProductPath = resolvePathSegments(basePath, [
     "JR CHAMPIONSHIP",
     productConfig.groupFolder,
-    productConfig.productFolder,
-    `${team} Home`
+    productConfig.productFolder
   ]);
+
+  return [
+    path.join(jrProductPath, `${team} JR`),
+    path.join(jrProductPath, `${team.toUpperCase()} JR`),
+    path.join(jrProductPath, `${team} Home`),
+    path.join(jrProductPath, `${team.toUpperCase()} HOME`)
+  ];
+}
+
+function findJrTeamFolder(basePath, productConfig, team) {
+  const candidates = getJrTeamFolderCandidates(basePath, productConfig, team);
+  const existingCandidate = findExistingPath(candidates);
+
+  if (existingCandidate) {
+    return existingCandidate;
+  }
+
+  const jrProductPath = resolvePathSegments(basePath, [
+    "JR CHAMPIONSHIP",
+    productConfig.groupFolder,
+    productConfig.productFolder
+  ]);
+
+  if (!fs.existsSync(jrProductPath)) {
+    return candidates[0];
+  }
+
+  const teamWords = team.toUpperCase().split(/\s+/);
+  const entries = fs.readdirSync(jrProductPath);
+  const match = entries.find(function (entryName) {
+    const normalizedEntry = entryName.toUpperCase();
+    return teamWords.every(function (word) { return normalizedEntry.indexOf(word) !== -1; }) &&
+      (normalizedEntry.indexOf("JR") !== -1 || normalizedEntry.indexOf("HOME") !== -1);
+  });
+
+  return match ? path.join(jrProductPath, match) : candidates[0];
+}
+
+function buildJrTemplatePath({ basePath, team, style, size }) {
+  const productConfig = getVariantProductConfig(style, "JR Championship");
+  const targetFolder = findJrTeamFolder(basePath, productConfig, team);
   const canonicalName = `${productConfig.nikeCode} ${team} ${normalizeStyle(style)} ${size}.pdf`;
   const canonicalPath = path.join(targetFolder, canonicalName);
 
@@ -453,7 +494,7 @@ function buildStarsStripesTemplatePath({ basePath, designCode, style, size }) {
 
 function buildTemplatePath({ basePath, team, variant, version, style, size, designCode }) {
   // Devuelve la plantilla exacta que se copiara para el pedido actual.
-  if (variant === "JR Championship") {
+  if (variantRules.isJrVariantName(variant)) {
     return buildJrTemplatePath({ basePath, team, style, size });
   }
 

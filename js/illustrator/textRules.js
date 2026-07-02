@@ -27,8 +27,12 @@
         return variantName === "Indigenous Heritage";
     }
 
-    function isJrVariant(variantName) {
-        return variantName === "JR Championship";
+    function isJrVariant(order) {
+        const variantName = String(order && order.variant || "").trim().toLowerCase();
+        return order && order.variantCode === "JR" ||
+            variantName === "jr championship" ||
+            variantName === "jr champ" ||
+            variantName === "jr champ shorts";
     }
 
     function hasCatalogPlaceholders(order) {
@@ -80,11 +84,11 @@
             };
         }
 
-        if (isJrVariant(order.variant)) {
+        if (isJrVariant(order)) {
             return {
                 mode: "text",
                 placeholders: { numberPlaceholder: "00", namePlaceholder: "" },
-                message: "JR Championship reemplaza numero de jugador usando placeholder 00."
+                message: `${order.variant || "JR Championship"} reemplaza numero de jugador usando placeholder 00.`
             };
         }
 

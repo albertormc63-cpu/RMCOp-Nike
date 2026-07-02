@@ -112,10 +112,6 @@ function inferLine(style) {
   return "";
 }
 
-function inferVariant(style) {
-  return variantRules.inferVariantFromStyle(style).name;
-}
-
 function inferVersion(style) {
   const normalizedStyle = cleanUpper(style);
 
@@ -412,6 +408,7 @@ function normalizeRow(cells, index, columns, metadata) {
     columns.format || "on-demand"
   );
   const specialDesign = inferSpecialDesign(variant.code, color, metadata.rosterName, line);
+  const jrGarmentType = variant.code === "JR" ? variantRules.getJrGarmentType(style) : "";
 
   return {
     sourceRow: index + 1,
@@ -422,10 +419,11 @@ function normalizeRow(cells, index, columns, metadata) {
     color: color,
     line: line,
     team: inferTeam(color) || (columns.format === "generic-roster" ? inferTeam(metadata.teamSearchText) : ""),
-    variant: variant.name,
+    variant: variant.code === "JR" ? variantRules.getJrVariantDisplayName(style) : variant.name,
     variantCode: variant.code,
     designCode: specialDesign ? specialDesign.code : "",
-    designName: specialDesign ? specialDesign.name : "",
+    designName: specialDesign ? specialDesign.name : (jrGarmentType || ""),
+    garmentType: jrGarmentType,
     version: specialDesign && specialDesign.version ? specialDesign.version : inferVersion(style),
     styleFamily: getStyleFamily(style),
     sizeRaw: sizeRaw,

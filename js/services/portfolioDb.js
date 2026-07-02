@@ -152,7 +152,7 @@ function getCatalogVariantCode(order) {
   const variantName = normalizeLookupValue(order && order.variant).toLowerCase();
   if (variantName === "all stars") return "AS";
   if (variantName === "stars & stripes") return "SS";
-  if (variantName === "jr championship") return "JR";
+  if (variantName === "jr championship" || variantName === "jr champ" || variantName === "jr champ shorts") return "JR";
   if (variantName === "indigenous heritage") return "IH";
   if (variantName === "throwback") return "TB";
 

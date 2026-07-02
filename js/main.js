@@ -818,7 +818,7 @@
             return "personalized";
         }
 
-        if (["ST", "IH", "TB", "AS"].some(hasToken)) {
+        if (["ST", "IH", "TB", "AS", "JR"].some(hasToken)) {
             return "generic";
         }
 
@@ -831,7 +831,7 @@
 
         if (selectedMode === "personalized") {
             if (nameType === "generic" || isGenericRoster) {
-                throw new Error("Este Excel parece ser de Genericas (ST/IH/TB/AS o roster detallado). Selecciona la seccion Genericas antes de cargarlo.");
+                throw new Error("Este Excel parece ser de Genericas (ST/IH/TB/AS/JR o roster detallado). Selecciona la seccion Genericas antes de cargarlo.");
             }
 
             if (nameType === "unknown") {
@@ -854,7 +854,7 @@
         }
 
         if (nameType === "unknown") {
-            console.warn("El nombre del Excel no incluye ST/IH/TB/AS; se acepto porque su estructura corresponde a Genericas.");
+            console.warn("El nombre del Excel no incluye ST/IH/TB/AS/JR; se acepto porque su estructura corresponde a Genericas.");
         }
     }
 
@@ -1262,6 +1262,54 @@
         console.log(`Destino batch: ${folderPath}`);
     }
 
+    function isJrOrder(order) {
+        const variantName = String(order && order.variant || "").trim().toLowerCase();
+        return order && (order.variantCode === "JR" ||
+            variantName === "jr championship" ||
+            variantName === "jr champ" ||
+            variantName === "jr champ shorts");
+    }
+
+    function getJrGarmentType(order) {
+        if (order && order.garmentType) {
+            return order.garmentType;
+        }
+
+        return /1500/i.test(String(order && order.style || "")) ? "shorts" : "jersey";
+    }
+
+    function logJrBatchDetection(order, templatePath) {
+        if (!isJrOrder(order)) {
+            return;
+        }
+
+        console.log([
+            "JR detectado",
+            `fila ${order.sourceRow || "-"}`,
+            `style ${order.style || "-"}`,
+            `tipo ${getJrGarmentType(order)}`,
+            `variante ${order.variant || "-"}`,
+            `ruta ${templatePath || "-"}`
+        ].join(" | "));
+    }
+
+    function logJrBatchResult(order, result) {
+        if (!isJrOrder(order)) {
+            return;
+        }
+
+        const ok = result && result.ok;
+        console[ok ? "log" : "warn"]([
+            "JR resultado",
+            `fila ${order.sourceRow || "-"}`,
+            `style ${order.style || "-"}`,
+            `tipo ${getJrGarmentType(order)}`,
+            `variante ${order.variant || "-"}`,
+            ok ? "Completado" : "Error",
+            ok ? `salida ${result.outputPath || result.outputName || "-"}` : `mensaje ${result.message || "Error desconocido"}`
+        ].join(" | "));
+    }
+
     function buildBatchPreview(order, sizeDestinationFolder) {
         const services = nodeRuntime.services;
         const paths = getCurrentPaths();
@@ -1276,6 +1324,8 @@
             designCode: order.designCode
         });
         const outputName = buildBatchOutputName(order);
+
+        logJrBatchDetection(order, templatePath);
 
         return {
             order: order,
@@ -1337,25 +1387,32 @@
 
             try {
                 const copyResult = await createBatchCopyForOrder(order);
-
-                okCount++;
-                results.push({
+                const result = {
                     ok: true,
                     sourceRow: order.sourceRow,
                     outputPath: copyResult.outputPath,
                     outputName: copyResult.outputName,
-                    size: order.size
-                });
+                    size: order.size,
+                    order: order
+                };
+
+                okCount++;
+                results.push(result);
                 console.log(`OK fila ${order.sourceRow}: ${copyResult.outputPath}`);
+                logJrBatchResult(order, result);
             } catch (error) {
-                errorCount++;
-                results.push({
+                const result = {
                     ok: false,
                     sourceRow: order.sourceRow,
                     size: order.size,
-                    message: error.message
-                });
+                    message: error.message,
+                    order: order
+                };
+
+                errorCount++;
+                results.push(result);
                 console.error(`Error fila ${order.sourceRow}: ${error.message}`);
+                logJrBatchResult(order, result);
             }
         }
 
@@ -1427,7 +1484,7 @@
                     console.log(await illustratorBridge.savePdfAndCloseActiveDocument(copyResult.outputPath));
 
                     okCount++;
-                    results.push({
+                    const result = {
                         ok: true,
                         sourceRow: order.sourceRow,
                         outputPath: copyResult.outputPath,
@@ -1436,11 +1493,13 @@
                         durationMs: Date.now() - rowStartedAt,
                         clave: order.validationKey,
                         order: order
-                    });
+                    };
+                    results.push(result);
                     console.log(`Procesada fila ${order.sourceRow}: ${copyResult.outputName}`);
+                    logJrBatchResult(order, result);
                 } catch (error) {
                     errorCount++;
-                    results.push({
+                    const result = {
                         ok: false,
                         sourceRow: order.sourceRow,
                         size: order.size,
@@ -1448,8 +1507,10 @@
                         durationMs: Date.now() - rowStartedAt,
                         clave: order.validationKey,
                         order: order
-                    });
+                    };
+                    results.push(result);
                     console.error(`Error batch fila ${order.sourceRow}: ${error.message}`);
+                    logJrBatchResult(order, result);
                 }
             }
 

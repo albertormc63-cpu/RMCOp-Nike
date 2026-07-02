@@ -95,6 +95,43 @@ function inferVariantFromStyle(style) {
   return specialVariant || variants[0];
 }
 
+function getBaseStyleCode(style) {
+  const normalizedStyle = stripVariantSuffix(style);
+  const match = normalizedStyle.match(/^[AY]([0-9]{4})/);
+  return match ? match[1] : "";
+}
+
+function getJrGarmentType(style) {
+  if (inferVariantFromStyle(style).code !== "JR") return "";
+
+  const baseCode = getBaseStyleCode(style);
+
+  if (baseCode === "1500") return "shorts";
+  if (baseCode === "1000") return "jersey";
+  return "";
+}
+
+function getJrVariantDisplayName(style) {
+  return getJrGarmentType(style) === "shorts" ? "JR Champ Shorts" : "JR Champ";
+}
+
+function isJrVariantName(variantName) {
+  const normalizedName = String(variantName || "").trim().toLowerCase();
+  return normalizedName === "jr championship" ||
+    normalizedName === "jr champ" ||
+    normalizedName === "jr champ shorts";
+}
+
+function getVariantDisplayName(style) {
+  const variant = inferVariantFromStyle(style);
+
+  if (variant.code === "JR") {
+    return getJrVariantDisplayName(style);
+  }
+
+  return variant.name;
+}
+
 function stripVariantSuffix(style) {
   const normalizedStyle = normalizeStyle(style);
   const variant = inferVariantFromStyle(normalizedStyle);
@@ -120,6 +157,11 @@ module.exports = {
   getVariantByCode,
   getStyleSuffix,
   inferVariantFromStyle,
+  getBaseStyleCode,
+  getJrGarmentType,
+  getJrVariantDisplayName,
+  isJrVariantName,
+  getVariantDisplayName,
   stripVariantSuffix,
   isTextReplacementVariant,
   isIhVariant
