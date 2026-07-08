@@ -488,7 +488,9 @@
             minScale: Number(rules.minScale || 50),
             nameMaxWidth: Number(resolved.nameMaxWidth || 0),
             numberMaxWidth: Number(resolved.numberMaxWidth || 0),
-            smallNumberMaxWidth: Number(resolved.smallNumberMaxWidth || 0)
+            smallNumberMaxWidth: Number(resolved.smallNumberMaxWidth || 0),
+            numberMiterLimit: Number(resolved.numberMiterLimit || 0),
+            smallNumberMiterLimit: Number(resolved.smallNumberMiterLimit || resolved.numberMiterLimit || 0)
         };
     }
 

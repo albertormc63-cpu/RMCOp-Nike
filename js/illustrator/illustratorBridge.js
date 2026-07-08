@@ -122,6 +122,10 @@
             ",",
             toJsxString(fitRule.unit || "in"),
             ",",
+            toJsxNumber(fitRule.numberMiterLimit),
+            ",",
+            toJsxNumber(fitRule.smallNumberMiterLimit),
+            ",",
             toJsxJson(payload.ihNumberRule),
             ")"
         ].join(""));

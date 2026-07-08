@@ -85,11 +85,27 @@ function RMCNike_savePdfAndCloseActiveDocument(filePath) {
     }
 }
 
-function RMCNike_applyNameNumber(namePlaceholder, numberPlaceholder, newName, newNumber, shouldReplaceNumber, nameMaxWidth, numberMaxWidth, smallNumberMaxWidth, fitBuffer, minScale, fitUnit, ihNumberRuleJson) {
+function RMCNike_applyNameNumber(namePlaceholder, numberPlaceholder, newName, newNumber, shouldReplaceNumber, nameMaxWidth, numberMaxWidth, smallNumberMaxWidth, fitBuffer, minScale, fitUnit, numberMiterLimit, smallNumberMiterLimit, ihNumberRuleJson) {
     // Coordinador general: nombre siempre es texto; numero puede ser Standard(texto) o IH(arte).
     try {
         if (app.documents.length === 0) {
             return "ERROR:No hay documento abierto en Illustrator.";
+        }
+
+        if (ihNumberRuleJson === undefined && (typeof numberMiterLimit === "string" || numberMiterLimit === null)) {
+            // Compatibilidad con paneles CEP ya cargados: la firma anterior mandaba ihNumberRuleJson aqui.
+            ihNumberRuleJson = numberMiterLimit;
+            numberMiterLimit = null;
+            smallNumberMiterLimit = null;
+        }
+
+        if (!numberMiterLimit && Number(numberMaxWidth) === 10) {
+            // Fallback para paneles cargados antes de soportar numberMiterLimit: Youth/Y1000 usa 10in.
+            numberMiterLimit = 3;
+        }
+
+        if (!smallNumberMiterLimit && Number(smallNumberMaxWidth) === 10) {
+            smallNumberMiterLimit = numberMiterLimit || 3;
         }
 
         var doc = app.activeDocument;
@@ -107,8 +123,8 @@ function RMCNike_applyNameNumber(namePlaceholder, numberPlaceholder, newName, ne
             numberFrames = replaceExactText(doc, numberPlaceholder, safeNumber, "numero");
             var numberFramesToFit = getLargestTextFrames(numberFrames);
             var smallNumberFramesToFit = getTextFramesExceptLargest(numberFrames);
-            fittedNumber = fitTextFramesByObjectWidth(numberFramesToFit, numberMaxWidth, fitBuffer, minScale, fitUnit, "numero");
-            fittedNumber += fitTextFramesByObjectWidth(smallNumberFramesToFit, smallNumberMaxWidth, fitBuffer, minScale, fitUnit, "numero pequeno");
+            fittedNumber = fitTextFramesByObjectWidth(numberFramesToFit, numberMaxWidth, fitBuffer, minScale, fitUnit, "numero", numberMiterLimit);
+            fittedNumber += fitTextFramesByObjectWidth(smallNumberFramesToFit, smallNumberMaxWidth, fitBuffer, minScale, fitUnit, "numero pequeno", smallNumberMiterLimit || numberMiterLimit);
             numberSummary = " | Medidas numero: " + summarizeTextFrames(numberFrames, fitUnit);
         } else if (safeNumber !== " ") {
             // Indigenous Heritage: el numero se arma duplicando grupos raster/expandidos.

@@ -2,7 +2,7 @@
 <!-- Manifest CEP: registra el panel en Illustrator y define permisos/tamano de ventana. -->
 <ExtensionManifest Version="7.0"
     ExtensionBundleId="com.rmc.nike.panel"
-    ExtensionBundleVersion="1.0.1.0"
+    ExtensionBundleVersion="1.0.2.0"
     ExtensionBundleName="RMC Nike Panel">
 
     <ExtensionList>

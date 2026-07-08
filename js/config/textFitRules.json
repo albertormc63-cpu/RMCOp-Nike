@@ -28,7 +28,7 @@
     },
     "Denver": {
       "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
-      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 }
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10, "numberMiterLimit": 3, "smallNumberMiterLimit": 3 }
     },
     "Maryland": {
       "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },

@@ -80,7 +80,7 @@ function fitTextFrames(frames, maxWidth, fitBuffer, minScale, fitUnit, label) {
     return fittedCount;
 }
 
-function fitTextFramesByObjectWidth(frames, maxWidth, fitBuffer, minScale, fitUnit, label) {
+function fitTextFramesByObjectWidth(frames, maxWidth, fitBuffer, minScale, fitUnit, label, miterLimit) {
     // Para numeros Standard ajustamos el ancho del objeto, similar al campo Ancho de Propiedades.
     var fittedCount = 0;
     var widthLimit = toIllustratorPoints(maxWidth, fitUnit);
@@ -107,10 +107,11 @@ function fitTextFramesByObjectWidth(frames, maxWidth, fitBuffer, minScale, fitUn
                 continue;
             }
 
+            applyTextFrameMiterLimit(tf, miterLimit, label);
             app.redraw();
 
             if (getTextFramePropertyWidth(tf) > widthLimit) {
-                resizeTextFrameToWidth(tf, widthLimit, buffer, minimumScale);
+                resizeTextFrameToWidth(tf, widthLimit, buffer, minimumScale, miterLimit, label);
                 fittedCount++;
             }
         } catch (error) {
@@ -121,7 +122,7 @@ function fitTextFramesByObjectWidth(frames, maxWidth, fitBuffer, minScale, fitUn
     return fittedCount;
 }
 
-function resizeTextFrameToWidth(tf, widthLimit, buffer, minimumScale) {
+function resizeTextFrameToWidth(tf, widthLimit, buffer, minimumScale, miterLimit, label) {
     var tolerance = 0.02 * 72;
 
     for (var i = 0; i < 4; i++) {
@@ -137,9 +138,79 @@ function resizeTextFrameToWidth(tf, widthLimit, buffer, minimumScale) {
             scaleX = minimumScale;
         }
 
-        tf.resize(scaleX, 100, true, true, true, true, scaleX, Transformation.CENTER);
+        // Mantener el grosor de contornos/efectos al ajustar ancho; solo cambia el ancho visual del objeto.
+        tf.resize(scaleX, 100, true, true, true, true, 100, Transformation.CENTER);
+        applyTextFrameMiterLimit(tf, miterLimit, label);
         app.redraw();
     }
+}
+
+function applyTextFrameMiterLimit(tf, miterLimit, label) {
+    // Algunas plantillas importadas exponen el limite de trazo en el textFrame;
+    // otras lo exponen en textPath o characterAttributes. Probamos todos sin bloquear la orden.
+    var limit = Number(miterLimit);
+    var applied = false;
+
+    if (!limit || limit <= 0) {
+        return false;
+    }
+
+    try {
+        tf.strokeMiterLimit = limit;
+        applied = true;
+    } catch (error) {
+    }
+
+    try {
+        tf.strokeJoin = StrokeJoin.MITERENDJOIN;
+    } catch (error) {
+    }
+
+    try {
+        if (tf.textPath) {
+            tf.textPath.strokeMiterLimit = limit;
+            try {
+                tf.textPath.strokeJoin = StrokeJoin.MITERENDJOIN;
+            } catch (textPathJoinError) {
+            }
+            applied = true;
+        }
+    } catch (error) {
+    }
+
+    try {
+        var attributes = tf.textRange && tf.textRange.characterAttributes;
+
+        if (attributes) {
+            attributes.strokeMiterLimit = limit;
+            try {
+                attributes.strokeJoin = StrokeJoin.MITERENDJOIN;
+            } catch (joinError) {
+            }
+            applied = true;
+        }
+    } catch (error) {
+    }
+
+    try {
+        var ranges = tf.textRanges || [];
+
+        for (var i = 0; i < ranges.length; i++) {
+            ranges[i].characterAttributes.strokeMiterLimit = limit;
+            try {
+                ranges[i].characterAttributes.strokeJoin = StrokeJoin.MITERENDJOIN;
+            } catch (rangeJoinError) {
+            }
+            applied = true;
+        }
+    } catch (error) {
+    }
+
+    if (!applied) {
+        $.writeln("RMCNike no pudo aplicar limite de trazo " + limit + " en " + (label || "texto") + ".");
+    }
+
+    return applied;
 }
 
 function summarizeTextFrames(frames, fitUnit) {
@@ -211,6 +282,7 @@ function getTextFramePropertyWidth(tf) {
 $.global.replaceExactText = replaceExactText;
 $.global.fitTextFrames = fitTextFrames;
 $.global.fitTextFramesByObjectWidth = fitTextFramesByObjectWidth;
+$.global.applyTextFrameMiterLimit = applyTextFrameMiterLimit;
 $.global.summarizeTextFrames = summarizeTextFrames;
 $.global.getLargestTextFrames = getLargestTextFrames;
 $.global.getTextFramesExceptLargest = getTextFramesExceptLargest;
