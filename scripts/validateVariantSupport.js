@@ -146,7 +146,8 @@ function validateJrChampionship() {
   assert(buildGenericOutputName(shortsData.validRows[0]) === "79438-26 PLL-Carolina Chaos A1500JR SM SIN_DATOS.pdf", "Naming JR shorts no coincide.");
 
   const carolinaTemplate = buildTemplatePath(shortsData.validRows[0]);
-  assert(!fs.existsSync(carolinaTemplate), `Carolina A1500JR debe quedar bloqueado hasta agregar plantilla: ${carolinaTemplate}`);
+  assert(carolinaTemplate.includes(`${path.sep}Carolina JR${path.sep}A1500${path.sep}`), `Carolina A1500JR debe buscar dentro de A1500: ${carolinaTemplate}`);
+  assert(fs.existsSync(carolinaTemplate), `Carolina A1500JR debe resolver plantilla existente: ${carolinaTemplate}`);
 
   const bostonShorts = Object.assign({}, shortsData.validRows[0], {
     team: "Boston",
@@ -154,7 +155,15 @@ function validateJrChampionship() {
     size: "SM"
   });
   const bostonTemplate = buildTemplatePath(bostonShorts);
+  assert(bostonTemplate.includes(`${path.sep}Boston JR${path.sep}A1500${path.sep}`), `Boston A1500JR debe buscar dentro de A1500: ${bostonTemplate}`);
   assert(fs.existsSync(bostonTemplate), `Boston A1500JR debe resolver plantilla existente: ${bostonTemplate}`);
+
+  const bostonYouthShorts = Object.assign({}, bostonShorts, {
+    style: "Y1500JR"
+  });
+  const bostonYouthTemplate = buildTemplatePath(bostonYouthShorts);
+  assert(bostonYouthTemplate.includes(`${path.sep}Boston JR${path.sep}Y1500${path.sep}`), `Boston Y1500JR debe buscar dentro de Y1500: ${bostonYouthTemplate}`);
+  assert(fs.existsSync(bostonYouthTemplate), `Boston Y1500JR debe resolver plantilla existente: ${bostonYouthTemplate}`);
 }
 
 validateStandard();

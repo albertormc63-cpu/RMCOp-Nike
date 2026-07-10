@@ -1,6 +1,6 @@
 # Estado Actual
 
-Ultima actualizacion: 2026-06-22.
+Ultima actualizacion: 2026-07-10.
 
 `RMCOp-Nike` es el panel CEP principal de Illustrator para Nike Lacrosse On Demand. El flujo manual individual funciona y el batch desde Excel opera en modos `Personalizadas` y `Genericas` con validacion incremental.
 
@@ -10,6 +10,7 @@ Ultima actualizacion: 2026-06-22.
 - `Standard`: nombre y numero como texto.
 - `Indigenous Heritage`: nombre como texto y numero desde arte; gap obligatorio de `0.25in`.
 - `Throwback`: variante de texto `TB`; no pertenece al flujo IH.
+- JR Championship busca shorts `A1500JR` y `Y1500JR` dentro de las subcarpetas `A1500` y `Y1500` de cada equipo; jerseys 1000 permanecen en la raiz del equipo.
 - Batch valida archivos y SQLite antes de producir, y vuelve a validar al procesar.
 - Solo `FALTANTE` se genera; inconsistencias y duplicados quedan fuera.
 - Personalizadas usa destino manual con subcarpetas style/talla.

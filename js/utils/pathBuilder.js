@@ -462,7 +462,13 @@ function findJrTeamFolder(basePath, productConfig, team) {
 
 function buildJrTemplatePath({ basePath, team, style, size }) {
   const productConfig = getVariantProductConfig(style, "JR Championship");
-  const targetFolder = findJrTeamFolder(basePath, productConfig, team);
+  const teamFolder = findJrTeamFolder(basePath, productConfig, team);
+  const styleFamily = getStyleSearchFamily(style);
+  // Los shorts JR 1500 viven dentro de una subcarpeta por audiencia:
+  // A1500 para adulto y Y1500 para youth. Los jerseys 1000 siguen en la raiz del equipo.
+  const targetFolder = variantRules.getBaseStyleCode(style) === "1500"
+    ? (findCaseInsensitiveChild(teamFolder, styleFamily) || path.join(teamFolder, styleFamily))
+    : teamFolder;
   const canonicalName = `${productConfig.nikeCode} ${team} ${normalizeStyle(style)} ${size}.pdf`;
   const canonicalPath = path.join(targetFolder, canonicalName);
 
