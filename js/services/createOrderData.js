@@ -41,31 +41,31 @@ const specialDesigns = {
   AS: [
     {
       code: "AS-M-TA",
-      name: "Away / Team A",
+      name: "Home / Team A",
       line: "masculino",
-      version: "Away",
-      aliases: ["TEAM A", "TEAMA", "AAS1", "AWAY", "EAST"]
+      version: "Home",
+      aliases: ["TEAM A", "TEAMA", "HAS1", "HOME", "EAST"]
     },
     {
       code: "AS-M-TB",
-      name: "Home / Team B",
+      name: "Away / Team B",
       line: "masculino",
-      version: "Home",
-      aliases: ["TEAM B", "TEAMB", "HAS1", "HOME", "WEST"]
+      version: "Away",
+      aliases: ["TEAM B", "TEAMB", "AAS1", "AWAY", "WEST"]
     },
     {
       code: "AS-F-TA",
-      name: "Away / Team A",
+      name: "Home / Team A",
       line: "femenino",
-      version: "Away",
-      aliases: ["TEAM A", "TEAMA", "AAS1", "AWAY", "EAST"]
+      version: "Home",
+      aliases: ["TEAM A", "TEAMA", "HAS1", "HOME", "EAST"]
     },
     {
       code: "AS-F-TB",
-      name: "Home / Team B",
+      name: "Away / Team B",
       line: "femenino",
-      version: "Home",
-      aliases: ["TEAM B", "TEAMB", "HAS1", "HOME", "WEST"]
+      version: "Away",
+      aliases: ["TEAM B", "TEAMB", "AAS1", "AWAY", "WEST"]
     }
   ],
   SS: [

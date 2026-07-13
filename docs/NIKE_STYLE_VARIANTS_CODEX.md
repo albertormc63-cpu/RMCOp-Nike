@@ -606,7 +606,13 @@ Puntos a cuidar:
 
 ## All Star Game y color `TeamA` / `TeamB`
 
-Nueva observacion:
+Regla confirmada:
+
+- `TeamA` equivale a `Home`.
+- `TeamB` equivale a `Away`.
+- La regla aplica a masculino y femenino.
+
+Observacion de importacion:
 
 All Star Game puede venir en la columna `Color` como:
 
@@ -626,15 +632,14 @@ Esto sugiere que All Star Game debe modelarse como variante/diseno con aliases, 
 
 Pendientes:
 
-- Confirmar si `TeamA` equivale a Away y `TeamB` a Home, o si son lados/equipos del evento sin relacion directa con `A/H`.
 - Confirmar si `AAS1` y `HAS1` siguen vigentes como `design_code`, aliases o nombres de carpeta.
 - Confirmar si la variante debe ser `AS`, `SS` con design_code All Star, u otra categoria.
 - No activar All Star Game en catalogo productivo sin autorizacion expresa.
 
-Regla provisional:
+Regla operativa:
 
 ```text
-TeamA/TeamB y AAS1/HAS1 deben tratarse como aliases/datos de diseno hasta confirmar la regla oficial.
+TeamA/TeamB y AAS1/HAS1 deben tratarse como aliases/datos de diseno de All Stars.
 ```
 
 ---
