@@ -527,7 +527,7 @@ id
 style_family          -- A1000, A2000, Y1000, Y2000; opcional si la regla aplica globalmente
 variant_code          -- H, A, IH, TB, SS, AS, etc.
 variant_name          -- Home, Away, Indigenous Heritage, Throwback, Special Series, All Star Game
-design_code           -- GNB1, NYS1, AAS1, HAS1, etc. Null si no aplica
+design_code           -- GNB1, NYS1, X001, X002, etc. Null si no aplica
 design_name           -- Green Beret Foundation, Navy SEAL Foundation, All Star Team A, etc.
 team_code             -- BOS, UTA, etc. Null si no pertenece a equipo oficial
 team_name
@@ -610,6 +610,8 @@ Regla confirmada:
 
 - `TeamA` equivale a `Home`.
 - `TeamB` equivale a `Away`.
+- `Home` equivale a `East` y `X001`.
+- `Away` equivale a `West` y `X002`.
 - La regla aplica a masculino y femenino.
 
 Observacion de importacion:
@@ -621,25 +623,24 @@ TeamA
 TeamB
 ```
 
-Antes podia venir con codigos como:
+Tambien puede venir con codigos como:
 
 ```text
-AAS1
-HAS1
+X001
+X002
 ```
 
 Esto sugiere que All Star Game debe modelarse como variante/diseno con aliases, no como equipo oficial normal.
 
 Pendientes:
 
-- Confirmar si `AAS1` y `HAS1` siguen vigentes como `design_code`, aliases o nombres de carpeta.
 - Confirmar si la variante debe ser `AS`, `SS` con design_code All Star, u otra categoria.
 - No activar All Star Game en catalogo productivo sin autorizacion expresa.
 
 Regla operativa:
 
 ```text
-TeamA/TeamB y AAS1/HAS1 deben tratarse como aliases/datos de diseno de All Stars.
+HOME/EAST/X001/TeamA y AWAY/WEST/X002/TeamB deben tratarse como aliases/datos de diseno de All Stars.
 ```
 
 ---
@@ -739,7 +740,7 @@ Estos puntos siguen abiertos y deben quedar como TODO si la tarea los toca:
 6. Lista futura de más diseños dentro de `SS`.
 7. Tabla final compartida para variantes/disenos Nike.
 8. Estado inicial correcto para items recien generados: `Imprimiendo` vs `En proceso de impresion`.
-9. Interpretacion oficial de All Star Game: `TeamA`, `TeamB`, `AAS1`, `HAS1`.
+9. Interpretacion oficial de All Star Game: `HOME`, `EAST`, `X001`, `TeamA`, `AWAY`, `WEST`, `X002`, `TeamB`.
 
 ---
 

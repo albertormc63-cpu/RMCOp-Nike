@@ -21,6 +21,8 @@
             data: null,
             selectedStyleFamily: "",
             selectedSizes: [],
+            selectedVariantCodes: [],
+            variantCatalogLabels: null,
             shippingDateInput: "",
             lastResults: [],
             validation: null
@@ -525,14 +527,25 @@
         const invalidCount = batchData ? batchData.invalidRows.length : 0;
         const sizeCounts = countBatchRowsBy(filteredRows, "size");
         const sizes = Object.keys(sizeCounts).sort();
+
+        state.batch.selectedSizes = state.batch.selectedSizes.filter(function (size) {
+            return sizes.indexOf(size) !== -1;
+        });
+
+        const filteredRowsBySize = getRowsBySizes(filteredRows, state.batch.selectedSizes);
+        const variantCounts = countBatchRowsBy(filteredRowsBySize, getBatchVariantKey);
+        const variantCodes = Object.keys(variantCounts).sort(function (left, right) {
+            return getBatchVariantLabel(left).localeCompare(getBatchVariantLabel(right));
+        });
         const styleFamilyCounts = batchData ? batchData.counts.byStyleFamily || {} : {};
         const styleFamilies = Object.keys(styleFamilyCounts).sort();
         const rowsPreview = document.getElementById("batchRowsPreview");
         const styleFamilyList = document.getElementById("batchStyleFamilyList");
         const sizeList = document.getElementById("batchSizeList");
+        const variantList = document.getElementById("batchVariantList");
 
-        state.batch.selectedSizes = state.batch.selectedSizes.filter(function (size) {
-            return sizes.indexOf(size) !== -1;
+        state.batch.selectedVariantCodes = state.batch.selectedVariantCodes.filter(function (variantCode) {
+            return variantCodes.indexOf(variantCode) !== -1;
         });
         const selectedRows = batchData ? getSelectedBatchRows() : [];
 
@@ -553,6 +566,20 @@
         sizes.forEach(function (size) {
             renderSizeCheckbox(sizeList, size, size, sizeCounts[size], state.batch.selectedSizes.indexOf(size) !== -1);
         });
+
+        if (variantList) {
+            variantList.innerHTML = "";
+            renderVariantCheckbox(variantList, "", "Todas", filteredRowsBySize.length, state.batch.selectedVariantCodes.length === 0);
+            variantCodes.forEach(function (variantCode) {
+                renderVariantCheckbox(
+                    variantList,
+                    variantCode,
+                    getBatchVariantLabel(variantCode),
+                    variantCounts[variantCode],
+                    state.batch.selectedVariantCodes.indexOf(variantCode) !== -1
+                );
+            });
+        }
 
         if (!batchData) {
             rowsPreview.textContent = "Importa un Excel para revisar filas.";
@@ -599,7 +626,7 @@
             lines.push(`Fecha embarque seleccionada: ${getBatchShippingDate([]) || "pendiente"}`);
         }
         lines.push(`Encabezados: fila ${batchData.headerRow || 1} | Datos desde fila ${batchData.dataStartRow || 2}`);
-        lines.push(`Filtro style: ${getSelectedBatchStyleFamilyLabel()} | Filtro talla: ${getSelectedBatchSizeLabel()}`);
+        lines.push(`Filtro style: ${getSelectedBatchStyleFamilyLabel()} | Filtro talla: ${getSelectedBatchSizeLabel()} | Filtro variante: ${getSelectedBatchVariantLabel()}`);
         lines.push(`Validas en seleccion: ${selectedRows.length} | Errores del Excel: ${invalidCount}`);
         lines.push("");
 
@@ -667,6 +694,7 @@
         button.addEventListener("click", function () {
             state.batch.selectedStyleFamily = value;
             state.batch.selectedSizes = [];
+            state.batch.selectedVariantCodes = [];
             clearBatchValidation();
             renderBatchSummary();
             console.log(`Familia style seleccionada: ${getSelectedBatchStyleFamilyLabel()} (${getSelectedBatchRows().length} filas).`);
@@ -708,10 +736,45 @@
         container.appendChild(option);
     }
 
+    function renderVariantCheckbox(container, value, label, count, checked) {
+        const option = document.createElement("label");
+        const input = document.createElement("input");
+        const text = document.createElement("span");
+
+        option.className = "batch-size-option";
+        option.classList.toggle("active", checked);
+        input.type = "checkbox";
+        input.checked = checked;
+        text.textContent = `${label}: ${count}`;
+
+        input.addEventListener("change", function () {
+            if (!value) {
+                state.batch.selectedVariantCodes = [];
+            } else if (input.checked) {
+                if (state.batch.selectedVariantCodes.indexOf(value) === -1) {
+                    state.batch.selectedVariantCodes.push(value);
+                }
+            } else {
+                state.batch.selectedVariantCodes = state.batch.selectedVariantCodes.filter(function (variantCode) {
+                    return variantCode !== value;
+                });
+            }
+
+            clearBatchValidation();
+            renderBatchSummary();
+            console.log(`Variantes batch seleccionadas: ${getSelectedBatchVariantLabel()} (${getSelectedBatchRows().length} filas).`);
+        });
+
+        option.appendChild(input);
+        option.appendChild(text);
+        container.appendChild(option);
+    }
+
     function countBatchRowsBy(rows, key) {
         return rows.reduce(function (counts, row) {
-            const value = row[key] || "(vacio)";
-            counts[value] = (counts[value] || 0) + 1;
+            const value = typeof key === "function" ? key(row) : row[key];
+            const normalizedValue = value || "(vacio)";
+            counts[normalizedValue] = (counts[normalizedValue] || 0) + 1;
             return counts;
         }, {});
     }
@@ -726,10 +789,70 @@
         });
     }
 
+    function getRowsBySizes(rows, sizes) {
+        if (!sizes || sizes.length === 0) {
+            return rows;
+        }
+
+        return rows.filter(function (row) {
+            return sizes.indexOf(row.size) !== -1;
+        });
+    }
+
+    function getBatchVariantKey(row) {
+        const variantCode = String(row && row.variantCode || "").trim().toUpperCase();
+
+        return variantCode || String(row && row.variant || "STD").trim().toUpperCase();
+    }
+
+    function getBatchVariantCatalogLabels() {
+        const services = nodeRuntime.services;
+
+        if (state.batch.variantCatalogLabels) {
+            return state.batch.variantCatalogLabels;
+        }
+
+        state.batch.variantCatalogLabels = { STD: "Standard" };
+
+        if (!services.portfolioDb || !services.portfolioDb.listStyleVariantLabels) {
+            return state.batch.variantCatalogLabels;
+        }
+
+        try {
+            state.batch.variantCatalogLabels = services.portfolioDb.listStyleVariantLabels(getPortfolioDbDeps(), getPortfolioDbPath());
+        } catch (error) {
+            console.warn(`No se pudo leer catalogo de variantes; se usaran nombres locales: ${error.message}`);
+        }
+
+        return state.batch.variantCatalogLabels;
+    }
+
+    function getBatchVariantFallbackLabel(variantCode) {
+        const batchData = state.batch.data;
+
+        if (!batchData) {
+            return variantCode || "Standard";
+        }
+
+        const match = batchData.validRows.find(function (row) {
+            return getBatchVariantKey(row) === variantCode;
+        });
+
+        return match && match.variant ? match.variant : (variantCode || "Standard");
+    }
+
+    function getBatchVariantLabel(variantCode) {
+        const normalizedCode = String(variantCode || "").trim().toUpperCase();
+        const catalogLabels = getBatchVariantCatalogLabels();
+
+        return catalogLabels[normalizedCode] || getBatchVariantFallbackLabel(normalizedCode);
+    }
+
     function getSelectedBatchRows() {
         const batchData = state.batch.data;
         const selectedStyleFamily = state.batch.selectedStyleFamily;
         const selectedSizes = state.batch.selectedSizes;
+        const selectedVariantCodes = state.batch.selectedVariantCodes;
 
         if (!batchData) {
             return [];
@@ -738,7 +861,8 @@
         return batchData.validRows.filter(function (row) {
             const matchesStyleFamily = !selectedStyleFamily || row.styleFamily === selectedStyleFamily;
             const matchesSize = selectedSizes.length === 0 || selectedSizes.indexOf(row.size) !== -1;
-            return matchesStyleFamily && matchesSize;
+            const matchesVariant = selectedVariantCodes.length === 0 || selectedVariantCodes.indexOf(getBatchVariantKey(row)) !== -1;
+            return matchesStyleFamily && matchesSize && matchesVariant;
         });
     }
 
@@ -748,6 +872,12 @@
 
     function getSelectedBatchSizeLabel() {
         return state.batch.selectedSizes.length ? state.batch.selectedSizes.join(", ") : "todas";
+    }
+
+    function getSelectedBatchVariantLabel() {
+        return state.batch.selectedVariantCodes.length
+            ? state.batch.selectedVariantCodes.map(getBatchVariantLabel).join(", ")
+            : "todas";
     }
 
     function getBatchModeLabel() {
@@ -798,6 +928,7 @@
         state.batch.data = null;
         state.batch.selectedStyleFamily = "";
         state.batch.selectedSizes = [];
+        state.batch.selectedVariantCodes = [];
         state.batch.shippingDateInput = "";
         state.batch.lastResults = [];
         const shippingDateInput = document.getElementById("batchGenericShippingDate");
@@ -1038,6 +1169,7 @@
     function validateBatchSelection(selectedRowsOverride) {
         const services = nodeRuntime.services;
         const selectedRows = selectedRowsOverride || getSelectedBatchRows();
+        const selectedSignature = getBatchSelectionSignature(selectedRows);
 
         if (!state.batch.data || !state.batch.destinationFolder) {
             clearBatchValidation();
@@ -1099,17 +1231,32 @@
         state.batch.validation = {
             rows: rows,
             counts: counts,
-            selectedCount: selectedRows.length
+            selectedCount: selectedRows.length,
+            selectedSignature: selectedSignature
         };
 
         return state.batch.validation;
     }
 
+    function getBatchSelectionSignature(rows) {
+        return (rows || []).map(function (row) {
+            return [
+                row.sourceRow,
+                row.style,
+                row.size,
+                getBatchVariantKey(row),
+                row.name,
+                row.number
+            ].join(":");
+        }).join("|");
+    }
+
     function getBatchValidationForSelectedRows() {
         const selectedRows = getSelectedBatchRows();
         const validation = state.batch.validation;
+        const selectedSignature = getBatchSelectionSignature(selectedRows);
 
-        if (!validation || validation.selectedCount !== selectedRows.length) {
+        if (!validation || validation.selectedCount !== selectedRows.length || validation.selectedSignature !== selectedSignature) {
             return validateBatchSelection();
         }
 
@@ -1237,6 +1384,7 @@
         }
         state.batch.selectedStyleFamily = "";
         state.batch.selectedSizes = [];
+        state.batch.selectedVariantCodes = [];
         state.batch.shippingDateInput = "";
         document.getElementById("batchGenericShippingDate").value = "";
         state.batch.lastResults = [];

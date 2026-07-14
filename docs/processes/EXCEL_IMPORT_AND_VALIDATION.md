@@ -225,6 +225,7 @@ counts.byVersion
 ```
 
 La UI filtra `validRows` por familia y talla; `invalidRows` permanece visible como diagnostico.
+El filtro de variantes se calcula desde las filas ya filtradas por familia y talla, usando la variante base de cada fila. Las etiquetas prefieren `rmc_nike_style_variants` cuando SQLite esta disponible y usan la variante normalizada del Excel como respaldo.
 
 ## Casos Reales Verificados
 

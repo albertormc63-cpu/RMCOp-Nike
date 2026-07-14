@@ -44,7 +44,8 @@ Solo items `Completado` bloquean la clave; errores pueden reintentarse.
 
 ## Produccion
 
-- Filtrar por familia de style y una o varias tallas.
+- Filtrar por familia de style, una o varias tallas y variante global.
+- El filtro de variante agrupa por variante base (`Standard`, `Indigenous Heritage`, `All Star`, etc.), no por `Home/Away`.
 - Copiar, abrir, aplicar, guardar PDF y cerrar por cada fila faltante.
 - `Qty/Pzs` registra piezas, pero no multiplica PDFs.
 - En Genericas, Roster sustituye WO cuando no existe y participa en naming/clave.

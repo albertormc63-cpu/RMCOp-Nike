@@ -223,6 +223,48 @@ LIMIT 1;
   return parseVariantCatalogRow(rows[0]);
 }
 
+function listStyleVariantLabels(deps, dbPath) {
+  if (!deps.childProcess || !deps.fs || !dbPath || !deps.fs.existsSync(dbPath)) {
+    return { STD: "Standard" };
+  }
+
+  const output = deps.childProcess.execFileSync(SQLITE_BIN, [dbPath], {
+    input: `
+.mode tabs
+.headers off
+SELECT variant_code, variant_name
+FROM rmc_nike_style_variants
+WHERE variant_code IS NOT NULL
+  AND TRIM(variant_code) <> ''
+  AND variant_name IS NOT NULL
+  AND TRIM(variant_name) <> ''
+ORDER BY id;
+`,
+    encoding: "utf8"
+  });
+  const labels = { STD: "Standard" };
+
+  parseTabRows(output).forEach(function (row) {
+    const code = normalizeLookupValue(row[0]).toUpperCase();
+    const name = normalizeLookupValue(row[1]);
+
+    if (!code || !name) {
+      return;
+    }
+
+    if (code === "H" || code === "A") {
+      labels.STD = "Standard";
+      return;
+    }
+
+    if (!labels[code]) {
+      labels[code] = name;
+    }
+  });
+
+  return labels;
+}
+
 function backfillMissingItemKeys(deps, dbPath) {
   const output = deps.childProcess.execFileSync(SQLITE_BIN, [dbPath], {
     input: `
@@ -636,6 +678,7 @@ module.exports = {
   buildOrderKey,
   ensureSchema,
   getStyleVariantCatalogEntry,
+  listStyleVariantLabels,
   listExistingItemKeys,
   normalizeExistingShippingDates,
   recordBatchRun
