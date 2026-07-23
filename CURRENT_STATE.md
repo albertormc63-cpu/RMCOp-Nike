@@ -11,6 +11,7 @@ Ultima actualizacion: 2026-07-10.
 - `Indigenous Heritage`: nombre como texto y numero desde arte; gap obligatorio de `0.25in`.
 - `Throwback`: variante de texto `TB`; no pertenece al flujo IH.
 - JR Championship busca shorts `A1500JR` y `Y1500JR` dentro de las subcarpetas `A1500` y `Y1500` de cada equipo; jerseys 1000 permanecen en la raiz del equipo.
+- Standard 1500 (`A1500A/H`, `Y1500A/H`) busca plantillas en la subcarpeta `1500` dentro de cada carpeta Home/Away de equipo.
 - Batch valida archivos y SQLite antes de producir, y vuelve a validar al procesar.
 - Solo `FALTANTE` se genera; inconsistencias y duplicados quedan fuera.
 - Personalizadas usa destino manual con subcarpetas style/talla.

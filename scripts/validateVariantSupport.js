@@ -55,6 +55,65 @@ function validateStandard() {
   assert(odData.validRows[0].shipOrder === "5500155", "Standard OD debe conservar Ship Order en la columna esperada.");
 }
 
+function validateStandard1500() {
+  const baseOrder = {
+    team: "Boston",
+    variant: "Standard",
+    version: "Away",
+    style: "A1500A",
+    size: "LG",
+    wo: "1500-TEST",
+    number: "",
+    name: ""
+  };
+  const adultAwayTemplate = buildTemplatePath(baseOrder);
+
+  assert(
+    adultAwayTemplate.includes(`${path.sep}MENS${path.sep}AWAY${path.sep}Boston Away${path.sep}1500${path.sep}`),
+    `A1500A Standard debe buscar dentro de subcarpeta 1500: ${adultAwayTemplate}`
+  );
+  assert(
+    adultAwayTemplate.endsWith(`${path.sep}PLL BOSTON A1500A LG.pdf`),
+    `A1500A Standard debe usar nombre de plantilla legible por equipo: ${adultAwayTemplate}`
+  );
+
+  const adultHomeTemplate = buildTemplatePath(Object.assign({}, baseOrder, {
+    version: "Home",
+    style: "A1500H"
+  }));
+  assert(
+    adultHomeTemplate.includes(`${path.sep}MENS${path.sep}HOME${path.sep}Boston Home${path.sep}1500${path.sep}`),
+    `A1500H Standard debe buscar dentro de subcarpeta 1500: ${adultHomeTemplate}`
+  );
+
+  const youthAwayTemplate = buildTemplatePath(Object.assign({}, baseOrder, {
+    version: "Away",
+    style: "Y1500A"
+  }));
+  assert(
+    youthAwayTemplate.includes(`${path.sep}YOUTH${path.sep}AWAY${path.sep}Boston Away${path.sep}1500${path.sep}`),
+    `Y1500A Standard debe buscar dentro de subcarpeta 1500: ${youthAwayTemplate}`
+  );
+  assert(
+    youthAwayTemplate.endsWith(`${path.sep}PLL BOSTON Y1500A LG.pdf`),
+    `Y1500A Standard debe usar nombre de plantilla legible por equipo: ${youthAwayTemplate}`
+  );
+
+  const youthHomeTemplate = buildTemplatePath(Object.assign({}, baseOrder, {
+    version: "Home",
+    style: "Y1500H"
+  }));
+  assert(
+    youthHomeTemplate.includes(`${path.sep}YOUTH${path.sep}HOME${path.sep}Boston Home${path.sep}1500${path.sep}`),
+    `Y1500H Standard debe buscar dentro de subcarpeta 1500: ${youthHomeTemplate}`
+  );
+
+  assert(
+    pathBuilder.buildOutputName(baseOrder) === "1500-TEST PLL-Boston Cannons A1500A LG SIN_DATOS.pdf",
+    "Naming de salida Standard 1500 no debe cambiar."
+  );
+}
+
 function validateStarsStripes() {
   const data = createOrderDataFromExcel(fixtures.starsStripes);
   assert(data.sourceFormat === "generic-roster", "SS debe detectarse como generic-roster.");
@@ -167,6 +226,7 @@ function validateJrChampionship() {
 }
 
 validateStandard();
+validateStandard1500();
 validateStarsStripes();
 validateWllCharging();
 validateAllStars();

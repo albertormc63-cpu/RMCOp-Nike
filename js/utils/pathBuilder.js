@@ -234,6 +234,14 @@ function getCanonicalTemplateName({ teamCode, productConfig, style, size }) {
   return `${productConfig.nikeCode}-${teamCode}-${normalizeStyle(style)} ${size}.pdf`;
 }
 
+function getStandardTemplateName({ productConfig, team, style, size }) {
+  if (variantRules.getBaseStyleCode(style) === "1500") {
+    return `${productConfig.nikeCode} ${team.toUpperCase()} ${normalizeStyle(style)} ${size}.pdf`;
+  }
+
+  return "";
+}
+
 function getSizeAliases(size) {
   const normalizedSize = String(size || "").trim().toUpperCase();
   const aliases = {
@@ -347,8 +355,12 @@ function buildTextTemplatePath({ basePath, team, variant, version, style, size, 
   ]);
   const existingFolder = findExistingPath(folderCandidates) ||
     findCaseInsensitiveChild(versionPath, `${team} ${version}`);
-  const targetFolder = existingFolder || folderCandidates[0];
-  const canonicalName = getCanonicalTemplateName({ teamCode, productConfig, style, size });
+  const teamFolder = existingFolder || folderCandidates[0];
+  const targetFolder = variantRules.getBaseStyleCode(style) === "1500"
+    ? (findCaseInsensitiveChild(teamFolder, "1500") || path.join(teamFolder, "1500"))
+    : teamFolder;
+  const standardTemplateName = getStandardTemplateName({ productConfig, team, style, size });
+  const canonicalName = standardTemplateName || getCanonicalTemplateName({ teamCode, productConfig, style, size });
   const canonicalPath = path.join(targetFolder, canonicalName);
 
   if (fs.existsSync(canonicalPath)) {

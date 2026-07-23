@@ -52,4 +52,22 @@ Solo items `Completado` bloquean la clave; errores pueden reintentarse.
 - Filas sin nombre/numero pueden ser validas y usan `SIN_DATOS` para comparar el nombre final.
 - Registrar el run como `RMCOp-Nike Personalizadas` o `RMCOp-Nike Genericas`.
 
+## Plantillas 1500
+
+Standard `A1500A`, `A1500H`, `Y1500A` y `Y1500H` usa las carpetas normales Home/Away por equipo y entra a una subcarpeta `1500`.
+
+Ejemplo adulto Away Boston:
+
+```text
+STANDARD/
+  NIKE Mens and Youth/
+    MENS/
+      AWAY/
+        Boston Away/
+          1500/
+            PLL BOSTON A1500A LG.pdf
+```
+
+JR Championship conserva la regla separada de shorts: `A1500JR` busca subcarpeta `A1500` y `Y1500JR` busca subcarpeta `Y1500` dentro de la carpeta `JR` del equipo.
+
 Detalles del contrato Excel: `EXCEL_IMPORT_AND_VALIDATION.md`. Persistencia: `../sqlite/SQLITE_PORTFOLIO_AND_REGISTRY.md`.
