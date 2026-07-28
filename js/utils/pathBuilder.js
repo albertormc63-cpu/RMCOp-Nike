@@ -68,6 +68,17 @@ function sanitizeOutputPart(value) {
     .replace(/\s+/g, " ");
 }
 
+function buildOutputIdentifierPart({ style, number, name }) {
+  const rawIdentifier = number || name;
+
+  if (!rawIdentifier && variantRules.getBaseStyleCode(style) === "1500") {
+    return "";
+  }
+
+  const orderIdentifier = sanitizeOutputPart(rawIdentifier || "SIN_DATOS");
+  return orderIdentifier ? ` ${orderIdentifier}` : "";
+}
+
 function getStyleSearchFamily(style) {
   // A1000H/A1000A/A1000IH/A1000TB buscan reglas/plantillas como familia A1000.
   return variantRules.stripVariantSuffix(style);
@@ -356,8 +367,9 @@ function buildTextTemplatePath({ basePath, team, variant, version, style, size, 
   const existingFolder = findExistingPath(folderCandidates) ||
     findCaseInsensitiveChild(versionPath, `${team} ${version}`);
   const teamFolder = existingFolder || folderCandidates[0];
+  const styleFamily = getStyleSearchFamily(style);
   const targetFolder = variantRules.getBaseStyleCode(style) === "1500"
-    ? (findCaseInsensitiveChild(teamFolder, "1500") || path.join(teamFolder, "1500"))
+    ? (findCaseInsensitiveChild(teamFolder, styleFamily) || path.join(teamFolder, styleFamily))
     : teamFolder;
   const standardTemplateName = getStandardTemplateName({ productConfig, team, style, size });
   const canonicalName = standardTemplateName || getCanonicalTemplateName({ teamCode, productConfig, style, size });
@@ -542,8 +554,7 @@ function buildTemplatePath({ basePath, team, variant, version, style, size, desi
 }
 
 function buildStarsStripesOutputName({ wo, designCode, style, size, number, name }) {
-  const orderIdentifier = sanitizeOutputPart(number || name || "SIN_DATOS");
-  const identifierPart = orderIdentifier ? ` ${orderIdentifier}` : "";
+  const identifierPart = buildOutputIdentifierPart({ style, number, name });
   const normalizedDesignCode = sanitizeOutputPart(String(designCode || "").trim().toUpperCase());
 
   if (!normalizedDesignCode) {
@@ -556,8 +567,7 @@ function buildStarsStripesOutputName({ wo, designCode, style, size, number, name
 function buildAllStarsOutputName({ wo, variant, version, style, size, number, name }) {
   const productConfig = getProductConfig(style);
   const variantCode = variantCodes[variant] || "AS";
-  const orderIdentifier = sanitizeOutputPart(number || name || "SIN_DATOS");
-  const identifierPart = orderIdentifier ? ` ${orderIdentifier}` : "";
+  const identifierPart = buildOutputIdentifierPart({ style, number, name });
   const versionPart = sanitizeOutputPart(version || "Home").toUpperCase();
 
   return `${wo} ${productConfig.nikeCode}-All Stars ${versionPart} ${normalizeStyle(style)}${variantCode && normalizeStyle(style).indexOf(variantCode) === -1 ? variantCode : ""} ${size}${identifierPart}.pdf`;
@@ -580,8 +590,7 @@ function buildOutputName({ wo, team, variant, version, style, size, number, name
   const variantCode = variant && variant !== "Standard" ? (variantCodes[variant] || variant) : "";
   const normalizedStyle = normalizeStyle(style);
   const stylePart = variantCode && normalizedStyle.indexOf(variantCode) === -1 ? `${normalizedStyle}${variantCode}` : normalizedStyle;
-  const orderIdentifier = sanitizeOutputPart(number || name || "SIN_DATOS");
-  const identifierPart = orderIdentifier ? ` ${orderIdentifier}` : "";
+  const identifierPart = buildOutputIdentifierPart({ style, number, name });
   return `${wo} ${productConfig.nikeCode}-${team}${nickname} ${stylePart} ${size}${identifierPart}.pdf`;
 }
 

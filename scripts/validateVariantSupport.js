@@ -69,8 +69,8 @@ function validateStandard1500() {
   const adultAwayTemplate = buildTemplatePath(baseOrder);
 
   assert(
-    adultAwayTemplate.includes(`${path.sep}MENS${path.sep}AWAY${path.sep}Boston Away${path.sep}1500${path.sep}`),
-    `A1500A Standard debe buscar dentro de subcarpeta 1500: ${adultAwayTemplate}`
+    adultAwayTemplate.includes(`${path.sep}MENS${path.sep}AWAY${path.sep}Boston Away${path.sep}A1500${path.sep}`),
+    `A1500A Standard debe buscar dentro de subcarpeta A1500: ${adultAwayTemplate}`
   );
   assert(
     adultAwayTemplate.endsWith(`${path.sep}PLL BOSTON A1500A LG.pdf`),
@@ -82,8 +82,8 @@ function validateStandard1500() {
     style: "A1500H"
   }));
   assert(
-    adultHomeTemplate.includes(`${path.sep}MENS${path.sep}HOME${path.sep}Boston Home${path.sep}1500${path.sep}`),
-    `A1500H Standard debe buscar dentro de subcarpeta 1500: ${adultHomeTemplate}`
+    adultHomeTemplate.includes(`${path.sep}MENS${path.sep}HOME${path.sep}Boston Home${path.sep}A1500${path.sep}`),
+    `A1500H Standard debe buscar dentro de subcarpeta A1500: ${adultHomeTemplate}`
   );
 
   const youthAwayTemplate = buildTemplatePath(Object.assign({}, baseOrder, {
@@ -91,8 +91,8 @@ function validateStandard1500() {
     style: "Y1500A"
   }));
   assert(
-    youthAwayTemplate.includes(`${path.sep}YOUTH${path.sep}AWAY${path.sep}Boston Away${path.sep}1500${path.sep}`),
-    `Y1500A Standard debe buscar dentro de subcarpeta 1500: ${youthAwayTemplate}`
+    youthAwayTemplate.includes(`${path.sep}YOUTH${path.sep}AWAY${path.sep}Boston Away${path.sep}Y1500${path.sep}`),
+    `Y1500A Standard debe buscar dentro de subcarpeta Y1500: ${youthAwayTemplate}`
   );
   assert(
     youthAwayTemplate.endsWith(`${path.sep}PLL BOSTON Y1500A LG.pdf`),
@@ -104,13 +104,13 @@ function validateStandard1500() {
     style: "Y1500H"
   }));
   assert(
-    youthHomeTemplate.includes(`${path.sep}YOUTH${path.sep}HOME${path.sep}Boston Home${path.sep}1500${path.sep}`),
-    `Y1500H Standard debe buscar dentro de subcarpeta 1500: ${youthHomeTemplate}`
+    youthHomeTemplate.includes(`${path.sep}YOUTH${path.sep}HOME${path.sep}Boston Home${path.sep}Y1500${path.sep}`),
+    `Y1500H Standard debe buscar dentro de subcarpeta Y1500: ${youthHomeTemplate}`
   );
 
   assert(
-    pathBuilder.buildOutputName(baseOrder) === "1500-TEST PLL-Boston Cannons A1500A LG SIN_DATOS.pdf",
-    "Naming de salida Standard 1500 no debe cambiar."
+    pathBuilder.buildOutputName(baseOrder) === "1500-TEST PLL-Boston Cannons A1500A LG.pdf",
+    "Naming de salida Standard 1500 sin nombre/numero no debe agregar SIN_DATOS."
   );
 }
 
@@ -202,7 +202,7 @@ function validateJrChampionship() {
   assert(shortsData.invalidRows.length === 0, "JR shorts no debe fallar por familia 1500.");
   assert(shortsData.validRows[0].variant === "JR Championship", "A1500JR debe mapear a JR Championship.");
   assert(shortsData.validRows[0].styleFamily === "A1500", "A1500JR debe agruparse como A1500.");
-  assert(buildGenericOutputName(shortsData.validRows[0]) === "79438-26 PLL-Carolina Chaos A1500JR SM SIN_DATOS.pdf", "Naming JR shorts no coincide.");
+  assert(buildGenericOutputName(shortsData.validRows[0]) === "79438-26 PLL-Carolina Chaos A1500JR SM.pdf", "Naming JR shorts no coincide.");
 
   const carolinaTemplate = buildTemplatePath(shortsData.validRows[0]);
   assert(carolinaTemplate.includes(`${path.sep}Carolina JR${path.sep}A1500${path.sep}`), `Carolina A1500JR debe buscar dentro de A1500: ${carolinaTemplate}`);

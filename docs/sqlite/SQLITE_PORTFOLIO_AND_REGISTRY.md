@@ -223,7 +223,7 @@ Esta clave se guarda en `rmcop_nike_items.clave`.
 `js/services/portfolioDb.js` rellena claves vacias y recalcula claves de Genericas para usar `roster`. Solo escribe cuando el valor calculado cambia.
 Una restriccion unica parcial protege claves con `estado = Completado`. Los items con error no bloquean un reintento.
 
-Si una fila no tiene nombre ni numero, usar el mismo criterio de nombre final que el panel (`SIN_DATOS`) para comparar contra archivos existentes.
+Si una fila no tiene nombre ni numero, usar el mismo criterio de nombre final que el panel para comparar contra archivos existentes. En general se usa `SIN_DATOS`; para styles 1500 se omite ese sufijo del nombre final.
 
 La validacion debe respetar que:
 

@@ -72,12 +72,12 @@ const specialDesigns = {
     {
       code: "GNB1",
       name: "Green Beret Foundation",
-      aliases: ["GNB1", "GREEN BERET", "GREEN BERET FOUNDATION", "GREEN BERET FUNDATION"]
+      aliases: ["GNB1", "GBF", "GREEN BERET", "GREEN BERET FOUNDATION", "GREEN BERET FUNDATION"]
     },
     {
       code: "NYS1",
       name: "Navy Seals Foundation",
-      aliases: ["NYS1", "NAVY SEAL", "NAVY SEALS", "NAVY SEAL FOUNDATION", "NAVY SEALS FOUNDATION", "NAVY SEALS FUNDATION"]
+      aliases: ["NYS1", "NSF", "SEAL", "SEALS", "NAVY SEAL", "NAVY SEALS", "NAVY SEAL FOUNDATION", "NAVY SEALS FOUNDATION", "NAVY SEALS FUNDATION"]
     }
   ]
 };

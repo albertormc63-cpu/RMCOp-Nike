@@ -49,12 +49,13 @@ Solo items `Completado` bloquean la clave; errores pueden reintentarse.
 - Copiar, abrir, aplicar, guardar PDF y cerrar por cada fila faltante.
 - `Qty/Pzs` registra piezas, pero no multiplica PDFs.
 - En Genericas, Roster sustituye WO cuando no existe y participa en naming/clave.
-- Filas sin nombre/numero pueden ser validas y usan `SIN_DATOS` para comparar el nombre final.
+- Filas sin nombre/numero pueden ser validas y normalmente usan `SIN_DATOS` para comparar el nombre final.
+- Excepcion actual: styles 1500 sin nombre/numero no agregan `SIN_DATOS` al nombre del PDF.
 - Registrar el run como `RMCOp-Nike Personalizadas` o `RMCOp-Nike Genericas`.
 
 ## Plantillas 1500
 
-Standard `A1500A`, `A1500H`, `Y1500A` y `Y1500H` usa las carpetas normales Home/Away por equipo y entra a una subcarpeta `1500`.
+Standard `A1500A`, `A1500H`, `Y1500A` y `Y1500H` usa las carpetas normales Home/Away por equipo y entra a una subcarpeta por familia: `A1500` para adulto y `Y1500` para nino.
 
 Ejemplo adulto Away Boston:
 
@@ -64,10 +65,10 @@ STANDARD/
     MENS/
       AWAY/
         Boston Away/
-          1500/
+          A1500/
             PLL BOSTON A1500A LG.pdf
 ```
 
-JR Championship conserva la regla separada de shorts: `A1500JR` busca subcarpeta `A1500` y `Y1500JR` busca subcarpeta `Y1500` dentro de la carpeta `JR` del equipo.
+JR Championship usa la misma idea de familia para shorts: `A1500JR` busca subcarpeta `A1500` y `Y1500JR` busca subcarpeta `Y1500` dentro de la carpeta `JR` del equipo.
 
 Detalles del contrato Excel: `EXCEL_IMPORT_AND_VALIDATION.md`. Persistencia: `../sqlite/SQLITE_PORTFOLIO_AND_REGISTRY.md`.
