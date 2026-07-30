@@ -1,6 +1,7 @@
 node_modules
 .DS_Store
 .env
+js/config/localSettings.json
 dist
 build
 tools/mockup-printer/output

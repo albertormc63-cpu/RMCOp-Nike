@@ -426,6 +426,11 @@ select {
     color: var(--rmc-text);
 }
 
+.secondary-button.active {
+    border-color: var(--focus);
+    color: var(--focus);
+}
+
 .destination-note {
     margin-top: 5px;
     overflow-wrap: anywhere;
@@ -462,6 +467,21 @@ select {
     border: 1px solid var(--line);
     border-radius: 6px;
     background: var(--panel);
+}
+
+.database-picker {
+    display: grid;
+    gap: 8px;
+}
+
+.database-button-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.database-preset-button {
+    width: 100%;
 }
 
 .batch-action {

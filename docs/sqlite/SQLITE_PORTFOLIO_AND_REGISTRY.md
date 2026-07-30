@@ -290,6 +290,39 @@ Puntos que hacen pesado el sistema:
 
 La recomendacion es gradual y conserva el flujo visible actual.
 
+### BD Por Operador En Volumen Compartido
+
+Como paso intermedio antes de una API central, cada operador puede tener su propia SQLite en el volumen de red:
+
+```text
+/Volumes/Fullsize/PATRONES ACOMODADOS PARA ROLLO/NIKE LACROSSE/RMCOp-NIKE/ASSETS/BD/THANIA/RMC_CEP.sqlite
+/Volumes/Fullsize/PATRONES ACOMODADOS PARA ROLLO/NIKE LACROSSE/RMCOp-NIKE/ASSETS/BD/ANTONIO/RMC_CEP.sqlite
+```
+
+Regla operativa:
+
+- Cada CEP escribe solo en la BD de su operador.
+- RMC Control Center consolida hacia la BD central.
+- No usar una sola SQLite compartida como escritor simultaneo de varias estaciones.
+- El sync debe leer desde una copia o backup seguro de la BD fuente.
+- Al consolidar, prefijar o mapear `run_id` por operador para evitar colisiones.
+
+Herramienta inicial:
+
+```bash
+npm run db:create-operator
+```
+
+Por defecto crea BDs semilla para `THANIA` y `ANTONIO` con estructura completa y catalogos/base, pero sin runs/items/ordenes operativas.
+
+RMCOp-Nike permite elegir la BD activa desde la pantalla `Rutas`:
+
+- `Central`: usa la ruta por defecto de `js/config/config.js`.
+- `Thania` y `Antonio`: apuntan a las BDs por operador del volumen compartido.
+- `Examinar BD SQLite`: permite seleccionar otra SQLite compatible.
+
+La seleccion se guarda localmente en `js/config/localSettings.json`, archivo ignorado por Git para que cada instalacion conserve su propia preferencia al cerrar Illustrator.
+
 ### 1. Separar Responsabilidades
 
 ```text

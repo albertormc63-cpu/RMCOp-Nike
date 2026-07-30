@@ -299,6 +299,21 @@
                     <span class="eyebrow">Ordenes</span>
                     <p id="ordersBasePreview" class="path-preview">Pendiente</p>
                 </div>
+                <div>
+                    <span class="eyebrow">Base de datos activa</span>
+                    <p id="databasePathPreview" class="path-preview">Pendiente</p>
+                    <p id="databaseStatusPreview" class="destination-note">Sin validar.</p>
+                </div>
+                <div class="database-picker">
+                    <span class="eyebrow">Guardar registros en</span>
+                    <div class="database-button-grid">
+                        <button type="button" class="secondary-button database-preset-button" data-db-preset="central">Central</button>
+                        <button type="button" class="secondary-button database-preset-button" data-db-preset="THANIA">Thania</button>
+                        <button type="button" class="secondary-button database-preset-button" data-db-preset="ANTONIO">Antonio</button>
+                    </div>
+                    <button type="button" id="btnChooseDatabasePath" class="secondary-button settings-action">Examinar BD SQLite</button>
+                    <button type="button" id="btnResetDatabasePath" class="secondary-button settings-action">Restaurar BD central</button>
+                </div>
             </div>
 
             <button id="btnExtractOfficialSwatches" class="primary-button">Extraer muestras oficiales</button>

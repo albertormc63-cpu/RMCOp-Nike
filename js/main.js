@@ -7,6 +7,7 @@
     const textRules = window.RMC.illustrator.textRules;
     const illustratorBridge = window.RMC.illustrator.bridge;
     const DEBUG_BATCH_PERF = false;
+    const OPERATOR_DB_ROOT = "/Volumes/Fullsize/PATRONES ACOMODADOS PARA ROLLO/NIKE LACROSSE/RMCOp-NIKE/ASSETS/BD";
 
     // Estado vivo del panel. Se actualiza cuando el usuario cambia linea/equipo/variante.
     const state = {
@@ -14,6 +15,10 @@
         selectedTeam: catalog.teams[0].name,
         selectedVariant: catalog.variants[0].name,
         lastOutputPath: "",
+        settings: {
+            databasePath: "",
+            databaseLabel: "Central"
+        },
         batch: {
             mode: "personalized",
             excelPath: "",
@@ -51,6 +56,82 @@
         return services.path.join(getExtensionRootPath(), "js/config/officialSwatches.json");
     }
 
+    function getLocalSettingsPath() {
+        const services = nodeRuntime.services;
+
+        if (!services.path) {
+            return "";
+        }
+
+        return services.path.join(getExtensionRootPath(), "js/config/localSettings.json");
+    }
+
+    function getDefaultPortfolioDbPath() {
+        const services = nodeRuntime.services;
+        const homePath = typeof process !== "undefined" && process.env ? process.env.HOME : "";
+        const configPath = services.config && services.config.portfolio ? services.config.portfolio.databasePath : "";
+
+        if (configPath) {
+            return configPath;
+        }
+
+        if (!homePath || !services.path) {
+            return "";
+        }
+
+        return services.path.join(homePath, "Documents/RMC - CEP/RMC_BD/RMC_CEP.sqlite");
+    }
+
+    function getOperatorDbPath(operatorCode) {
+        const services = nodeRuntime.services;
+
+        if (!services.path) {
+            return "";
+        }
+
+        return services.path.join(OPERATOR_DB_ROOT, String(operatorCode || "").toUpperCase(), "RMC_CEP.sqlite");
+    }
+
+    function loadLocalSettings() {
+        const services = nodeRuntime.services;
+        const settingsPath = getLocalSettingsPath();
+
+        state.settings.databasePath = "";
+        state.settings.databaseLabel = "Central";
+
+        if (!services.fs || !settingsPath || !services.fs.existsSync(settingsPath)) {
+            return;
+        }
+
+        try {
+            const saved = JSON.parse(services.fs.readFileSync(settingsPath, "utf8"));
+            state.settings.databasePath = String(saved.databasePath || "").trim();
+            state.settings.databaseLabel = String(saved.databaseLabel || "").trim() || "Personalizada";
+        } catch (error) {
+            console.warn(`No se pudo leer configuracion local: ${error.message}`);
+        }
+    }
+
+    function saveLocalSettings(nextSettings) {
+        const services = nodeRuntime.services;
+        const settingsPath = getLocalSettingsPath();
+
+        if (!services.fs || !services.path || !settingsPath) {
+            throw new Error("No se puede guardar configuracion local sin Node/FS.");
+        }
+
+        const payload = {
+            databasePath: nextSettings.databasePath || "",
+            databaseLabel: nextSettings.databaseLabel || "Central",
+            updatedAt: new Date().toISOString()
+        };
+
+        services.fs.mkdirSync(services.path.dirname(settingsPath), { recursive: true });
+        services.fs.writeFileSync(settingsPath, JSON.stringify(payload, null, 2), "utf8");
+        state.settings.databasePath = payload.databasePath;
+        state.settings.databaseLabel = payload.databaseLabel;
+    }
+
     function getPortfolioBaseFolder() {
         const services = nodeRuntime.services;
         const homePath = typeof process !== "undefined" && process.env ? process.env.HOME : "";
@@ -79,19 +160,7 @@
     }
 
     function getPortfolioDbPath() {
-        const services = nodeRuntime.services;
-        const homePath = typeof process !== "undefined" && process.env ? process.env.HOME : "";
-        const configPath = services.config && services.config.portfolio ? services.config.portfolio.databasePath : "";
-
-        if (configPath) {
-            return configPath;
-        }
-
-        if (!homePath || !services.path) {
-            return "";
-        }
-
-        return services.path.join(homePath, "Documents/RMC - CEP/RMC_BD/RMC_CEP.sqlite");
+        return state.settings.databasePath || getDefaultPortfolioDbPath();
     }
 
     function escapeCsvValue(value) {
@@ -299,10 +368,107 @@
     function renderSettings() {
         const paths = getCurrentPaths();
         const config = nodeRuntime.services.config;
+        const activeDbPath = getPortfolioDbPath();
 
         document.getElementById("modePreview").textContent = config ? config.mode : "Sin Node";
         document.getElementById("templatesBasePreview").textContent = paths ? paths.templatesBase : "No disponible";
         document.getElementById("ordersBasePreview").textContent = paths ? paths.ordersBase : "No disponible";
+        renderDatabaseSettings(activeDbPath);
+    }
+
+    function getDatabaseStatus(dbPath) {
+        const services = nodeRuntime.services;
+
+        if (!services.fs || !services.path || !dbPath) {
+            return {
+                ok: false,
+                message: "No disponible."
+            };
+        }
+
+        if (!services.fs.existsSync(dbPath)) {
+            return {
+                ok: false,
+                message: "No existe el archivo seleccionado."
+            };
+        }
+
+        if (!services.portfolioDb || !services.portfolioDb.ensureSchema) {
+            return {
+                ok: false,
+                message: "Servicio SQLite no disponible."
+            };
+        }
+
+        try {
+            services.portfolioDb.ensureSchema({
+                fs: services.fs,
+                path: services.path,
+                childProcess: services.childProcess
+            }, dbPath);
+
+            return {
+                ok: true,
+                message: `Lista para RMCOp-Nike (${state.settings.databaseLabel || "Central"}).`
+            };
+        } catch (error) {
+            return {
+                ok: false,
+                message: error.message
+            };
+        }
+    }
+
+    function assertUsableDatabasePath(dbPath) {
+        const status = getDatabaseStatus(dbPath);
+
+        if (!status.ok) {
+            throw new Error(status.message);
+        }
+    }
+
+    function renderDatabaseSettings(activeDbPath) {
+        const dbPreview = document.getElementById("databasePathPreview");
+        const statusPreview = document.getElementById("databaseStatusPreview");
+        const status = getDatabaseStatus(activeDbPath);
+
+        if (dbPreview) {
+            dbPreview.textContent = activeDbPath || "No disponible";
+        }
+
+        if (statusPreview) {
+            statusPreview.textContent = status.message;
+            statusPreview.classList.toggle("manual", status.ok);
+        }
+
+        document.querySelectorAll("[data-db-preset]").forEach(function (button) {
+            const preset = button.getAttribute("data-db-preset");
+            const expectedPath = preset === "central" ? getDefaultPortfolioDbPath() : getOperatorDbPath(preset);
+
+            button.classList.toggle("active", activeDbPath === expectedPath);
+        });
+    }
+
+    function setPortfolioDatabasePath(databasePath, databaseLabel) {
+        assertUsableDatabasePath(databasePath);
+        saveLocalSettings({
+            databasePath: databasePath,
+            databaseLabel: databaseLabel
+        });
+        renderSettings();
+        renderBatchSummary();
+        logFlow(`BD activa: ${databaseLabel} -> ${databasePath}`);
+    }
+
+    function resetPortfolioDatabasePath() {
+        assertUsableDatabasePath(getDefaultPortfolioDbPath());
+        saveLocalSettings({
+            databasePath: "",
+            databaseLabel: "Central"
+        });
+        renderSettings();
+        renderBatchSummary();
+        logFlow(`BD activa restaurada a central: ${getDefaultPortfolioDbPath()}`);
     }
 
     function normalizeCepPath(value) {
@@ -2115,6 +2281,49 @@
             });
         });
 
+        document.querySelectorAll("[data-db-preset]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                try {
+                    const preset = button.getAttribute("data-db-preset");
+
+                    if (preset === "central") {
+                        resetPortfolioDatabasePath();
+                        return;
+                    }
+
+                    setPortfolioDatabasePath(getOperatorDbPath(preset), preset);
+                } catch (error) {
+                    console.error("No se pudo cambiar la BD activa:");
+                    console.error(error.message);
+                    showIllustratorAlert(error.message);
+                }
+            });
+        });
+
+        document.getElementById("btnChooseDatabasePath").addEventListener("click", function () {
+            try {
+                const selectedPath = pickFileFromCep("Selecciona BD SQLite para RMCOp-Nike", OPERATOR_DB_ROOT, ["sqlite", "db"]);
+
+                if (selectedPath) {
+                    setPortfolioDatabasePath(selectedPath, "Personalizada");
+                }
+            } catch (error) {
+                console.error("No se pudo seleccionar la BD:");
+                console.error(error.message);
+                showIllustratorAlert(error.message);
+            }
+        });
+
+        document.getElementById("btnResetDatabasePath").addEventListener("click", function () {
+            try {
+                resetPortfolioDatabasePath();
+            } catch (error) {
+                console.error("No se pudo restaurar la BD central:");
+                console.error(error.message);
+                showIllustratorAlert(error.message);
+            }
+        });
+
         document.getElementById("btnResetPanel").addEventListener("click", function () {
             location.reload();
         });
@@ -2122,6 +2331,7 @@
 
     document.addEventListener("DOMContentLoaded", function () {
         nodeRuntime.load();
+        loadLocalSettings();
         orderView.renderVariants(state);
         orderView.renderVersionControls(state);
         orderView.renderStyleOptions(state);
