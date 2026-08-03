@@ -42,6 +42,8 @@
             }
 
             try {
+                // Todo lo que toca filesystem, Excel o SQLite se centraliza aqui
+                // para que main.js no use require relativo al contexto raro de CEP.
                 services.path = require("path");
                 services.fs = require("fs");
                 services.childProcess = require("child_process");

@@ -66,6 +66,8 @@
         return services.path.join(getExtensionRootPath(), "js/config/localSettings.json");
     }
 
+    // La BD activa tiene dos niveles: config.js define la central por defecto,
+    // y localSettings.json permite que cada maquina apunte a su BD de operador.
     function getDefaultPortfolioDbPath() {
         const services = nodeRuntime.services;
         const homePath = typeof process !== "undefined" && process.env ? process.env.HOME : "";
@@ -92,6 +94,8 @@
         return services.path.join(OPERATOR_DB_ROOT, String(operatorCode || "").toUpperCase(), "RMC_CEP.sqlite");
     }
 
+    // Se carga al iniciar el panel; por eso Thania/Antonio conservan su BD
+    // aun cuando cierran Illustrator o se reinicia el CEP.
     function loadLocalSettings() {
         const services = nodeRuntime.services;
         const settingsPath = getLocalSettingsPath();
@@ -270,6 +274,8 @@
             return;
         }
 
+        // Bitacora plana para respaldo humano; SQLite sigue siendo la fuente
+        // principal para RMC Control Center, duplicados y reportes.
         services.fs.mkdirSync(logsFolder, { recursive: true });
 
         if (!services.fs.existsSync(csvPath)) {
@@ -280,6 +286,8 @@
         services.fs.appendFileSync(jsonlPath, `${jsonEntries.join("\n")}\n`, "utf8");
         console.log(`Log batch guardado: ${csvPath}`);
 
+        // Este es el unico punto de escritura SQLite para el batch completo.
+        // getPortfolioDbPath() decide si va a central o a la BD del operador.
         if (services.portfolioDb) {
             const dbResult = services.portfolioDb.recordBatchRun({
                 fs: services.fs,
@@ -314,6 +322,8 @@
             return;
         }
 
+        // Manual usa el mismo escritor que batch para que Control Center lea
+        // una sola familia de tablas: rmcop_nike_runs + rmcop_nike_items.
         const now = new Date();
         const dateText = [
             now.getFullYear(),
@@ -401,6 +411,8 @@
         }
 
         try {
+            // ensureSchema tambien migra indices/columnas faltantes. Validar aqui
+            // evita guardar una ruta que luego falle al producir.
             services.portfolioDb.ensureSchema({
                 fs: services.fs,
                 path: services.path,
@@ -631,7 +643,8 @@
     }
 
     function getTextFitRule(order) {
-        // Busca regla por equipo/style. Si algun dia hay tallas especiales, acepta overrides por talla.
+        // Busca regla por variante/diseno/equipo/style. SS no siempre tiene equipo,
+        // por eso tambien puede vivir en textFitRules.variants.
         const rules = nodeRuntime.services.textFitRules;
 
         if (!rules) {
@@ -639,14 +652,19 @@
         }
 
         const styleFamily = getStyleFamily(order.style);
+        const variantCode = getOrderVariantCode(order);
+        const designCode = String((order && (order.catalogDesignCode || order.designCode)) || "").trim().toUpperCase();
+        const variantRules = rules.variants && rules.variants[variantCode];
+        const designRules = variantRules && variantRules.designs && variantRules.designs[designCode];
+        const variantDesignRules = resolveTextFitStyleRule(designRules && designRules[styleFamily], order.size);
+        const variantStyleRules = resolveTextFitStyleRule(variantRules && variantRules[styleFamily], order.size);
         const teamRules = rules.teams && rules.teams[order.team];
-        const styleRules = teamRules && teamRules[styleFamily];
-        const sizeRule = styleRules && styleRules.sizes && styleRules.sizes[order.size];
+        const styleRules = resolveTextFitStyleRule(teamRules && teamRules[styleFamily], order.size);
         const defaultRule = rules.defaults && rules.defaults[styleFamily];
-        const resolved = sizeRule || styleRules || defaultRule;
+        const resolved = variantDesignRules || variantStyleRules || styleRules || defaultRule;
 
         if (!resolved) {
-            logFlow(`Sin regla de ajuste para ${order.team} ${styleFamily} ${order.size}.`);
+            logFlow(`Sin regla de ajuste para ${variantCode || "STD"} ${order.team || "sin equipo"} ${styleFamily} ${order.size}.`);
             return null;
         }
 
@@ -660,6 +678,32 @@
             numberMiterLimit: Number(resolved.numberMiterLimit || 0),
             smallNumberMiterLimit: Number(resolved.smallNumberMiterLimit || resolved.numberMiterLimit || 0)
         };
+    }
+
+    function resolveTextFitStyleRule(styleRules, size) {
+        if (!styleRules) {
+            return null;
+        }
+
+        return styleRules.sizes && styleRules.sizes[size] ? styleRules.sizes[size] : styleRules;
+    }
+
+    function getOrderVariantCode(order) {
+        const explicitCode = String((order && (order.catalogVariantCode || order.variantCode)) || "").trim().toUpperCase();
+
+        if (explicitCode) {
+            return explicitCode;
+        }
+
+        const variantName = String((order && order.variant) || "").trim().toLowerCase();
+
+        if (variantName === "stars & stripes") return "SS";
+        if (variantName === "all stars") return "AS";
+        if (variantName === "jr championship" || variantName === "jr champ" || variantName === "jr champ shorts") return "JR";
+        if (variantName === "indigenous heritage") return "IH";
+        if (variantName === "throwback") return "TB";
+
+        return "";
     }
 
     function getIhNumberRule() {
@@ -985,6 +1029,8 @@
         }
 
         try {
+            // Los nombres visibles de AS/SS/JR vienen del catalogo en SQLite
+            // cuando existe; si no, el panel cae a los nombres del Excel/codigo.
             state.batch.variantCatalogLabels = services.portfolioDb.listStyleVariantLabels(getPortfolioDbDeps(), getPortfolioDbPath());
         } catch (error) {
             console.warn(`No se pudo leer catalogo de variantes; se usaran nombres locales: ${error.message}`);
@@ -1128,6 +1174,8 @@
         const nameType = getBatchExcelNameType(excelPath);
         const isGenericRoster = batchData && batchData.sourceFormat === "generic-roster";
 
+        // El modo elegido en UI manda: OD y Genericas comparten muchos campos,
+        // asi que se valida nombre + estructura antes de permitir produccion.
         if (selectedMode === "personalized") {
             if (nameType === "generic" || isGenericRoster) {
                 throw new Error("Este Excel parece ser de Genericas (ST/IH/TB/AS/JR o roster detallado). Selecciona la seccion Genericas antes de cargarlo.");
@@ -1193,6 +1241,8 @@
         }
 
         try {
+            // Aqui se cruza cada pedido contra rmc_nike_style_variants.
+            // Para SS/AS/JR trae design_name y placeholders antes de mandar a Illustrator.
             const entry = services.portfolioDb.getStyleVariantCatalogEntry(getPortfolioDbDeps(), getPortfolioDbPath(), order);
 
             if (!entry) {
@@ -1226,6 +1276,8 @@
             return services.portfolioDb.buildOrderKey(order);
         }
 
+        // Fallback defensivo: debe coincidir con portfolioDb.buildOrderKey
+        // para que la validacion pre-batch y SQLite hablen la misma identidad.
         return [
             order.wo,
             order.shipOrder,
@@ -1287,6 +1339,8 @@
             return counts;
         }, {});
 
+        // Si dos filas iban al mismo PDF pero una trae nombre/numero extra,
+        // intenta usar un nombre mas especifico antes de marcar conflicto.
         return rows.map(function (row) {
             if (pathCounts[row.outputPath] <= 1) {
                 return row;
@@ -1373,6 +1427,8 @@
             const registered = Boolean(dbLookup[row.clave]);
             let status = "FALTANTE";
 
+            // La validacion incremental decide que entra a produccion.
+            // Solo FALTANTE pasa; archivos/registros existentes y conflictos se bloquean.
             if (keyCounts[row.clave] > 1 || pathCounts[row.outputPath] > 1) {
                 status = "CONFLICTO";
             } else if (fileExists && registered) {
@@ -1436,6 +1492,8 @@
             return getSelectedBatchRows();
         }
 
+        // El boton de proceso nunca usa "todas las filas" si ya hay validacion:
+        // reduce la seleccion a FALTANTE para no duplicar PDFs ni SQLite.
         return validation.rows.filter(function (row) {
             return row.status === "FALTANTE";
         }).map(function (row) {
@@ -1542,6 +1600,8 @@
         const batchData = services.createOrderDataFromExcel(excelPath);
         validateBatchExcelMode(excelPath, batchData, selectedMode);
 
+        // Al aceptar Excel se reinicia validacion/filtros dependientes del archivo.
+        // Genericas fija destino automaticamente a la carpeta del roster.
         state.batch.excelPath = excelPath;
         state.batch.data = batchData;
         state.batch.mode = selectedMode;
@@ -1791,6 +1851,8 @@
                 const rowStartedAt = Date.now();
 
                 try {
+                    // Orden por fila: validar catalogo -> copiar plantilla limpia ->
+                    // abrir en Illustrator -> reemplazar textos/arte -> guardar PDF y cerrar.
                     assertCatalogTextRuleReady(order);
                     const copyResult = await createBatchCopyForOrder(order);
 
@@ -1837,6 +1899,8 @@
             const elapsed = stopBatchTimer(timerState);
             console.log(`Batch completo terminado. OK: ${okCount} | Errores: ${errorCount} | Tiempo: ${formatElapsedTime(elapsed)}`);
             try {
+                // Se registra al final para mantener compatibilidad actual:
+                // un run con todos sus items y totales calculados.
                 appendBatchProcessLog(selectedRows, results, elapsed);
             } catch (error) {
                 console.warn(`No se pudo guardar el log batch: ${error.message}`);

@@ -1,5 +1,5 @@
 {
-  "_comment": "Reglas de ajuste por equipo y style family. Unidad: pulgadas. A1000/A2000 son adulto; Y1000/Y2000 son youth/nina. Si un equipo necesita ajuste especial, cambia solo su bloque.",
+  "_comment": "Reglas de ajuste por variante/equipo y style family. Unidad: pulgadas. A1000/A2000 son adulto; Y1000/Y2000 son youth/nina. Si una variante, diseno o equipo necesita ajuste especial, cambia solo su bloque.",
   "unit": "in",
   "buffer": 1,
   "minScale": 50,
@@ -8,6 +8,19 @@
     "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 },
     "A2000": { "nameMaxWidth": 8, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
     "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 }
+  },
+  "variants": {
+    "SS": {
+      "_comment": "Stars & Stripes no depende de equipo; estos anchos igualan los defaults por familia.",
+      "A1000": { "nameMaxWidth": 11, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
+      "Y1000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 },
+      "A2000": { "nameMaxWidth": 8, "numberMaxWidth": 13, "smallNumberMaxWidth": 12 },
+      "Y2000": { "nameMaxWidth": 8, "numberMaxWidth": 10, "smallNumberMaxWidth": 10 },
+      "designs": {
+        "GNB1": {},
+        "NYS1": {}
+      }
+    }
   },
   "teams": {
     "Boston": {

@@ -94,6 +94,8 @@
     }
 
     async function applyNameNumber(payload) {
+        // Punto unico que manda textos, limites de ajuste e instrucciones IH
+        // hacia ExtendScript para modificar el documento abierto.
         await ensureJsxLoaded();
         await evalScript(`$.evalFile(${toJsxString(`${getExtensionRoot()}/jsx/rmcNike.jsx`)})`);
         const fitRule = payload.fitRule || {};
@@ -146,6 +148,8 @@
     }
 
     async function savePdfAndCloseActiveDocument(filePath) {
+        // Ultimo paso del batch por fila: Illustrator guarda PDF en la ruta
+        // esperada y cierra para dejar limpio el siguiente documento.
         await ensureJsxLoaded();
         return evalScript(`RMCNike_savePdfAndCloseActiveDocument(${toJsxString(filePath)})`);
     }

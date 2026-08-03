@@ -6,6 +6,8 @@ const COMMITS_TABLE = "rmcop_nike_git_commits";
 const { normalizeShippingDate } = require("../utils/shippingDate");
 const ensuredSchemaByPath = {};
 
+// Contrato SQLite de RMCOp-Nike. main.js pasa payloads normalizados; aqui se
+// crean/migran tablas, se consultan catalogos y se registran runs/items.
 function sqlText(value) {
   if (value == null) return "NULL";
   return `'${String(value).replace(/'/g, "''")}'`;
@@ -57,6 +59,8 @@ function normalizeKeyPart(value) {
 }
 
 function buildOrderKey(order) {
+  // Identidad logica de un PDF/pieza. Controla validacion incremental,
+  // duplicados y sync hacia RMC Control Center; no depende del path.
   const hasName = normalizeKeyPart(order && order.name) !== "";
   const hasNumber = normalizeKeyPart(order && order.number) !== "";
   const keyName = hasName || hasNumber ? order && order.name : "SIN_DATOS";
@@ -80,6 +84,8 @@ function buildOrderKey(order) {
 }
 
 function execSql(deps, dbPath, sql) {
+  // Se usa /usr/bin/sqlite3 porque CEP/Node del panel no trae driver nativo.
+  // execFileSync evita interpolar SQL en un shell.
   if (!deps.childProcess || !deps.fs || !deps.path) {
     throw new Error("Dependencias Node incompletas para SQLite.");
   }
@@ -179,6 +185,8 @@ function parseVariantCatalogRow(row) {
 }
 
 function getStyleVariantCatalogEntry(deps, dbPath, order) {
+  // Consulta catalogo administrado por RMC Control Center. Para SS/AS/JR trae
+  // diseno y placeholders; para H/A puede resolver por equipo.
   if (!deps.childProcess || !deps.fs || !dbPath || !deps.fs.existsSync(dbPath)) {
     return null;
   }
@@ -266,6 +274,8 @@ ORDER BY id;
 }
 
 function backfillMissingItemKeys(deps, dbPath) {
+  // Migracion defensiva: registros viejos sin clave o Genericas antiguas se
+  // recalculan para que el indice unico parcial proteja duplicados reales.
   const output = deps.childProcess.execFileSync(SQLITE_BIN, [dbPath], {
     input: `
 .mode tabs
@@ -386,6 +396,8 @@ WHERE TRIM(COALESCE(clave, '')) <> ''
 }
 
 function ensureSchema(deps, dbPath) {
+  // Bootstrap idempotente de la BD activa. Corre tanto en central como en BDs
+  // por operador; no debe tocar tablas de otros CEP.
   const cacheKey = deps && deps.path ? deps.path.resolve(dbPath) : String(dbPath || "");
 
   if (ensuredSchemaByPath[cacheKey]) {
@@ -506,6 +518,8 @@ ON CONFLICT(source_app) DO UPDATE SET
 }
 
 function recordBatchRun(deps, dbPath, payload) {
+  // Escritura final de Manual/Personalizadas/Genericas. Hoy reemplaza el run
+  // si repite id; resolver colisiones de run_id queda como fase posterior.
   const run = payload.run || {};
   const results = payload.results || [];
   const now = new Date();
@@ -634,6 +648,8 @@ SELECT COUNT(*) FROM ${ITEMS_TABLE} WHERE run_id = ${sqlText(runId)};
 }
 
 function listExistingItemKeys(deps, dbPath, keys) {
+  // Lectura usada por validacion incremental: solo Completado bloquea clave.
+  // Errores quedan reintentables.
   const uniqueKeys = Array.from(new Set((keys || []).filter(Boolean)));
 
   if (!uniqueKeys.length || !deps.fs || !deps.fs.existsSync(dbPath)) {

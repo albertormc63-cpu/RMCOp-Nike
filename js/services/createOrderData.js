@@ -22,6 +22,8 @@ const sizeMap = {
 
 const validSizes = ["XS", "SM", "MD", "LG", "XL", "2X", "3X"];
 
+// Pistas que vienen en Color/roster para convertir texto libre del Excel en
+// equipo oficial o diseno especial.
 const colorTeamMap = [
   { token: "ARCHERS", team: "Utah" },
   { token: "ATLAS", team: "New York" },
@@ -121,6 +123,8 @@ function inferVersion(style) {
 }
 
 function inferSpecialDesign(variantCode, color, rosterName, line) {
+  // AS y SS no siempre tienen equipo; el diseno se deduce por aliases dentro
+  // de Color o del nombre del roster.
   const normalizedValues = [
     cleanUpper(color),
     cleanUpper(rosterName)
@@ -236,6 +240,8 @@ function isGenericRosterHeader(headerRow) {
 }
 
 function findHeaderRowIndex(rawRows) {
+  // Los Excel reales pueden traer titulos antes de la tabla. Se busca la
+  // primera fila que parezca encabezado operativo, no una fila fija.
   for (let index = 0; index < rawRows.length; index++) {
     const normalizedHeaders = rawRows[index].map(normalizeHeader);
     const hasStyle = normalizedHeaders.indexOf("STYLE") !== -1;
@@ -349,6 +355,8 @@ function extractDefaultShippingDate(rawRows) {
 }
 
 function getWorkbookMetadata(workbookData) {
+  // Metadata de archivo/roster usada como fallback cuando una fila no trae
+  // WO, roster, Ship Order, equipo o fecha en columnas normales.
   const rosterName = extractRosterName(workbookData.rawRows, workbookData.filePath);
   const teamSearchText = [rosterName, workbookData.filePath].filter(Boolean).join(" ");
   const rosterNumberMatch = rosterName.match(/\b[0-9]{4,}-[0-9]{2,}\b/) ||
@@ -381,6 +389,8 @@ function normalizeOrderIdentifiers(wo, shipOrder, sourceFormat) {
   const cleanWo = sanitizeNumber(wo) || cleanCell(wo);
   const cleanShipOrder = cleanCell(shipOrder);
 
+  // En algunos OD vienen invertidos WO y Ship Order. Solo se corrige cuando
+  // los patrones numericos son claros para no tocar rosters genericos.
   if (sourceFormat === "on-demand" && looksLikeShipOrder(cleanWo) && looksLikeWorkOrder(cleanShipOrder)) {
     return {
       wo: sanitizeNumber(cleanShipOrder) || cleanShipOrder,
@@ -395,6 +405,8 @@ function normalizeOrderIdentifiers(wo, shipOrder, sourceFormat) {
 }
 
 function normalizeRow(cells, index, columns, metadata) {
+  // Convierte una fila cruda del Excel al contrato comun que usan main.js,
+  // pathBuilder y portfolioDb, sea Personalizadas o Genericas.
   const style = cleanUpper(getCell(cells, columns.style));
   const sizeRaw = cleanUpper(getCell(cells, columns.size));
   const number = sanitizeNumber(getCell(cells, columns.number));
@@ -445,6 +457,8 @@ function validateOrderRow(row) {
   const warnings = [];
   const requiresTeam = row.variantCode !== "SS" && row.variantCode !== "AS";
 
+  // AS/SS se validan por designCode; Standard/IH/TB/JR siguen necesitando
+  // equipo porque la plantilla vive bajo carpeta de equipo.
   if (!row.wo && !(row.sourceFormat === "generic-roster" && row.roster)) errors.push("Falta Work Order o Roster");
   if (!row.style) errors.push("Falta Style");
   if (!row.line) errors.push("Style no reconocido");
@@ -525,6 +539,8 @@ function createOrderDataFromExcel(filePath) {
   const validRows = rows.filter(function (row) { return row.valid; });
   const invalidRows = rows.filter(function (row) { return !row.valid; });
 
+  // La salida es rica a proposito: UI muestra conteos, batch filtra por
+  // familia/talla/variante, y persistencia usa las filas validas.
   return {
     sourcePath: filePath,
     sheetName: workbookData.sheetName,

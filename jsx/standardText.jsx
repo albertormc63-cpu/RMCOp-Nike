@@ -30,7 +30,8 @@ function replaceExactText(doc, placeholder, replacement, label) {
 }
 
 function fitTextFrames(frames, maxWidth, fitBuffer, minScale, fitUnit, label) {
-    // Nombres Standard: mismo criterio que RMC Optimizador, usando tf.width y horizontalScale.
+    // Nombres Standard/variantes de texto: conserva la escala base de la plantilla
+    // y solo reduce horizontalScale cuando el texto visible rebasa el limite.
     var fittedCount = 0;
     var widthLimit = toIllustratorPoints(maxWidth, fitUnit);
     var buffer = Number(fitBuffer);
@@ -56,13 +57,11 @@ function fitTextFrames(frames, maxWidth, fitBuffer, minScale, fitUnit, label) {
                 continue;
             }
 
-            tf.textRange.characterAttributes.horizontalScale = 100;
-            app.redraw();
-
             var textWidth = getTextFramePropertyWidth(tf);
 
             if (textWidth > widthLimit) {
-                var newScale = (widthLimit / textWidth) * 100 * buffer;
+                var currentScale = Number(tf.textRange.characterAttributes.horizontalScale || 100);
+                var newScale = currentScale * (widthLimit / textWidth) * buffer;
 
                 if (newScale < minimumScale) {
                     newScale = minimumScale;
@@ -274,8 +273,46 @@ function roundForLog(value) {
 }
 
 function getTextFramePropertyWidth(tf) {
-    // Este valor corresponde al Ancho que normalmente se revisa en Propiedades/Transform.
+    var outlineWidth = getTextFrameOutlineWidth(tf);
+
+    if (outlineWidth && outlineWidth > 0) {
+        return outlineWidth;
+    }
+
+    // Respaldo: ancho del objeto/caja reportado por Illustrator.
     return Number(tf.width || 0);
+}
+
+function getTextFrameOutlineWidth(tf) {
+    // Las plantillas SS pueden traer texto dentro de cajas/transformaciones cuyo
+    // tf.width no representa el ancho visible. Una copia convertida a outlines
+    // mide los glifos reales sin modificar el textFrame original.
+    var duplicate = null;
+    var outlined = null;
+
+    try {
+        duplicate = tf.duplicate();
+        outlined = duplicate.createOutline();
+        app.redraw();
+
+        if (!outlined) {
+            return 0;
+        }
+
+        return Number(getItemBounds(outlined).width || 0);
+    } catch (error) {
+        $.writeln("RMCNike no pudo medir texto por outlines: " + error.message);
+        return 0;
+    } finally {
+        try {
+            if (outlined) {
+                outlined.remove();
+            } else if (duplicate) {
+                duplicate.remove();
+            }
+        } catch (cleanupError) {
+        }
+    }
 }
 
 // API publica del modulo Standard para rmcNike.jsx.

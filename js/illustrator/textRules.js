@@ -52,6 +52,9 @@
 
     // Standard y Throwback reemplazan texto. IH reemplaza nombre y arma/apaga numero con arte.
     function getTextRule(order) {
+        // Prioridad de placeholders:
+        // 1) catalogo SQLite para variantes especiales/equipo configurado,
+        // 2) reglas locales por equipo, 3) reglas especiales JR/IH.
         const lineRules = textRulesByLine[order.line] || {};
         const placeholders = lineRules[order.team] || null;
 

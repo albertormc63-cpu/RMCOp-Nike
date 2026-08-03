@@ -69,6 +69,8 @@ function sanitizeOutputPart(value) {
 }
 
 function buildOutputIdentifierPart({ style, number, name }) {
+  // Si hay numero se usa como identificador principal; si no, usa nombre.
+  // Los shorts/1500 sin datos no agregan SIN_DATOS por regla operativa.
   const rawIdentifier = number || name;
 
   if (!rawIdentifier && variantRules.getBaseStyleCode(style) === "1500") {
@@ -128,6 +130,8 @@ function getVariantRootFolder(variant) {
 }
 
 function getVariantProductConfig(style, variant) {
+  // Cada variante cambia el grupo raiz dentro de plantillas Nike. El producto
+  // MENS/YOUTH/Ladies/Girls se conserva desde el style.
   const productConfig = getProductConfig(style);
 
   if (variant === "Indigenous Heritage") {
@@ -170,6 +174,8 @@ function findExistingPath(candidates) {
 }
 
 function findCaseInsensitiveChild(parentPath, childName) {
+  // El volumen trae carpetas con mayusculas inconsistentes. Esta busqueda
+  // mantiene rutas tolerantes sin renombrar archivos reales.
   if (!fs.existsSync(parentPath)) return null;
 
   const normalizedChildName = childName.toLowerCase();
@@ -395,6 +401,8 @@ function buildThrowbackTemplatePath({ basePath, team, style, size }) {
 }
 
 function buildIhTemplatePath({ basePath, team, style, size }) {
+  // IH no usa Home/Away; busca equipo directo bajo INDIGENOUS HERITAGE y
+  // tolera carpetas historicas con nombres cercanos.
   const productConfig = getVariantProductConfig(style, "Indigenous Heritage");
   const targetFolder = findIhTeamFolder(basePath, productConfig, team);
   const foundTemplate = findTemplateByStyleAndSize(targetFolder, style, size);
@@ -504,6 +512,8 @@ function buildJrTemplatePath({ basePath, team, style, size }) {
 }
 
 function buildStarsStripesTemplatePath({ basePath, designCode, style, size }) {
+  // SS usa designCode para escoger subcarpeta y codigo de plantilla. Los
+  // placeholders de texto SS vienen de SQLite, no de este diccionario.
   const normalizedDesignCode = String(designCode || "").trim().toUpperCase();
   const design = starsStripesDesigns[normalizedDesignCode];
 
@@ -524,6 +534,7 @@ function buildStarsStripesTemplatePath({ basePath, designCode, style, size }) {
 
 function buildTemplatePath({ basePath, team, variant, version, style, size, designCode }) {
   // Devuelve la plantilla exacta que se copiara para el pedido actual.
+  // Este switch centraliza la diferencia entre Standard, IH, TB, JR, AS y SS.
   if (variantRules.isJrVariantName(variant)) {
     return buildJrTemplatePath({ basePath, team, style, size });
   }
@@ -575,6 +586,8 @@ function buildAllStarsOutputName({ wo, variant, version, style, size, number, na
 
 function buildOutputName({ wo, team, variant, version, style, size, number, name, designCode }) {
   // Nombre de la copia de trabajo dentro de la carpeta On Demand.
+  // Debe mantenerse alineado con la validacion incremental para que path
+  // esperado y archivo final sean el mismo.
   if (variant === "Stars & Stripes") {
     return buildStarsStripesOutputName({ wo, designCode, style, size, number, name });
   }
