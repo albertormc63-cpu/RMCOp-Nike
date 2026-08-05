@@ -14,6 +14,9 @@
             copyTemplate: null,
             createOrderDataFromExcel: null,
             portfolioDb: null,
+            fileComments: null,
+            styleVariantReserve: null,
+            styleVariantReserveData: null,
             textFitRules: null,
             ihNumberRules: null
         };
@@ -52,6 +55,14 @@
                 services.textFitRules = requireFromExtension("js/config/textFitRules.json");
                 // Reglas editables para armar numeros rasterizados de Indigenous Heritage.
                 services.ihNumberRules = requireFromExtension("js/config/ihNumberRules.json");
+                // Reserva local versionada de variantes Nike. Evita consultar SQLite
+                // durante importacion/proceso batch.
+                try {
+                    services.styleVariantReserveData = requireFromExtension("js/config/styleVariantReserve.json");
+                } catch (reserveError) {
+                    console.warn(`No se pudo cargar styleVariantReserve.json; se usaran reglas locales: ${reserveError.message}`);
+                    services.styleVariantReserveData = { variants: [] };
+                }
 
                 const pathBuilder = requireFromExtension("js/utils/pathBuilder.js");
                 services.buildTemplatePath = pathBuilder.buildTemplatePath;
@@ -59,6 +70,8 @@
                 services.copyTemplate = requireFromExtension("js/services/copyTemplate.js");
                 services.createOrderDataFromExcel = requireFromExtension("js/services/createOrderData.js").createOrderDataFromExcel;
                 services.portfolioDb = requireFromExtension("js/services/portfolioDb.js");
+                services.fileComments = requireFromExtension("js/services/fileComments.js");
+                services.styleVariantReserve = requireFromExtension("js/services/styleVariantReserve.js");
 
                 logFlow("Servicios Node cargados correctamente.");
             } catch (error) {

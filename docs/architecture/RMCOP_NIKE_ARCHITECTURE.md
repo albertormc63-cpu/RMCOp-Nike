@@ -30,11 +30,13 @@ El flujo manual se documenta en `../processes/MANUAL_FLOW.md`; batch en `../proc
 
 ## Fuentes De Verdad
 
-- Variantes: `js/config/variantRules.js`.
+- Reserva operativa de variantes: `js/config/styleVariantReserve.json`, leida por `js/services/styleVariantReserve.js`.
+- Fuente maestra para actualizar la reserva: `rmc_nike_style_variants` en SQLite mediante `scripts/syncStyleVariantReserve.js`.
+- Fallback de variantes base: `js/config/variantRules.js`.
 - Ajustes de texto: `js/config/textFitRules.json` y `js/illustrator/textRules.js`.
 - Numeros IH: `js/config/ihNumberRules.json` y `jsx/ihNumbers.jsx`.
 - Importacion: `js/services/createOrderData.js`.
-- Naming/rutas: `js/utils/pathBuilder.js`.
+- Naming/rutas: `js/utils/pathBuilder.js`; reglas de variantes para rutas en `js/config/pathVariantRules.js`.
 - Registro: `js/services/portfolioDb.js`.
 
 ## Restricciones

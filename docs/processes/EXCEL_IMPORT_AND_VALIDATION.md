@@ -188,6 +188,7 @@ Errores bloqueantes:
 - En Genericas faltan tanto WO como Roster.
 - Falta Style o no corresponde a familia 1000/2000.
 - No se puede inferir equipo.
+- El Style/variante/equipo/diseno no existe en `js/config/styleVariantReserve.json`.
 - Falta Size o no pertenece a las tallas permitidas.
 
 Warning no bloqueante:
@@ -225,7 +226,7 @@ counts.byVersion
 ```
 
 La UI filtra `validRows` por familia y talla; `invalidRows` permanece visible como diagnostico.
-El filtro de variantes se calcula desde las filas ya filtradas por familia y talla, usando la variante base de cada fila. Las etiquetas prefieren `rmc_nike_style_variants` cuando SQLite esta disponible y usan la variante normalizada del Excel como respaldo.
+El filtro de variantes se calcula desde las filas ya filtradas por familia y talla, usando la variante base de cada fila. Las etiquetas prefieren `js/config/styleVariantReserve.json` y usan la variante normalizada del Excel como respaldo.
 
 ## Casos Reales Verificados
 

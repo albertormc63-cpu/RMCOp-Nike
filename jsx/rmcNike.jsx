@@ -65,6 +65,45 @@ function RMCNike_alert(message) {
     }
 }
 
+function RMCNike_applyProcessDocumentInfo(doc) {
+    try {
+        var info = doc.info;
+        var comment = "Procesado y generado con RMCOp-Nike/RMC Control System. Developed by: Ing. Alberto Garcia";
+
+        if (!info) {
+            return "";
+        }
+
+        if (typeof info.author !== "undefined") {
+            info.author = "Ing. Alberto Garcia";
+        }
+
+        if (typeof info.subject !== "undefined") {
+            info.subject = comment;
+        }
+
+        if (typeof info.keywords !== "undefined") {
+            info.keywords = "RMCOp-Nike, RMC Control System, Nike Lacrosse On Demand";
+        }
+
+        return " Metadata RMC aplicada.";
+    } catch (error) {
+        return " Metadata RMC no aplicada: " + error.message;
+    }
+}
+
+function RMCNike_markActiveDocumentProcessInfo() {
+    try {
+        if (app.documents.length === 0) {
+            return "ERROR:No hay documento abierto en Illustrator.";
+        }
+
+        return "OK:" + RMCNike_applyProcessDocumentInfo(app.activeDocument);
+    } catch (error) {
+        return "ERROR:" + error.message;
+    }
+}
+
 function RMCNike_savePdfAndCloseActiveDocument(filePath) {
     try {
         if (app.documents.length === 0) {
@@ -74,12 +113,13 @@ function RMCNike_savePdfAndCloseActiveDocument(filePath) {
         var doc = app.activeDocument;
         var pdfFile = new File(filePath);
         var pdfOptions = new PDFSaveOptions();
+        var metadataMessage = RMCNike_applyProcessDocumentInfo(doc);
 
         pdfOptions.preserveEditability = true;
         doc.saveAs(pdfFile, pdfOptions);
         doc.close(SaveOptions.DONOTSAVECHANGES);
 
-        return "OK:PDF guardado y cerrado: " + pdfFile.fsName;
+        return "OK:PDF guardado y cerrado: " + pdfFile.fsName + metadataMessage;
     } catch (error) {
         return "ERROR:" + error.message;
     }

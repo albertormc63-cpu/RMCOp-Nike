@@ -154,6 +154,12 @@
         return evalScript(`RMCNike_savePdfAndCloseActiveDocument(${toJsxString(filePath)})`);
     }
 
+    async function markActiveDocumentProcessInfo() {
+        // Flujo manual: deja metadata interna lista para cuando el operador guarde el PDF abierto.
+        await ensureJsxLoaded();
+        return evalScript("RMCNike_markActiveDocumentProcessInfo()");
+    }
+
     window.RMC.illustrator.bridge = {
         openFile: openFile,
         confirmReplace: confirmReplace,
@@ -162,6 +168,7 @@
         applyNameNumber: applyNameNumber,
         extractOfficialSwatches: extractOfficialSwatches,
         addUsedColors: addUsedColors,
-        savePdfAndCloseActiveDocument: savePdfAndCloseActiveDocument
+        savePdfAndCloseActiveDocument: savePdfAndCloseActiveDocument,
+        markActiveDocumentProcessInfo: markActiveDocumentProcessInfo
     };
 })();

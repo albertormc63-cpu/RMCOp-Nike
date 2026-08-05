@@ -1,0 +1,1173 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "table": "rmc_nike_style_variants",
+    "syncedAt": "2026-08-04T13:45:18.279Z"
+  },
+  "variants": [
+    {
+      "id": "2",
+      "variantCode": "A",
+      "variantName": "Away",
+      "liga": "WLL",
+      "teamGender": "femenino",
+      "teamMarket": "Boston",
+      "teamMascot": "Guard",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "NORTH",
+      "templateNumberPlaceholder": "8",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "Boston",
+        "Guard",
+        "OD Guard"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A2000",
+        "Y2000"
+      ],
+      "opnikeLigaScope": [
+        "WLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "6",
+      "variantCode": "A",
+      "variantName": "Away",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "Boston",
+      "teamMascot": "Cannons",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "HOLMAN",
+      "templateNumberPlaceholder": "1",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "Boston",
+        "Cannons",
+        "OD Cannons"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "7",
+      "variantCode": "A",
+      "variantName": "Away",
+      "liga": "WLL",
+      "teamGender": "femenino",
+      "teamMarket": "California",
+      "teamMascot": "Palms",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "MASTROIANNI",
+      "templateNumberPlaceholder": "12",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "California",
+        "Palms",
+        "OD Palms"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A2000",
+        "Y2000"
+      ],
+      "opnikeLigaScope": [
+        "WLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "32",
+      "variantCode": "A",
+      "variantName": "Away",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "California",
+      "teamMascot": "Redwoods",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "KAVANAGH",
+      "templateNumberPlaceholder": "96",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "California",
+        "Redwoods",
+        "OD Redwoods"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "31",
+      "variantCode": "A",
+      "variantName": "Away",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "Carolina",
+      "teamMascot": "Chaos",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "RIORDEN",
+      "templateNumberPlaceholder": "0",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "Carolina",
+        "Chaos",
+        "OD Chaos"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "13",
+      "variantCode": "A",
+      "variantName": "Away",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "Denver",
+      "teamMascot": "Outlaws",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "O'NEILL",
+      "templateNumberPlaceholder": "42",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "Denver",
+        "Outlaws",
+        "OD Outlaws"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "11",
+      "variantCode": "A",
+      "variantName": "Away",
+      "liga": "WLL",
+      "teamGender": "femenino",
+      "teamMarket": "Maryland",
+      "teamMascot": "Charm",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "BLACK",
+      "templateNumberPlaceholder": "11",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "Maryland",
+        "Charm",
+        "OD Charm"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A2000",
+        "Y2000"
+      ],
+      "opnikeLigaScope": [
+        "WLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "15",
+      "variantCode": "A",
+      "variantName": "Away",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "Maryland",
+      "teamMascot": "Whipsnakes",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "MALONE",
+      "templateNumberPlaceholder": "7",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "Maryland",
+        "Whipsnakes",
+        "OD Whipsnakes"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "4",
+      "variantCode": "A",
+      "variantName": "Away",
+      "liga": "WLL",
+      "teamGender": "femenino",
+      "teamMarket": "New York",
+      "teamMascot": "Charging",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "SCANE",
+      "templateNumberPlaceholder": "27",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "New York",
+        "Charging",
+        "OD Charging"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A2000",
+        "Y2000"
+      ],
+      "opnikeLigaScope": [
+        "WLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "30",
+      "variantCode": "A",
+      "variantName": "Away",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "New York",
+      "teamMascot": "Atlas",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "BAPTISTE",
+      "templateNumberPlaceholder": "9",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "New York",
+        "Atlas",
+        "OD Atlas"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "17",
+      "variantCode": "A",
+      "variantName": "Away",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "Philadelphia",
+      "teamMascot": "Waterdogs",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "SOWERS",
+      "templateNumberPlaceholder": "22",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "Philadelphia",
+        "Waterdogs",
+        "OD Waterdogs"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "29",
+      "variantCode": "A",
+      "variantName": "Away",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "Utah",
+      "teamMascot": "Archers",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "SCHREIBER",
+      "templateNumberPlaceholder": "26",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "Utah",
+        "Archers",
+        "OD Archers"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "26",
+      "variantCode": "AS",
+      "variantName": "All Star",
+      "liga": "WLL",
+      "teamGender": "femenino",
+      "teamMarket": "East",
+      "teamMascot": "Team A",
+      "designCode": "AS-F-TA",
+      "designName": "Home / East",
+      "templateNamePlaceholder": "NAME",
+      "templateNumberPlaceholder": "26",
+      "isActive": true,
+      "isOfficialTeam": false,
+      "requiresDesignCode": true,
+      "aliases": [
+        "Home",
+        "East",
+        "TeamA",
+        "Team A",
+        "X001",
+        "HWAS1"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A2000",
+        "Y2000"
+      ],
+      "opnikeLigaScope": [
+        "WLL"
+      ],
+      "opnikeVariantRootFolder": "ALL STARS",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "design_version_folder"
+    },
+    {
+      "id": "24",
+      "variantCode": "AS",
+      "variantName": "All Star",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "East",
+      "teamMascot": "Team A",
+      "designCode": "AS-M-TA",
+      "designName": "Home / East",
+      "templateNamePlaceholder": "NAME",
+      "templateNumberPlaceholder": "26",
+      "isActive": true,
+      "isOfficialTeam": false,
+      "requiresDesignCode": true,
+      "aliases": [
+        "Home",
+        "East",
+        "TeamA",
+        "Team A",
+        "X001",
+        "HAS1"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "ALL STARS",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "design_version_folder"
+    },
+    {
+      "id": "27",
+      "variantCode": "AS",
+      "variantName": "All Star",
+      "liga": "WLL",
+      "teamGender": "femenino",
+      "teamMarket": "West",
+      "teamMascot": "Team B",
+      "designCode": "AS-F-TB",
+      "designName": "Away / West",
+      "templateNamePlaceholder": "NAME",
+      "templateNumberPlaceholder": "26",
+      "isActive": true,
+      "isOfficialTeam": false,
+      "requiresDesignCode": true,
+      "aliases": [
+        "Away",
+        "West",
+        "TeamB",
+        "Team B",
+        "X002",
+        "AWAS1"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A2000",
+        "Y2000"
+      ],
+      "opnikeLigaScope": [
+        "WLL"
+      ],
+      "opnikeVariantRootFolder": "ALL STARS",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "design_version_folder"
+    },
+    {
+      "id": "25",
+      "variantCode": "AS",
+      "variantName": "All Star",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "West",
+      "teamMascot": "Team B",
+      "designCode": "AS-M-TB",
+      "designName": "Away / West",
+      "templateNamePlaceholder": "NAME",
+      "templateNumberPlaceholder": "26",
+      "isActive": true,
+      "isOfficialTeam": false,
+      "requiresDesignCode": true,
+      "aliases": [
+        "Away",
+        "West",
+        "TeamB",
+        "Team B",
+        "X002",
+        "AAS1"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "ALL STARS",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "design_version_folder"
+    },
+    {
+      "id": "5",
+      "variantCode": "H",
+      "variantName": "Home",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "Boston",
+      "teamMascot": "Cannons",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "HOLMAN",
+      "templateNumberPlaceholder": "1",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "Boston",
+        "Cannons",
+        "OD Cannons"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "33",
+      "variantCode": "H",
+      "variantName": "Home",
+      "liga": "WLL",
+      "teamGender": "femenino",
+      "teamMarket": "Boston",
+      "teamMascot": "Guard",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "NORTH",
+      "templateNumberPlaceholder": "8",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "Boston",
+        "Guard",
+        "OD Guard"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A2000",
+        "Y2000"
+      ],
+      "opnikeLigaScope": [
+        "WLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "8",
+      "variantCode": "H",
+      "variantName": "Home",
+      "liga": "WLL",
+      "teamGender": "femenino",
+      "teamMarket": "California",
+      "teamMascot": "Palms",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "MASTROIANNI",
+      "templateNumberPlaceholder": "12",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "California",
+        "Palms",
+        "OD Palms"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A2000",
+        "Y2000"
+      ],
+      "opnikeLigaScope": [
+        "WLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "18",
+      "variantCode": "H",
+      "variantName": "Home",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "California",
+      "teamMascot": "Redwoods",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "KAVANAGH",
+      "templateNumberPlaceholder": "96",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "California",
+        "Redwoods",
+        "OD Redwoods"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "9",
+      "variantCode": "H",
+      "variantName": "Home",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "Carolina",
+      "teamMascot": "Chaos",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "RIORDEN",
+      "templateNumberPlaceholder": "0",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "Carolina",
+        "Chaos",
+        "OD Chaos"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "12",
+      "variantCode": "H",
+      "variantName": "Home",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "Denver",
+      "teamMascot": "Outlaws",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "O'NEILL",
+      "templateNumberPlaceholder": "42",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "Denver",
+        "Outlaws",
+        "OD Outlaws"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "10",
+      "variantCode": "H",
+      "variantName": "Home",
+      "liga": "WLL",
+      "teamGender": "femenino",
+      "teamMarket": "Maryland",
+      "teamMascot": "Charm",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "BLACK",
+      "templateNumberPlaceholder": "11",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "Maryland",
+        "Charm",
+        "OD Charm"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A2000",
+        "Y2000"
+      ],
+      "opnikeLigaScope": [
+        "WLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "14",
+      "variantCode": "H",
+      "variantName": "Home",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "Maryland",
+      "teamMascot": "Whipsnakes",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "MALONE",
+      "templateNumberPlaceholder": "7",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "Maryland",
+        "Whipsnakes",
+        "OD Whipsnakes"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "3",
+      "variantCode": "H",
+      "variantName": "Home",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "New York",
+      "teamMascot": "Atlas",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "BAPTISTE",
+      "templateNumberPlaceholder": "9",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "New York",
+        "Atlas",
+        "OD Atlas"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "34",
+      "variantCode": "H",
+      "variantName": "Home",
+      "liga": "WLL",
+      "teamGender": "femenino",
+      "teamMarket": "New York",
+      "teamMascot": "Charging",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "SCANE",
+      "templateNumberPlaceholder": "27",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "New York",
+        "Charging",
+        "OD Charging"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A2000",
+        "Y2000"
+      ],
+      "opnikeLigaScope": [
+        "WLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "16",
+      "variantCode": "H",
+      "variantName": "Home",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "Philadelphia",
+      "teamMascot": "Waterdogs",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "SOWERS",
+      "templateNumberPlaceholder": "22",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "Philadelphia",
+        "Waterdogs",
+        "OD Waterdogs"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "1",
+      "variantCode": "H",
+      "variantName": "Home",
+      "liga": "PLL",
+      "teamGender": "masculino",
+      "teamMarket": "Utah",
+      "teamMascot": "Archers",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "SCHREIBER",
+      "templateNumberPlaceholder": "26",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "Utah",
+        "Archers",
+        "OD Archers"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "STANDARD",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "standard_team_version_folder"
+    },
+    {
+      "id": "19",
+      "variantCode": "IH",
+      "variantName": "Indigenous Heritage",
+      "liga": "",
+      "teamGender": "",
+      "teamMarket": "",
+      "teamMascot": "",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "",
+      "templateNumberPlaceholder": "",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A2000",
+        "Y2000"
+      ],
+      "opnikeLigaScope": [],
+      "opnikeVariantRootFolder": "INDIGENOUS HERITAGE",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "special_team_folder_with_legacy_version_fallback"
+    },
+    {
+      "id": "28",
+      "variantCode": "JR",
+      "variantName": "JR Championship",
+      "liga": "PLL",
+      "teamGender": "",
+      "teamMarket": "",
+      "teamMascot": "",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "",
+      "templateNumberPlaceholder": "00",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [
+        "JR Championship",
+        "Jr.Champ",
+        "Jr Champ",
+        "JR Champ"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A1500",
+        "Y1500"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "JR CHAMPIONSHIP",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "jr_team_folder_with_optional_style_subfolder"
+    },
+    {
+      "id": "22",
+      "variantCode": "SS",
+      "variantName": "Special / Foundation Designs",
+      "liga": "",
+      "teamGender": "",
+      "teamMarket": "",
+      "teamMascot": "",
+      "designCode": "GNB1",
+      "designName": "Green Beret Foundation",
+      "templateNamePlaceholder": "send me",
+      "templateNumberPlaceholder": "32",
+      "isActive": true,
+      "isOfficialTeam": false,
+      "requiresDesignCode": true,
+      "aliases": [
+        "Green Beret",
+        "Green Beret Fundation",
+        "Green Beret Foundation",
+        "GBF"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A2000",
+        "Y2000"
+      ],
+      "opnikeLigaScope": [],
+      "opnikeVariantRootFolder": "STARS STRIPES",
+      "opnikeDesignFolder": "GREEN BERET FUNDATION",
+      "opnikeTemplateCode": "GBF",
+      "opnikeResolutionStrategy": "design_folder"
+    },
+    {
+      "id": "23",
+      "variantCode": "SS",
+      "variantName": "Special / Foundation Designs",
+      "liga": "",
+      "teamGender": "",
+      "teamMarket": "",
+      "teamMascot": "",
+      "designCode": "NYS1",
+      "designName": "Navy SEAL Foundation",
+      "templateNamePlaceholder": "LLTB",
+      "templateNumberPlaceholder": "32",
+      "isActive": true,
+      "isOfficialTeam": false,
+      "requiresDesignCode": true,
+      "aliases": [
+        "Navy SEALs",
+        "Navy Seal Foundation",
+        "Navy SEALs Foundation",
+        "NSF",
+        "SEALS"
+      ],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000",
+        "A2000",
+        "Y2000"
+      ],
+      "opnikeLigaScope": [],
+      "opnikeVariantRootFolder": "STARS STRIPES",
+      "opnikeDesignFolder": "NAVY SEALS FUNDATION",
+      "opnikeTemplateCode": "NSF",
+      "opnikeResolutionStrategy": "design_folder"
+    },
+    {
+      "id": "20",
+      "variantCode": "TB",
+      "variantName": "Throwback",
+      "liga": "",
+      "teamGender": "",
+      "teamMarket": "",
+      "teamMascot": "",
+      "designCode": "",
+      "designName": "",
+      "templateNamePlaceholder": "",
+      "templateNumberPlaceholder": "",
+      "isActive": true,
+      "isOfficialTeam": true,
+      "requiresDesignCode": false,
+      "aliases": [],
+      "opnikeEnabled": true,
+      "opnikeRuleStatus": "shadow",
+      "opnikeStyleScope": [
+        "A1000",
+        "Y1000"
+      ],
+      "opnikeLigaScope": [
+        "PLL"
+      ],
+      "opnikeVariantRootFolder": "THROWBACK",
+      "opnikeDesignFolder": "",
+      "opnikeTemplateCode": "",
+      "opnikeResolutionStrategy": "special_team_folder"
+    }
+  ]
+}

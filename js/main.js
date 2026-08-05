@@ -19,6 +19,7 @@
             databasePath: "",
             databaseLabel: "Central"
         },
+        variantReserveWarnings: {},
         batch: {
             mode: "personalized",
             excelPath: "",
@@ -36,6 +37,26 @@
 
     function logFlow(message) {
         console.log(`[Flujo] ${message}`);
+    }
+
+    function markGeneratedPdfFile(outputPath) {
+        const services = nodeRuntime.services;
+
+        if (!outputPath || !services.fileComments) {
+            return;
+        }
+
+        const result = services.fileComments.markGeneratedPdf({
+            fs: services.fs,
+            childProcess: services.childProcess
+        }, outputPath);
+
+        if (result.ok) {
+            console.log(`Comentario Finder aplicado: ${outputPath}`);
+            return;
+        }
+
+        console.warn(`No se pudo aplicar comentario Finder al PDF: ${result.reason || "sin detalle"}`);
     }
 
     function getCurrentPaths() {
@@ -134,6 +155,12 @@
         services.fs.writeFileSync(settingsPath, JSON.stringify(payload, null, 2), "utf8");
         state.settings.databasePath = payload.databasePath;
         state.settings.databaseLabel = payload.databaseLabel;
+        resetVariantCatalogCache();
+    }
+
+    function resetVariantCatalogCache() {
+        state.variantReserveWarnings = {};
+        state.batch.variantCatalogLabels = null;
     }
 
     function getPortfolioBaseFolder() {
@@ -609,6 +636,7 @@
         const paths = getCurrentPaths();
         const order = orderView.collectOrder(state);
         orderView.validateOrder(order);
+        assertOrderInStyleReserve(order);
 
         const templatePath = services.buildTemplatePath({
             basePath: paths.templatesBase,
@@ -1024,19 +1052,61 @@
 
         state.batch.variantCatalogLabels = { STD: "Standard" };
 
-        if (!services.portfolioDb || !services.portfolioDb.listStyleVariantLabels) {
+        if (services.styleVariantReserve && services.styleVariantReserveData) {
+            state.batch.variantCatalogLabels = services.styleVariantReserve.listLabels(services.styleVariantReserveData);
             return state.batch.variantCatalogLabels;
         }
 
-        try {
-            // Los nombres visibles de AS/SS/JR vienen del catalogo en SQLite
-            // cuando existe; si no, el panel cae a los nombres del Excel/codigo.
-            state.batch.variantCatalogLabels = services.portfolioDb.listStyleVariantLabels(getPortfolioDbDeps(), getPortfolioDbPath());
-        } catch (error) {
-            console.warn(`No se pudo leer catalogo de variantes; se usaran nombres locales: ${error.message}`);
+        return state.batch.variantCatalogLabels;
+    }
+
+    function warnMissingVariantReserve(order) {
+        const services = nodeRuntime.services;
+
+        if (!services.styleVariantReserveData || !services.styleVariantReserveData.variants || !services.styleVariantReserveData.variants.length) {
+            return;
         }
 
-        return state.batch.variantCatalogLabels;
+        const warningKey = [
+            order && order.style,
+            order && order.variantCode,
+            order && order.variant,
+            order && order.team,
+            order && order.designCode
+        ].join("|");
+
+        if (state.variantReserveWarnings[warningKey]) {
+            return;
+        }
+
+        state.variantReserveWarnings[warningKey] = true;
+        console.warn(`Style/variante no encontrado en reservas: ${order.style || "-"} ${order.variant || order.variantCode || "-"} ${order.team || order.designCode || "-"}. Se usaran reglas locales; actualiza js/config/styleVariantReserve.json desde SQLite si es una variante nueva.`);
+    }
+
+    function validateBatchRowsAgainstStyleReserve(batchData) {
+        const services = nodeRuntime.services;
+
+        if (!batchData || !services.styleVariantReserve || !services.styleVariantReserveData) {
+            return batchData;
+        }
+
+        return services.styleVariantReserve.validateBatchData(services.styleVariantReserveData, batchData);
+    }
+
+    function assertOrderInStyleReserve(order) {
+        const services = nodeRuntime.services;
+
+        if (!order || !services.styleVariantReserve || !services.styleVariantReserveData) {
+            return;
+        }
+
+        const reserveEntries = services.styleVariantReserve.getEntries(services.styleVariantReserveData);
+
+        if (!reserveEntries.length || services.styleVariantReserve.findEntry(reserveEntries, order)) {
+            return;
+        }
+
+        throw new Error(`Style/variante no esta en reservas locales: ${order.style || "-"} ${order.team || order.designCode || "-"}. Actualiza js/config/styleVariantReserve.json desde SQLite o da de alta la variante antes de procesar.`);
     }
 
     function getBatchVariantFallbackLabel(variantCode) {
@@ -1236,16 +1306,18 @@
     function enrichOrderWithVariantCatalog(order) {
         const services = nodeRuntime.services;
 
-        if (!order || !services.portfolioDb || !services.portfolioDb.getStyleVariantCatalogEntry) {
+        if (!order || !services.styleVariantReserve || !services.styleVariantReserveData) {
             return order;
         }
 
         try {
-            // Aqui se cruza cada pedido contra rmc_nike_style_variants.
-            // Para SS/AS/JR trae design_name y placeholders antes de mandar a Illustrator.
-            const entry = services.portfolioDb.getStyleVariantCatalogEntry(getPortfolioDbDeps(), getPortfolioDbPath(), order);
+            // El CEP cruza cada pedido contra la reserva local versionada.
+            // SQLite se usa solo para regenerar styleVariantReserve.json fuera del
+            // proceso normal; asi evitamos bloquear la UI durante batch.
+            const entry = services.styleVariantReserve.findEntry(services.styleVariantReserveData, order);
 
             if (!entry) {
+                warnMissingVariantReserve(order);
                 return order;
             }
 
@@ -1256,6 +1328,8 @@
                 catalogLiga: entry.liga,
                 catalogDesignCode: entry.designCode,
                 catalogDesignName: entry.designName,
+                catalogOpNikeEnabled: entry.opnikeEnabled,
+                catalogOpNikeRuleStatus: entry.opnikeRuleStatus,
                 templateNamePlaceholder: entry.templateNamePlaceholder,
                 templateNumberPlaceholder: entry.templateNumberPlaceholder,
                 catalogPlaceholderMissing: ["AS", "SS", "JR"].indexOf(entry.variantCode) !== -1 &&
@@ -1597,8 +1671,9 @@
             throw new Error("Selecciona un archivo de Excel valido (.xls, .xlsx, .xlsm o .xlsb).");
         }
 
-        const batchData = services.createOrderDataFromExcel(excelPath);
+        let batchData = services.createOrderDataFromExcel(excelPath);
         validateBatchExcelMode(excelPath, batchData, selectedMode);
+        batchData = validateBatchRowsAgainstStyleReserve(batchData);
 
         // Al aceptar Excel se reinicia validacion/filtros dependientes del archivo.
         // Genericas fija destino automaticamente a la carpeta del roster.
@@ -1860,6 +1935,7 @@
                     await openFileInIllustrator(copyResult.outputPath);
                     await applyOrderDataToIllustrator(order);
                     console.log(await illustratorBridge.savePdfAndCloseActiveDocument(copyResult.outputPath));
+                    markGeneratedPdfFile(copyResult.outputPath);
 
                     okCount++;
                     const result = {
@@ -2069,6 +2145,8 @@
 
         await openCurrentFileInIllustrator();
         await applyOrderDataToIllustrator(order);
+        console.log(await illustratorBridge.markActiveDocumentProcessInfo());
+        markGeneratedPdfFile(state.lastOutputPath);
 
         try {
             recordManualProcessLog(order, state.lastOutputPath, Date.now() - startedAt);

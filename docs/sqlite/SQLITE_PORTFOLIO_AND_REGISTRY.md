@@ -51,6 +51,32 @@ rmc_mockuptool_runs
 
 No modificar tablas de otros CEP desde RMCOp-Nike.
 
+## Catalogo Nike Compartido
+
+`rmc_nike_style_variants` es la fuente maestra para variantes, equipos, disenos, placeholders y campos `opnike_*`.
+El CEP no consulta esa tabla durante importacion/proceso batch para evitar bloqueos de UI.
+
+El consumo operativo usa una reserva versionada:
+
+```text
+js/config/styleVariantReserve.json
+```
+
+La reserva se actualiza manualmente desde SQLite con:
+
+```bash
+node scripts/syncStyleVariantReserve.js
+```
+
+Reglas actuales de consumo:
+
+- `variantRules.js` sigue como fallback local para `Standard`, `Indigenous Heritage`, `Throwback`, `JR`, `AS` y `SS`.
+- `styleVariantReserve.json` puede detectar reglas `opnikeEnabled` y `opnikeRuleStatus`, incluyendo `shadow` o `draft`.
+- La lectura de la reserva no cambia por si sola naming, rutas ni generacion si una variante nueva no tiene regla confirmada.
+- Manual valida la reserva antes de resolver plantilla/nombre.
+- Personalizadas y Genericas validan la reserva al importar Excel; las filas fuera de reserva quedan invalidas y se omiten.
+- Si una combinacion no esta en la reserva, la actualizacion desde SQLite debe hacerse fuera del batch.
+
 ## Manual, Personalizadas Y Genericas
 
 RMCOp-Nike registra tres herramientas:

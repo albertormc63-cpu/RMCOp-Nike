@@ -2,60 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const teams = require("../data/teams");
 const variantRules = require("../config/variantRules");
-
-// Codigo corto que se agrega al nombre final cuando la variante no es Standard.
-const variantCodes = {
-  "Indigenous Heritage": "IH",
-  Throwback: "TB",
-  "JR Championship": "JR",
-  "JR Champ": "JR",
-  "JR Champ Shorts": "JR",
-  "All Stars": "AS",
-  "Stars & Stripes": "SS"
-};
-
-const starsStripesDesigns = {
-  GNB1: { templateCode: "GBF", folderName: "GREEN BERET FUNDATION" },
-  NYS1: { templateCode: "NSF", folderName: "NAVY SEALS FUNDATION" }
-};
-
-const teamNicknames = {
-  masculino: {
-    Boston: "Cannons",
-    California: "Redwoods",
-    Carolina: "Chaos",
-    Denver: "Outlaws",
-    Maryland: "Whipsnakes",
-    "New York": "Atlas",
-    Philadelphia: "Waterdogs",
-    Utah: "Archers"
-  },
-  femenino: {
-    Boston: "Guard",
-    California: "Palms",
-    Maryland: "Charm",
-    "New York": "Charging"
-  }
-};
-
-const defaultTemplateNumbers = {
-  masculino: {
-    Boston: "1",
-    California: "96",
-    Carolina: "0",
-    Denver: "42",
-    Maryland: "7",
-    "New York": "9",
-    Philadelphia: "22",
-    Utah: "26"
-  },
-  femenino: {
-    Boston: "8",
-    California: "12",
-    Maryland: "11",
-    "New York": "27"
-  }
-};
+const pathVariantRules = require("../config/pathVariantRules");
 
 function normalizeStyle(style) {
   return String(style || "").trim().toUpperCase();
@@ -121,12 +68,7 @@ function getProductConfig(style) {
 }
 
 function getVariantRootFolder(variant) {
-  if (variant === "Indigenous Heritage") return "INDIGENOUS HERITAGE";
-  if (variant === "Throwback") return "THROWBACK";
-  if (variantRules.isJrVariantName(variant)) return "JR CHAMPIONSHIP";
-  if (variant === "All Stars") return "ALL STARS";
-  if (variant === "Stars & Stripes") return "STARS STRIPES";
-  return "STANDARD";
+  return pathVariantRules.getVariantRootFolder(variant);
 }
 
 function getVariantProductConfig(style, variant) {
@@ -134,37 +76,9 @@ function getVariantProductConfig(style, variant) {
   // MENS/YOUTH/Ladies/Girls se conserva desde el style.
   const productConfig = getProductConfig(style);
 
-  if (variant === "Indigenous Heritage") {
-    return Object.assign({}, productConfig, {
-      groupFolder: productConfig.nikeCode === "PLL" ? "NIKE IH Mens and Youth" : "NIKE IH Girls and Ladies"
-    });
-  }
-
-  if (variant === "Throwback") {
-    return Object.assign({}, productConfig, {
-      groupFolder: productConfig.nikeCode === "PLL" ? "NIKE TB Mens and Youth" : "NIKE TB Girls and Ladies"
-    });
-  }
-
-  if (variantRules.isJrVariantName(variant)) {
-    return Object.assign({}, productConfig, {
-      groupFolder: productConfig.nikeCode === "PLL" ? "NIKE JR Mens and Youth" : "NIKE JR Girls and Ladies"
-    });
-  }
-
-  if (variant === "All Stars") {
-    return Object.assign({}, productConfig, {
-      groupFolder: productConfig.nikeCode === "PLL" ? "NIKE AS Mens and Youth" : "NIKE AS Girls and Ladies"
-    });
-  }
-
-  if (variant === "Stars & Stripes") {
-    return Object.assign({}, productConfig, {
-      groupFolder: productConfig.nikeCode === "PLL" ? "NIKE SS Mens and Youth" : "NIKE SS Girls and Ladies"
-    });
-  }
-
-  return productConfig;
+  return Object.assign({}, productConfig, {
+    groupFolder: pathVariantRules.getVariantGroupFolder(variant, productConfig.nikeCode, productConfig.groupFolder)
+  });
 }
 
 function findExistingPath(candidates) {
@@ -220,9 +134,9 @@ function getTemplateFolderCandidates(basePath, productConfig, team, version) {
   return candidates;
 }
 
-function getIhTeamFolderCandidates(basePath, productConfig, team) {
+function getIhTeamFolderCandidates(basePath, variant, productConfig, team) {
   const ihRoot = resolvePathSegments(basePath, [
-    "INDIGENOUS HERITAGE",
+    getVariantRootFolder(variant),
     productConfig.groupFolder,
     productConfig.productFolder
   ]);
@@ -302,8 +216,8 @@ function findTemplateByStyleAndSize(folderPath, style, size) {
   return match ? path.join(folderPath, match) : null;
 }
 
-function findIhTeamFolder(basePath, productConfig, team) {
-  const candidates = getIhTeamFolderCandidates(basePath, productConfig, team);
+function findIhTeamFolder(basePath, variant, productConfig, team) {
+  const candidates = getIhTeamFolderCandidates(basePath, variant, productConfig, team);
   const existingCandidate = findExistingPath(candidates);
 
   if (existingCandidate) {
@@ -311,7 +225,7 @@ function findIhTeamFolder(basePath, productConfig, team) {
   }
 
   const ihProductPath = resolvePathSegments(basePath, [
-    "INDIGENOUS HERITAGE",
+    getVariantRootFolder(variant),
     productConfig.groupFolder,
     productConfig.productFolder
   ]);
@@ -388,9 +302,9 @@ function buildTextTemplatePath({ basePath, team, variant, version, style, size, 
   return findTemplateByStyleAndSize(targetFolder, style, size) || canonicalPath;
 }
 
-function buildThrowbackTemplatePath({ basePath, team, style, size }) {
-  const productConfig = getVariantProductConfig(style, "Throwback");
-  const targetFolder = findVariantTeamFolder(basePath, "Throwback", productConfig, team, "TB");
+function buildThrowbackTemplatePath({ basePath, team, variant, style, size }) {
+  const productConfig = getVariantProductConfig(style, variant);
+  const targetFolder = findVariantTeamFolder(basePath, variant, productConfig, team, pathVariantRules.getOutputVariantCode(variant));
   const foundTemplate = findTemplateByStyleAndSize(targetFolder, style, size);
 
   if (foundTemplate) {
@@ -400,11 +314,11 @@ function buildThrowbackTemplatePath({ basePath, team, style, size }) {
   return path.join(targetFolder, `${productConfig.nikeCode} ${team} TB ${getStyleSearchFamily(style)} ${size}.pdf`);
 }
 
-function buildIhTemplatePath({ basePath, team, style, size }) {
+function buildIhTemplatePath({ basePath, team, variant, style, size }) {
   // IH no usa Home/Away; busca equipo directo bajo INDIGENOUS HERITAGE y
   // tolera carpetas historicas con nombres cercanos.
-  const productConfig = getVariantProductConfig(style, "Indigenous Heritage");
-  const targetFolder = findIhTeamFolder(basePath, productConfig, team);
+  const productConfig = getVariantProductConfig(style, variant);
+  const targetFolder = findIhTeamFolder(basePath, variant, productConfig, team);
   const foundTemplate = findTemplateByStyleAndSize(targetFolder, style, size);
 
   if (foundTemplate) {
@@ -414,11 +328,11 @@ function buildIhTemplatePath({ basePath, team, style, size }) {
   return path.join(targetFolder, `${productConfig.nikeCode}-${team.toUpperCase()} IH ${getStyleSearchFamily(style)} ${size}.pdf`);
 }
 
-function buildAllStarsTemplatePath({ basePath, version, style, size }) {
-  const productConfig = getVariantProductConfig(style, "All Stars");
+function buildAllStarsTemplatePath({ basePath, variant, version, style, size }) {
+  const productConfig = getVariantProductConfig(style, variant);
   const versionFolder = String(version || "Home").toUpperCase();
   const targetFolder = resolvePathSegments(basePath, [
-    "ALL STARS",
+    getVariantRootFolder(variant),
     productConfig.groupFolder,
     productConfig.productFolder,
     versionFolder
@@ -448,9 +362,9 @@ function findTemplateByExactStyleAndSize(folderPath, style, size) {
   return match ? path.join(folderPath, match) : null;
 }
 
-function getJrTeamFolderCandidates(basePath, productConfig, team) {
+function getJrTeamFolderCandidates(basePath, variant, productConfig, team) {
   const jrProductPath = resolvePathSegments(basePath, [
-    "JR CHAMPIONSHIP",
+    getVariantRootFolder(variant),
     productConfig.groupFolder,
     productConfig.productFolder
   ]);
@@ -463,8 +377,8 @@ function getJrTeamFolderCandidates(basePath, productConfig, team) {
   ];
 }
 
-function findJrTeamFolder(basePath, productConfig, team) {
-  const candidates = getJrTeamFolderCandidates(basePath, productConfig, team);
+function findJrTeamFolder(basePath, variant, productConfig, team) {
+  const candidates = getJrTeamFolderCandidates(basePath, variant, productConfig, team);
   const existingCandidate = findExistingPath(candidates);
 
   if (existingCandidate) {
@@ -472,7 +386,7 @@ function findJrTeamFolder(basePath, productConfig, team) {
   }
 
   const jrProductPath = resolvePathSegments(basePath, [
-    "JR CHAMPIONSHIP",
+    getVariantRootFolder(variant),
     productConfig.groupFolder,
     productConfig.productFolder
   ]);
@@ -492,9 +406,9 @@ function findJrTeamFolder(basePath, productConfig, team) {
   return match ? path.join(jrProductPath, match) : candidates[0];
 }
 
-function buildJrTemplatePath({ basePath, team, style, size }) {
-  const productConfig = getVariantProductConfig(style, "JR Championship");
-  const teamFolder = findJrTeamFolder(basePath, productConfig, team);
+function buildJrTemplatePath({ basePath, team, variant, style, size }) {
+  const productConfig = getVariantProductConfig(style, variant);
+  const teamFolder = findJrTeamFolder(basePath, variant, productConfig, team);
   const styleFamily = getStyleSearchFamily(style);
   // Los shorts JR 1500 viven dentro de una subcarpeta por audiencia:
   // A1500 para adulto y Y1500 para youth. Los jerseys 1000 siguen en la raiz del equipo.
@@ -511,19 +425,19 @@ function buildJrTemplatePath({ basePath, team, style, size }) {
   return findTemplateByExactStyleAndSize(targetFolder, style, size) || canonicalPath;
 }
 
-function buildStarsStripesTemplatePath({ basePath, designCode, style, size }) {
+function buildStarsStripesTemplatePath({ basePath, variant, designCode, style, size }) {
   // SS usa designCode para escoger subcarpeta y codigo de plantilla. Los
-  // placeholders de texto SS vienen de SQLite, no de este diccionario.
+  // placeholders de texto SS vienen de la reserva local, no de este archivo.
   const normalizedDesignCode = String(designCode || "").trim().toUpperCase();
-  const design = starsStripesDesigns[normalizedDesignCode];
+  const design = pathVariantRules.getStarsStripesDesign(normalizedDesignCode, style);
 
   if (!design) {
     throw new Error(`Stars & Stripes requiere design_code valido: ${designCode || "(vacio)"}`);
   }
 
-  const productConfig = getVariantProductConfig(style, "Stars & Stripes");
+  const productConfig = getVariantProductConfig(style, variant);
   const targetFolder = resolvePathSegments(basePath, [
-    "STARS STRIPES",
+    getVariantRootFolder(variant),
     productConfig.groupFolder,
     productConfig.productFolder,
     design.folderName
@@ -532,36 +446,27 @@ function buildStarsStripesTemplatePath({ basePath, designCode, style, size }) {
   return path.join(targetFolder, `${productConfig.nikeCode} ${design.templateCode} SS ${getStyleSearchFamily(style)} ${size}.pdf`);
 }
 
+const templateBuilders = {
+  jr: buildJrTemplatePath,
+  "all-stars": buildAllStarsTemplatePath,
+  "stars-stripes": buildStarsStripesTemplatePath,
+  ih: buildIhTemplatePath,
+  throwback: buildThrowbackTemplatePath,
+  text: buildTextTemplatePath
+};
+
 function buildTemplatePath({ basePath, team, variant, version, style, size, designCode }) {
   // Devuelve la plantilla exacta que se copiara para el pedido actual.
-  // Este switch centraliza la diferencia entre Standard, IH, TB, JR, AS y SS.
-  if (variantRules.isJrVariantName(variant)) {
-    return buildJrTemplatePath({ basePath, team, style, size });
-  }
-
-  if (variant === "All Stars") {
-    return buildAllStarsTemplatePath({ basePath, version, style, size });
-  }
-
-  if (variant === "Stars & Stripes") {
-    return buildStarsStripesTemplatePath({ basePath, designCode, style, size });
-  }
-
-  if (variant === "Indigenous Heritage") {
-    return buildIhTemplatePath({ basePath, team, style, size });
-  }
-
-  if (variant === "Throwback") {
-    return buildThrowbackTemplatePath({ basePath, team, style, size });
-  }
-
+  // La variante decide estrategia en pathVariantRules; aqui solo se ejecuta.
+  const strategy = pathVariantRules.getTemplateStrategy(variant);
+  const builder = templateBuilders[strategy] || templateBuilders.text;
   const teamCode = teams[team];
 
-  if (!teamCode) {
+  if (builder === buildTextTemplatePath && !teamCode) {
     throw new Error(`Equipo no registrado: ${team}`);
   }
 
-  return buildTextTemplatePath({ basePath, team, variant, version, style, size, teamCode });
+  return builder({ basePath, team, variant, version, style, size, designCode, teamCode });
 }
 
 function buildStarsStripesOutputName({ wo, designCode, style, size, number, name }) {
@@ -577,34 +482,38 @@ function buildStarsStripesOutputName({ wo, designCode, style, size, number, name
 
 function buildAllStarsOutputName({ wo, variant, version, style, size, number, name }) {
   const productConfig = getProductConfig(style);
-  const variantCode = variantCodes[variant] || "AS";
+  const variantCode = pathVariantRules.getOutputVariantCode(variant) || "AS";
   const identifierPart = buildOutputIdentifierPart({ style, number, name });
   const versionPart = sanitizeOutputPart(version || "Home").toUpperCase();
 
   return `${wo} ${productConfig.nikeCode}-All Stars ${versionPart} ${normalizeStyle(style)}${variantCode && normalizeStyle(style).indexOf(variantCode) === -1 ? variantCode : ""} ${size}${identifierPart}.pdf`;
 }
 
-function buildOutputName({ wo, team, variant, version, style, size, number, name, designCode }) {
-  // Nombre de la copia de trabajo dentro de la carpeta On Demand.
-  // Debe mantenerse alineado con la validacion incremental para que path
-  // esperado y archivo final sean el mismo.
-  if (variant === "Stars & Stripes") {
-    return buildStarsStripesOutputName({ wo, designCode, style, size, number, name });
-  }
-
-  if (variant === "All Stars") {
-    return buildAllStarsOutputName({ wo, variant, version, style, size, number, name });
-  }
-
+function buildTeamOutputName({ wo, team, variant, version, style, size, number, name }) {
   const productConfig = getProductConfig(style);
-  const lineNicknames = teamNicknames[productConfig.lineName] || {};
-  const lineDefaultNumbers = defaultTemplateNumbers[productConfig.lineName] || {};
-  const nickname = lineNicknames[team] ? ` ${lineNicknames[team]}` : "";
-  const variantCode = variant && variant !== "Standard" ? (variantCodes[variant] || variant) : "";
+  const teamMascot = pathVariantRules.getTeamMascot({ team, variant, version, style });
+  const nickname = teamMascot ? ` ${teamMascot}` : "";
+  const variantCode = pathVariantRules.getOutputVariantCode(variant);
   const normalizedStyle = normalizeStyle(style);
   const stylePart = variantCode && normalizedStyle.indexOf(variantCode) === -1 ? `${normalizedStyle}${variantCode}` : normalizedStyle;
   const identifierPart = buildOutputIdentifierPart({ style, number, name });
   return `${wo} ${productConfig.nikeCode}-${team}${nickname} ${stylePart} ${size}${identifierPart}.pdf`;
+}
+
+const outputNameBuilders = {
+  "stars-stripes": buildStarsStripesOutputName,
+  "all-stars": buildAllStarsOutputName,
+  team: buildTeamOutputName
+};
+
+function buildOutputName({ wo, team, variant, version, style, size, number, name, designCode }) {
+  // Nombre de la copia de trabajo dentro de la carpeta On Demand.
+  // Debe mantenerse alineado con la validacion incremental para que path
+  // esperado y archivo final sean el mismo.
+  const strategy = pathVariantRules.getOutputStrategy(variant);
+  const builder = outputNameBuilders[strategy] || outputNameBuilders.team;
+
+  return builder({ wo, team, variant, version, style, size, number, name, designCode });
 }
 
 module.exports = {
