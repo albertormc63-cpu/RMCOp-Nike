@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "source": {
     "table": "rmc_nike_style_variants",
-    "syncedAt": "2026-08-04T13:45:18.279Z"
+    "syncedAt": "2026-08-07T19:45:23.405Z"
   },
   "variants": [
     {
@@ -23,10 +23,11 @@
       "aliases": [
         "Boston",
         "Guard",
-        "OD Guard"
+        "OD Guard",
+        "X001"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A2000",
         "Y2000"
@@ -57,10 +58,11 @@
       "aliases": [
         "Boston",
         "Cannons",
-        "OD Cannons"
+        "OD Cannons",
+        "X001"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -93,10 +95,11 @@
       "aliases": [
         "California",
         "Palms",
-        "OD Palms"
+        "OD Palms",
+        "X008"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A2000",
         "Y2000"
@@ -127,10 +130,13 @@
       "aliases": [
         "California",
         "Redwoods",
-        "OD Redwoods"
+        "OD Redwoods",
+        "X008",
+        "Riptide",
+        "Rdwd"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -163,10 +169,11 @@
       "aliases": [
         "Carolina",
         "Chaos",
-        "OD Chaos"
+        "OD Chaos",
+        "X004"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -199,10 +206,11 @@
       "aliases": [
         "Denver",
         "Outlaws",
-        "OD Outlaws"
+        "OD Outlaws",
+        "X005"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -235,10 +243,11 @@
       "aliases": [
         "Maryland",
         "Charm",
-        "OD Charm"
+        "OD Charm",
+        "X006"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A2000",
         "Y2000"
@@ -269,10 +278,13 @@
       "aliases": [
         "Maryland",
         "Whipsnakes",
-        "OD Whipsnakes"
+        "OD Whipsnakes",
+        "X006",
+        "Bayhawk",
+        "WPSN"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -305,10 +317,11 @@
       "aliases": [
         "New York",
         "Charging",
-        "OD Charging"
+        "OD Charging",
+        "X002"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A2000",
         "Y2000"
@@ -339,10 +352,11 @@
       "aliases": [
         "New York",
         "Atlas",
-        "OD Atlas"
+        "OD Atlas",
+        "X002"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -375,10 +389,13 @@
       "aliases": [
         "Philadelphia",
         "Waterdogs",
-        "OD Waterdogs"
+        "OD Waterdogs",
+        "X007",
+        "Barrage",
+        "WD"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -411,10 +428,11 @@
       "aliases": [
         "Utah",
         "Archers",
-        "OD Archers"
+        "OD Archers",
+        "X003"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -453,7 +471,7 @@
         "HWAS1"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A2000",
         "Y2000"
@@ -490,7 +508,7 @@
         "HAS1"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000"
@@ -527,7 +545,7 @@
         "AWAS1"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A2000",
         "Y2000"
@@ -564,7 +582,7 @@
         "AAS1"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000"
@@ -595,10 +613,11 @@
       "aliases": [
         "Boston",
         "Cannons",
-        "OD Cannons"
+        "OD Cannons",
+        "X001"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -631,10 +650,11 @@
       "aliases": [
         "Boston",
         "Guard",
-        "OD Guard"
+        "OD Guard",
+        "X001"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A2000",
         "Y2000"
@@ -665,10 +685,11 @@
       "aliases": [
         "California",
         "Palms",
-        "OD Palms"
+        "OD Palms",
+        "X008"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A2000",
         "Y2000"
@@ -699,10 +720,13 @@
       "aliases": [
         "California",
         "Redwoods",
-        "OD Redwoods"
+        "OD Redwoods",
+        "X008",
+        "Riptide",
+        "Rdwd"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -735,10 +759,11 @@
       "aliases": [
         "Carolina",
         "Chaos",
-        "OD Chaos"
+        "OD Chaos",
+        "X004"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -771,10 +796,11 @@
       "aliases": [
         "Denver",
         "Outlaws",
-        "OD Outlaws"
+        "OD Outlaws",
+        "X005"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -807,10 +833,11 @@
       "aliases": [
         "Maryland",
         "Charm",
-        "OD Charm"
+        "OD Charm",
+        "X006"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A2000",
         "Y2000"
@@ -841,10 +868,13 @@
       "aliases": [
         "Maryland",
         "Whipsnakes",
-        "OD Whipsnakes"
+        "OD Whipsnakes",
+        "X006",
+        "Bayhawk",
+        "WPSN"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -877,10 +907,11 @@
       "aliases": [
         "New York",
         "Atlas",
-        "OD Atlas"
+        "OD Atlas",
+        "X002"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -913,10 +944,11 @@
       "aliases": [
         "New York",
         "Charging",
-        "OD Charging"
+        "OD Charging",
+        "X002"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A2000",
         "Y2000"
@@ -947,10 +979,13 @@
       "aliases": [
         "Philadelphia",
         "Waterdogs",
-        "OD Waterdogs"
+        "OD Waterdogs",
+        "X007",
+        "Barrage",
+        "WD"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -983,10 +1018,11 @@
       "aliases": [
         "Utah",
         "Archers",
-        "OD Archers"
+        "OD Archers",
+        "X003"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -1016,14 +1052,20 @@
       "isActive": true,
       "isOfficialTeam": true,
       "requiresDesignCode": false,
-      "aliases": [],
+      "aliases": [
+        "IH",
+        "Indigenoues Heritage",
+        "IHW"
+      ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
         "A2000",
-        "Y2000"
+        "Y2000",
+        "A1500",
+        "Y1500"
       ],
       "opnikeLigaScope": [],
       "opnikeVariantRootFolder": "INDIGENOUS HERITAGE",
@@ -1053,7 +1095,7 @@
         "JR Champ"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -1090,7 +1132,7 @@
         "GBF"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -1126,7 +1168,7 @@
         "SEALS"
       ],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000",
@@ -1156,7 +1198,7 @@
       "requiresDesignCode": false,
       "aliases": [],
       "opnikeEnabled": true,
-      "opnikeRuleStatus": "shadow",
+      "opnikeRuleStatus": "active",
       "opnikeStyleScope": [
         "A1000",
         "Y1000"

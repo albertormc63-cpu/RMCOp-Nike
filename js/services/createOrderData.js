@@ -36,7 +36,10 @@ const colorTeamMap = [
   { token: "GUARD", team: "Boston" },
   { token: "PALMS", team: "California" },
   { token: "CHARM", team: "Maryland" },
-  { token: "CHARGING", team: "New York" }
+  { token: "CHARGING", team: "New York" },
+  { token: "RIPTIDE", team: "California" },
+  { token: "BAYHAWK", team: "Maryland" },
+  { token: "BARRAGE", team: "Philadelphia" }
 ];
 
 const specialDesigns = {
